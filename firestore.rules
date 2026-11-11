@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pass 1 baseline: the catalog is world-readable, nothing is writable.
+    // TODO(codex): owner-scoped writes keyed on GitHub OAuth uid, star subcollection.
+    match /agents/{agentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

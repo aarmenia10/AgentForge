@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode, toggled on <html> by ThemeProvider. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Navy: the brand's dark surface ramp. Slate and teal come from Tailwind. */
+  --color-navy-50: #f0f4fb;
+  --color-navy-100: #dde6f5;
+  --color-navy-200: #b9c9e8;
+  --color-navy-300: #8aa3d3;
+  --color-navy-400: #5a78b8;
+  --color-navy-500: #3a5899;
+  --color-navy-600: #2a427a;
+  --color-navy-700: #1e3160;
+  --color-navy-800: #152445;
+  --color-navy-900: #0d1830;
+  --color-navy-950: #070e1f;
+
+  --shadow-glow: 0 0 0 1px rgb(45 212 191 / 0.25), 0 12px 40px -12px rgb(20 184 166 / 0.35);
+}
+
+:root {
+  --glass-bg: rgb(255 255 255 / 0.68);
+  --glass-bg-strong: rgb(255 255 255 / 0.88);
+  --glass-border: rgb(15 23 42 / 0.08);
+  --glass-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px -16px rgb(15 23 42 / 0.18);
+  --page-glow-a: rgb(45 212 191 / 0.2);
+  --page-glow-b: rgb(58 88 153 / 0.16);
+}
+
+.dark {
+  --glass-bg: rgb(21 36 69 / 0.42);
+  --glass-bg-strong: rgb(13 24 48 / 0.9);
+  --glass-border: rgb(255 255 255 / 0.09);
+  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 16px 40px -20px rgb(0 0 0 / 0.7);
+  --page-glow-a: rgb(20 184 166 / 0.16);
+  --page-glow-b: rgb(58 88 153 / 0.3);
+}
+
+/* Frosted surface used by cards, toolbars, and the nav. */
+@utility glass {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+
+/* Near-opaque variant for overlays that sit on busy content. */
+@utility glass-strong {
+  background-color: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(24px) saturate(1.4);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-slate-50 font-sans text-slate-900 antialiased dark:bg-navy-950 dark:text-slate-100;
+    background-image:
+      radial-gradient(60rem 32rem at 12% -8%, var(--page-glow-a), transparent 60%),
+      radial-gradient(56rem 34rem at 92% 0%, var(--page-glow-b), transparent 62%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-teal-500;
+  }
+
+  ::selection {
+    @apply bg-teal-500/30;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
