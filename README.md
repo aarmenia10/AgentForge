@@ -168,13 +168,12 @@ Each item has a fixed signature already in the repo. Fill in bodies, do not resh
 
 1. **Firestore repository.** Implement `createFirestoreAgentRepository()` in `src/lib/agentRepository.ts` against the `AgentRepository` interface, then switch the `agentRepository` export. Add the `firebase` SDK and a `src/lib/firebase.ts` initializer reading `VITE_FIREBASE_*` env vars.
 2. **Static catalog snapshot.** A script that exports the `agents` collection to `public/catalog.json` and per-agent files, plus a GitHub Actions workflow that runs it and deploys Hosting. Point `listAgents()` at the snapshot.
-3. **GitHub OAuth.** Implement `AuthService` in `src/lib/auth.ts` with Firebase Auth's `GithubAuthProvider`, and wire the disabled button in `TopNav.tsx`.
-4. **Security rules.** Extend `firestore.rules`: authors write only their own manifests, one star document per user per agent, manifest shape validation.
-5. **Seed data.** Grow `src/data/seedAgents.ts` into a realistic catalog (30+ agents across all six categories and five frameworks).
-6. **Manifest validation.** A runtime validator for `AgentManifest` (shared by the publish flow and the MCP server).
-7. **`@agentforge/mcp-server`.** A stdio MCP server in `packages/mcp-server/` that accepts `--agent <id>@<version>`, fetches the manifest, and exposes the prompt blueprint as an MCP prompt and the schemas as a tool definition.
-8. **Tests.** Vitest unit tests for `queryAgents`, `buildMcpConfig`, `buildInstallSnippet`, `formatRelativeTime`, and the validator. Component tests for the modal's tab and focus behavior.
-9. **Tooling.** ESLint and Prettier configs, CI for typecheck, lint, and test.
+3. **Security rules.** Extend `firestore.rules`: authors write only their own manifests, one star document per user per agent, manifest shape validation.
+4. **Seed data.** Grow `src/data/seedAgents.ts` into a realistic catalog (30+ agents across all six categories and five frameworks).
+5. **Manifest validation.** A runtime validator for `AgentManifest` (shared by the publish flow and the MCP server).
+6. **`@agentforge/mcp-server`.** A stdio MCP server in `packages/mcp-server/` that accepts `--agent <id>@<version>`, fetches the manifest, and exposes the prompt blueprint as an MCP prompt and the schemas as a tool definition.
+7. **Tests.** Vitest unit tests for `queryAgents`, `buildMcpConfig`, `buildInstallSnippet`, `formatRelativeTime`, and the validator. Component tests for the modal's tab and focus behavior.
+8. **Tooling.** ESLint and Prettier configs, CI for typecheck, lint, and test.
 
 ### Later passes (Claude)
 
