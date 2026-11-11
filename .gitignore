@@ -4,6 +4,8 @@ node_modules/
 # Build output
 dist/
 dist-ssr/
+packages/mcp-server/catalog.json
+*.tgz
 *.tsbuildinfo
 .vite/
 

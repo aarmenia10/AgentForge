@@ -1,11 +1,35 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Pass 1 baseline: the catalog is world-readable, nothing is writable.
-    // TODO(codex): owner-scoped writes keyed on GitHub OAuth uid, star subcollection.
+    function signedIn() { return request.auth != null; }
+    function agentPath(agentId) { return /databases/$(database)/documents/agents/$(agentId); }
+    function starPath(agentId) { return /databases/$(database)/documents/agents/$(agentId)/stars/$(request.auth.uid); }
+    function validStarDelta(agentId) {
+      let before = get(agentPath(agentId)).data;
+      let after = getAfter(agentPath(agentId)).data;
+      let delta = exists(starPath(agentId)) ? -1 : 1;
+      return after.diff(before).affectedKeys().hasOnly(['stats'])
+        && after.stats.diff(before.stats).affectedKeys().hasOnly(['stars'])
+        && after.stats.stars is int && after.stats.stars >= 0
+        && after.stats.stars == before.stats.stars + delta
+        && existsAfter(starPath(agentId)) != exists(starPath(agentId));
+    }
     match /agents/{agentId} {
-      allow read: if true;
-      allow write: if false;
+      // Catalog reads use Hosting. Only star transactions need this document.
+      allow get: if signedIn();
+      allow list: if false;
+      allow update: if signedIn() && validStarDelta(agentId);
+      // Admin import/publish pipeline owns manifests; clients cannot forge verification.
+      allow create, delete: if false;
+      match /stars/{userId} {
+        allow get: if signedIn() && request.auth.uid == userId;
+        allow create: if signedIn() && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['user_id', 'created_at'])
+          && request.resource.data.user_id == userId
+          && request.resource.data.created_at == request.time
+          && validStarDelta(agentId);
+        allow delete: if signedIn() && request.auth.uid == userId && validStarDelta(agentId);
+      }
     }
   }
 }
