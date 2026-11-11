@@ -2,7 +2,7 @@
  * Canonical AgentForge schema contract.
  *
  * This file is the single source of truth for the web app, the Firestore
- * `agents` collection, and `@agentforge/mcp-server`. Field names are snake_case
+ * `agents` collection, and `agentforge-registry`. Field names are snake_case
  * where the manifest is serialized (JSON on disk, Firestore documents, MCP
  * payloads), so do not rename them without a schema version bump.
  */

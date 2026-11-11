@@ -29,7 +29,7 @@ Agents today are trapped in the framework that built them. A CrewAI crew, a Lang
  Claude Desktop / Cursor / Claude Code       │
         │ stdio (MCP)                        │
         ▼                                    │
- @agentforge/mcp-server  ◀───────────────────┘
+ agentforge-registry     ◀───────────────────┘
  (runs locally via npx)
         │ exposes the manifest as MCP prompts and tools
         ▼
@@ -40,7 +40,7 @@ Three decisions keep the bill at zero.
 
 1. **No server-side inference.** The registry serves JSON. The user's client runs the model.
 2. **No backend compute.** There are no Cloud Functions (they require the paid Blaze plan). Everything is static hosting, Firestore security rules, and client code.
-3. **The local MCP server does the integration work.** `@agentforge/mcp-server` runs on the user's machine through `npx`, fetches one pinned manifest, and exposes it over stdio.
+3. **The local MCP server does the integration work.** `agentforge-registry` runs on the user's machine through `npx`, fetches one pinned manifest, and exposes it over stdio.
 
 ### Staying at $0: the read-quota constraint
 
@@ -60,14 +60,14 @@ Other Spark limits worth knowing: Hosting transfers 360 MB per day, and Firestor
 
 ### MCP install contract
 
-The web app generates this entry, and `@agentforge/mcp-server` must honor it:
+The web app generates this entry, and `agentforge-registry` must honor it:
 
 ```json
 {
   "mcpServers": {
     "agentforge-<agent-id>": {
       "command": "npx",
-      "args": ["-y", "@agentforge/mcp-server", "--agent", "<agent-id>@<version>"]
+      "args": ["-y", "agentforge-registry", "--agent", "<agent-id>@<version>"]
     }
   }
 }
@@ -171,7 +171,7 @@ Each item has a fixed signature already in the repo. Fill in bodies, do not resh
 3. **Security rules.** Extend `firestore.rules`: authors write only their own manifests, one star document per user per agent, manifest shape validation.
 4. **Seed data.** Grow `src/data/seedAgents.ts` into a realistic catalog (30+ agents across all six categories and five frameworks).
 5. **Manifest validation.** A runtime validator for `AgentManifest` (shared by the publish flow and the MCP server).
-6. **`@agentforge/mcp-server`.** A stdio MCP server in `packages/mcp-server/` that accepts `--agent <id>@<version>`, fetches the manifest, and exposes the prompt blueprint as an MCP prompt and the schemas as a tool definition.
+6. **`agentforge-registry`.** A stdio MCP server in `packages/mcp-server/` that accepts `--agent <id>@<version>`, fetches the manifest, and exposes the prompt blueprint as an MCP prompt and the schemas as a tool definition.
 7. **Tests.** Vitest unit tests for `queryAgents`, `buildMcpConfig`, `buildInstallSnippet`, `formatRelativeTime`, and the validator. Component tests for the modal's tab and focus behavior.
 8. **Tooling.** ESLint and Prettier configs, CI for typecheck, lint, and test.
 

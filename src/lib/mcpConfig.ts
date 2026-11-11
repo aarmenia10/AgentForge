@@ -1,7 +1,11 @@
 import type { AgentManifest } from '@/types/agent'
 
-/** npm package that serves registry agents over MCP stdio. */
-export const MCP_SERVER_PACKAGE = '@agentforge/mcp-server'
+/**
+ * npm package that serves registry agents over MCP stdio.
+ * Unscoped on purpose: the `@agentforge` npm scope and the `agentforge-mcp`
+ * name both belong to unrelated projects, so neither may appear in a snippet.
+ */
+export const MCP_SERVER_PACKAGE = 'agentforge-registry'
 
 export type McpClient = 'claude_desktop' | 'cursor' | 'claude_code'
 
