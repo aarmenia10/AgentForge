@@ -149,7 +149,13 @@ test('built Node executable speaks real stdio MCP and loads its bundled catalog 
   const cwd = await mkdtemp(join(tmpdir(), 'agentforge-stdio-'))
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [executable, '--agent', 'sec-10k-auditor@1.0.0'],
+    args: [
+      '--import',
+      `data:text/javascript,${encodeURIComponent("globalThis.fetch = async () => { throw new Error('offline') }")}`,
+      executable,
+      '--agent',
+      'sec-10k-auditor@1.0.0',
+    ],
     cwd,
     stderr: 'pipe',
   })

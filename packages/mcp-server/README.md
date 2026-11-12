@@ -10,9 +10,19 @@ The command becomes available after the maintainer publishes this package to npm
 Before publication, build from the repository and use `node packages/mcp-server/dist/cli.js`.
 
 `--catalog <path-or-https-URL>` overrides `AGENTFORGE_CATALOG_URL`. Otherwise the server
-loads `public/catalog.json` from the working directory, then its bundled snapshot if
-the local file is absent. An explicit source, malformed catalog, or unavailable pinned
-version fails closed. It never silently substitutes another version.
+fetches `https://agentforge-b10db.web.app/catalog.json` with a 10-second timeout and
+falls back to its bundled snapshot on network, HTTP, parsing, or validation failure.
+The default never reads a catalog from the working directory. An explicit source
+fails closed on any error, even when it names the default URL. An unavailable pinned
+version always fails closed; it never silently substitutes another version.
+
+For OpenAI Codex, install the pinned agent using the documented stdio command:
+
+```sh
+codex mcp add agentforge-postgres-index-tuner -- npx -y agentforge-registry --agent postgres-index-tuner@1.0.0
+```
+
+See [OpenAI's MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
 
 `search_registry({ query?, category?, framework?, limit? })` ranks the catalog in memory
 and returns several candidates, each with the fields needed to judge fit: required
@@ -48,3 +58,9 @@ npm pack ./packages/mcp-server
 
 The tarball contains the executable, validated catalog snapshot, and runtime dependency
 declarations. It has no dependency on the web app or source files after packaging.
+The shared manifest validator is bundled into `dist/cli.js`; manifest types are
+checked at build time and erased. Only declared npm packages remain as runtime imports.
+
+From the repository root, `npm run test:package` packs the release, checks its file
+list, installs it into an empty temporary consumer outside the repository, and
+verifies stdio MCP with both an explicit bundled catalog and offline default fallback.

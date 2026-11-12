@@ -23,13 +23,13 @@ This README is the project's single source of truth. It replaces the earlier "Ph
 
 ## 1. What exists today
 
-Verified on `main` at the time of writing. `npm run build` passes and `npm test` passes 16 of 16.
+Verified on `main` at the time of writing. `npm run build` passes and `npm test` passes 29 of 29. `npm run test:package` also passes a standalone tarball install and MCP smoke test.
 
 | Area | State |
 | --- | --- |
 | Web catalog | Built. Search, category pills, framework filter, sort, four-tab detail view, `?agent=<id>` deep links, light and dark themes |
 | Static catalog | Built. `scripts/export-catalog.ts` validates every manifest and writes `public/catalog.json`. The site reads only that file |
-| Seed agents | 10 manifests. All are `mcp_native`, all carry the same author, and none are tagged `creative` |
+| Seed agents | 14 validated manifests. At least two in every category, including `creative`, and all five frameworks represented |
 | Validation | Built. `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
 | MCP server | Built in `packages/mcp-server` as `agentforge-registry`. Ships the AI navigation guide, ranked search, and `compare_agents`. **Not published to npm**, so nobody can install it yet |
 | Firestore rules | Built for atomic per-user stars. No client can create or edit a manifest |
@@ -41,7 +41,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Publishing | Not built. The only way to add an agent is to edit `src/data/seedAgents.ts` |
 | Stars | Rules and transaction code exist. Unusable until sign-in exists and `agents/{id}` documents are provisioned |
 | CI and deploys | `.github/workflows/ci.yml` builds and tests every push and deploys Hosting and rules from `main`. First automated deploy succeeded 2026-11-12 |
-| Lint and format | None configured |
+| Lint and format | ESLint recommended rules run in CI. Prettier checks new and conforming files, with an explicit legacy formatting baseline |
 
 ### Project facts
 
@@ -196,7 +196,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
 | P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | done |
 | P1-3 | Visual style per [7.1](#71-visual-style): original look kept, pill labels replaced | Claude | none | No pill-shaped labels remain. Both themes and 375px verified | done |
-| P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | open |
+| P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | blocked (prep done; owner npm publication and live client verification remain) |
 | P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits |done (not yet observed with a live model; that check belongs to P1-7) |
 | P1-6 | Seed coverage: at least two agents per category including `creative`, and at least one agent for each framework | Codex | none | Every category pill and every framework filter returns results | done |
 | P1-7 | Live verification: walk the deployed site and a real MCP connection, file what breaks | Antigravity | P1-2, P1-4 | A written pass or fail for each Phase 1 "done when" | open |
@@ -362,6 +362,7 @@ npm run lint           # installs isolated lint tooling, then checks JS/TS
 npm run format:check   # checks Prettier formatting outside the legacy baseline
 npm run test:firestore # security rules against the local emulator (needs Java 21+)
 npm run build:mcp      # build packages/mcp-server on its own
+npm run test:package   # pack, install outside the repo, verify bundled/offline MCP
 ```
 
 ESLint uses recommended JavaScript and TypeScript rules. Its TypeScript 6 parser
@@ -376,6 +377,18 @@ Run the MCP server from a checkout:
 ```bash
 node packages/mcp-server/dist/cli.js --agent postgres-index-tuner@1.0.0
 ```
+
+The MCP server defaults to the live catalog URL in Project facts and falls back
+to its bundled snapshot when that request fails or returns invalid data.
+`--catalog` overrides `AGENTFORGE_CATALOG_URL`; either explicit source fails
+closed on errors. An unavailable version pin always fails closed.
+
+For Codex, the install panel generates `codex mcp add <server-name> -- npx -y
+agentforge-registry --agent <id>@<version>`, following the
+[official MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+The package's shared validator is bundled into `dist/cli.js` and manifest types
+are checked at build time; the release has no local web-app dependency.
+`build:mcp` uses a locked `npm ci` so it cannot re-add that dependency.
 
 Catalog export: without Google credentials the exporter uses the seed file. Set `AGENTFORGE_CATALOG_SOURCE=firestore` plus Application Default Credentials to merge live records. Details are in `.env.example` and `scripts/export-catalog.ts`.
 

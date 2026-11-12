@@ -2,12 +2,11 @@ import type { AgentManifest } from '@/types/agent'
 
 /**
  * npm package that serves registry agents over MCP stdio.
- * Unscoped on purpose: the `@agentforge` npm scope and the `agentforge-mcp`
- * name both belong to unrelated projects, so neither may appear in a snippet.
+ * The unscoped package name is the registry's install contract.
  */
 export const MCP_SERVER_PACKAGE = 'agentforge-registry'
 
-export type McpClient = 'claude_desktop' | 'cursor' | 'claude_code'
+export type McpClient = 'claude_desktop' | 'cursor' | 'claude_code' | 'codex'
 
 export interface McpClientInfo {
   id: McpClient
@@ -41,6 +40,12 @@ export const MCP_CLIENTS: readonly McpClientInfo[] = [
   {
     id: 'claude_code',
     label: 'Claude Code',
+    configFile: null,
+    locations: [],
+  },
+  {
+    id: 'codex',
+    label: 'OpenAI Codex',
     configFile: null,
     locations: [],
   },
@@ -82,6 +87,12 @@ export function buildInstallSnippet(
   if (client === 'claude_code') {
     const { command, args } = buildServerEntry(agent)
     return `claude mcp add ${mcpServerKey(agent)} -- ${command} ${args.join(' ')}`
+  }
+  if (client === 'codex') {
+    // https://learn.chatgpt.com/docs/extend/mcp?surface=cli
+    // The CLI writes Codex's mcp_servers configuration in config.toml.
+    const { command, args } = buildServerEntry(agent)
+    return `codex mcp add ${mcpServerKey(agent)} -- ${command} ${args.join(' ')}`
   }
   return JSON.stringify(buildMcpConfig(agent), null, 2)
 }

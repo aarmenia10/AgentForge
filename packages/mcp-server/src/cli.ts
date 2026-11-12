@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { loadCatalog } from './catalog'
+import { DEFAULT_CATALOG_URL, loadCatalog } from './catalog'
 import { createRegistryServer } from './server'
 
 try {
@@ -15,7 +15,7 @@ try {
   })
   if (values.help) {
     console.log(
-      'Usage: agentforge-registry [--agent <id>@<version>] [--catalog <file-or-URL>]\nCatalog: --catalog, AGENTFORGE_CATALOG_URL, local public/catalog.json, then bundled snapshot.',
+      `Usage: agentforge-registry [--agent <id>@<version>] [--catalog <file-or-URL>]\nCatalog: --catalog, AGENTFORGE_CATALOG_URL, then ${DEFAULT_CATALOG_URL} with bundled snapshot fallback. Explicit sources fail closed.`,
     )
   } else {
     const catalog = await loadCatalog(
