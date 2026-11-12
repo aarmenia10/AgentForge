@@ -1,0 +1,36 @@
+# Dependencies and generated output have their own writers.
+**/node_modules/
+**/dist/
+**/dist-ssr/
+coverage/
+.firebase/
+**/package-lock.json
+public/catalog.json
+packages/mcp-server/catalog.json
+
+# P1-2 legacy formatting baseline. These exact files predate Prettier; remove an
+# entry when its owner formats that file. New files are checked automatically.
+# Keep this list explicit so new files in these directories are not exempt.
+firebase.json
+index.html
+packages/mcp-server/tsconfig.json
+README.md
+src/App.tsx
+src/components/AgentCard.tsx
+src/components/detail/AgentDetailModal.tsx
+src/components/detail/InstallPanel.tsx
+src/components/detail/SchemaViewer.tsx
+src/components/ExplorerToolbar.tsx
+src/components/Hero.tsx
+src/components/TopNav.tsx
+src/components/ui.tsx
+src/data/seedAgents.ts
+src/index.css
+src/lib/auth.ts
+src/lib/catalog.ts
+src/lib/format.ts
+src/lib/mcpConfig.ts
+src/theme/ThemeProvider.tsx
+src/types/agent.ts
+tests/catalog.test.ts
+tests/mcp.test.ts

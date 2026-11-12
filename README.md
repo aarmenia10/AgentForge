@@ -192,7 +192,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | ID | Task | Owner | Depends on | Done when | Status |
 | --- | --- | --- | --- | --- | --- |
 | P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
-| P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | open |
+| P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | done |
 | P1-3 | Design revamp per [7.1](#71-design-revamp) | Claude | none | Every checklist item in 7.1 is met in both themes and at 375px | open |
 | P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | open |
 | P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits | open |
@@ -350,9 +350,18 @@ npm install
 npm run dev            # http://localhost:5173
 npm run build          # export catalog, typecheck, production bundle in dist/
 npm test               # builds the MCP package first, then runs all tests
+npm run lint           # installs isolated lint tooling, then checks JS/TS
+npm run format:check   # checks Prettier formatting outside the legacy baseline
 npm run test:firestore # security rules against the local emulator (needs Java 21+)
 npm run build:mcp      # build packages/mcp-server on its own
 ```
+
+ESLint uses recommended JavaScript and TypeScript rules. Its TypeScript 6 parser
+runtime is isolated in `tools/lint` because the current parser does not support
+the application's TypeScript 7 compiler; both dependency sets have lockfiles.
+Prettier follows the existing no-semicolon, single-quote style. `.prettierignore`
+lists existing formatting exceptions individually to avoid a mass reformat.
+Remove an entry when formatting that file; new files are checked automatically.
 
 Run the MCP server from a checkout:
 

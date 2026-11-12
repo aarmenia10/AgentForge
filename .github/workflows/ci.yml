@@ -29,6 +29,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       # The catalog is built from the seed file here. Credentials are not
       # present yet, so the exporter cannot reach Firestore by accident.
       - name: Build
