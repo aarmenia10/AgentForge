@@ -14,7 +14,17 @@ loads `public/catalog.json` from the working directory, then its bundled snapsho
 the local file is absent. An explicit source, malformed catalog, or unavailable pinned
 version fails closed. It never silently substitutes another version.
 
-`search_registry({ query?, category? })` searches metadata in memory.
+`search_registry({ query?, category?, framework?, limit? })` ranks the catalog in memory
+and returns several candidates, each with the fields needed to judge fit: required
+inputs, output fields, required tools, author verification, last update, and which
+query terms matched. `compare_agents({ agent_ids })` returns a side-by-side of two to
+five candidates. Neither loads anything.
+
+The server teaches a connected AI to compare before choosing. A condensed guide is
+sent as the initialization instructions, and the full text is served as the
+`registry_guide` resource (`agentforge://guide`) and prompt. The canonical text is
+`docs/AI_GUIDE.md`; after editing it run `node packages/mcp-server/sync-guide.mjs`.
+
 `switch_agent({ agent_id })` accepts an id or pinned id@version and returns its full
 blueprint. It refreshes the `active_agent` MCP prompt, the active manifest resource,
 and the schema-driven `agent_<id>` tool, notifying clients that their lists changed.

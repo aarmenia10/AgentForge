@@ -7,12 +7,16 @@ coverage/
 **/package-lock.json
 public/catalog.json
 packages/mcp-server/catalog.json
+packages/mcp-server/src/guide.ts
 
 # P1-2 legacy formatting baseline. These exact files predate Prettier; remove an
 # entry when its owner formats that file. New files are checked automatically.
 # Keep this list explicit so new files in these directories are not exempt.
 firebase.json
+docs/AI_GUIDE.md
 index.html
+packages/mcp-server/src/discovery.ts
+packages/mcp-server/src/server.ts
 packages/mcp-server/tsconfig.json
 README.md
 src/App.tsx
@@ -34,4 +38,5 @@ src/lib/mcpConfig.ts
 src/theme/ThemeProvider.tsx
 src/types/agent.ts
 tests/catalog.test.ts
+tests/guide.test.ts
 tests/mcp.test.ts
