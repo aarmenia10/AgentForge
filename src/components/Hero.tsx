@@ -1,5 +1,23 @@
+import {
+  Clapperboard,
+  Code2,
+  FlaskConical,
+  LineChart,
+  ServerCog,
+  Workflow,
+  type LucideIcon,
+} from 'lucide-react'
 import { AGENT_CATEGORIES, type AgentCategoryTag } from '@/types/agent'
 import { cn } from './ui'
+
+const CATEGORY_ICONS: Record<AgentCategoryTag, LucideIcon> = {
+  coding: Code2,
+  finance: LineChart,
+  research: FlaskConical,
+  devops: ServerCog,
+  ops: Workflow,
+  creative: Clapperboard,
+}
 
 interface HeroProps {
   category: AgentCategoryTag | null
@@ -7,31 +25,32 @@ interface HeroProps {
   agentCount: number
 }
 
-/** Page header: what this is, in three lines, then the category filter. */
 export function Hero({ category, onCategoryChange, agentCount }: HeroProps) {
   return (
-    <section className="mx-auto max-w-7xl px-4 pt-10 pb-8 sm:px-6 sm:pt-14">
-      <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-        The GitHub for AI Agents
-      </h1>
-
-      <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-muted">
-        A registry of agents built on any framework. Read the prompt, the tools, and the schema
-        contract before you install anything, then add an agent to Claude or Cursor with one config
-        snippet. No API keys. No inference bill.
+    <section className="mx-auto max-w-7xl px-4 pb-10 pt-16 text-center sm:px-6 sm:pt-24">
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-teal-600 dark:text-teal-300">
+        Open source · MCP-native · runs on the subscription you already pay for
       </p>
 
-      <p className="mt-3 font-mono text-xs text-subtle">
-        {agentCount > 0 && `${agentCount} agents / `}open source / MCP-native / runs on the
-        subscription you already have
+      <h1 className="mx-auto mt-6 max-w-4xl text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
+        The GitHub for{' '}
+        <span className="bg-gradient-to-r from-teal-500 via-teal-400 to-navy-400 bg-clip-text text-transparent">
+          AI Agents
+        </span>
+      </h1>
+
+      <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-slate-600 sm:text-lg dark:text-slate-300">
+        Discover agents built on any framework, inspect their prompts, tools, and schema contracts,
+        then add them to Claude or Cursor with one config snippet. No API keys. No inference bill.
       </p>
 
       <div
         role="group"
         aria-label="Browse by category"
-        className="mt-6 flex flex-wrap gap-x-1 gap-y-1.5"
+        className="mx-auto mt-9 flex max-w-3xl flex-wrap justify-center gap-2.5"
       >
         {AGENT_CATEGORIES.map(({ tag, label }) => {
+          const Icon = CATEGORY_ICONS[tag]
           const active = category === tag
           return (
             <button
@@ -40,17 +59,24 @@ export function Hero({ category, onCategoryChange, agentCount }: HeroProps) {
               aria-pressed={active}
               onClick={() => onCategoryChange(active ? null : tag)}
               className={cn(
-                'h-8 rounded border px-3 text-sm',
+                'inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition',
                 active
-                  ? 'border-accent font-medium text-accent'
-                  : 'border-line text-muted hover:border-edge hover:text-ink',
+                  ? 'bg-teal-500 text-white shadow-glow'
+                  : 'glass text-slate-700 hover:-translate-y-0.5 hover:text-teal-600 dark:text-slate-200 dark:hover:text-teal-300',
               )}
             >
+              <Icon className="size-4" />
               {label}
             </button>
           )
         })}
       </div>
+
+      {agentCount > 0 && (
+        <p className="mt-6 text-sm text-slate-500 dark:text-slate-400">
+          {agentCount} agents in the registry
+        </p>
+      )}
     </section>
   )
 }

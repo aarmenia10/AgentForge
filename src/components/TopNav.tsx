@@ -1,4 +1,4 @@
-import { Moon, Search, Sun } from 'lucide-react'
+import { Anvil, Moon, Search, Sun } from 'lucide-react'
 import { useTheme } from '@/theme/ThemeProvider'
 import { AGENT_CATEGORIES, type AgentCategoryTag } from '@/types/agent'
 import { cn } from './ui'
@@ -14,29 +14,30 @@ export function TopNav({ keyword, onKeywordChange, category, onCategoryChange }:
   const { theme, toggleTheme } = useTheme()
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface">
-      <div className="mx-auto flex h-12 max-w-7xl items-center gap-3 px-4 sm:gap-5 sm:px-6">
-        <a
-          href="/"
-          className="shrink-0 rounded font-mono text-sm font-semibold tracking-tight text-ink"
-          aria-label="AgentForge home"
-        >
-          agentforge
+    <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
+        <a href="/" className="flex shrink-0 items-center gap-2.5" aria-label="AgentForge home">
+          <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-teal-400 to-navy-600 text-white shadow-lg shadow-teal-500/25">
+            <Anvil className="size-5" />
+          </span>
+          <span className="hidden text-lg font-semibold tracking-tight sm:block">
+            Agent<span className="text-teal-500">Forge</span>
+          </span>
         </a>
 
-        <label className="relative min-w-0 flex-1 md:max-w-xs">
+        <label className="relative min-w-0 flex-1 md:max-w-sm">
           <span className="sr-only">Search agents</span>
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-subtle" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             value={keyword}
             onChange={(event) => onKeywordChange(event.target.value)}
             placeholder="Search agents, tools, authors"
-            className="field h-8 w-full pl-8"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-white/70 pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-white/5"
           />
         </label>
 
-        <nav aria-label="Categories" className="hidden items-center gap-4 lg:flex">
+        <nav aria-label="Categories" className="hidden items-center gap-1 lg:flex">
           {AGENT_CATEGORIES.slice(0, 4).map(({ tag, label }) => (
             <a
               key={tag}
@@ -44,8 +45,10 @@ export function TopNav({ keyword, onKeywordChange, category, onCategoryChange }:
               onClick={() => onCategoryChange(category === tag ? null : tag)}
               aria-current={category === tag ? 'true' : undefined}
               className={cn(
-                'rounded text-sm',
-                category === tag ? 'font-medium text-accent' : 'text-muted hover:text-ink',
+                'rounded-lg px-3 py-2 text-sm font-medium transition',
+                category === tag
+                  ? 'text-teal-600 dark:text-teal-300'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
               )}
             >
               {label}
@@ -53,21 +56,21 @@ export function TopNav({ keyword, onKeywordChange, category, onCategoryChange }:
           ))}
         </nav>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={toggleTheme}
             aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            className="grid size-8 place-items-center rounded text-muted hover:bg-sunken hover:text-ink"
+            className="grid size-10 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-900/5 dark:text-slate-300 dark:hover:bg-white/10"
           >
-            {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </button>
           {/* Placeholder until sign-in ships (README task P2-2). */}
           <button
             type="button"
             disabled
             title="Sign-in is coming soon"
-            className="h-8 cursor-not-allowed rounded px-2 text-sm text-subtle"
+            className="inline-flex h-10 cursor-not-allowed items-center rounded-xl border border-slate-300 px-3.5 text-sm font-medium text-slate-500 dark:border-white/15 dark:text-slate-400"
           >
             Sign in
           </button>
