@@ -23,7 +23,7 @@ This README is the project's single source of truth. It replaces the earlier "Ph
 
 ## 1. What exists today
 
-Verified on `main` at the time of writing. `npm run build` passes and `npm test` passes 8 of 8.
+Verified on `main` at the time of writing. `npm run build` passes and `npm test` passes 16 of 16.
 
 | Area | State |
 | --- | --- |
@@ -31,7 +31,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Static catalog | Built. `scripts/export-catalog.ts` validates every manifest and writes `public/catalog.json`. The site reads only that file |
 | Seed agents | 10 manifests. All are `mcp_native`, all carry the same author, and none are tagged `creative` |
 | Validation | Built. `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
-| MCP server | Built in `packages/mcp-server` as `agentforge-registry`. **Not published to npm**, so nobody can install it yet |
+| MCP server | Built in `packages/mcp-server` as `agentforge-registry`. Ships the AI navigation guide, ranked search, and `compare_agents`. **Not published to npm**, so nobody can install it yet |
 | Firestore rules | Built for atomic per-user stars. No client can create or edit a manifest |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
@@ -130,6 +130,8 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 | Date | Decision |
 | --- | --- |
+| 2026-11-12 | `docs/AI_GUIDE.md` is the canonical AI guide. `packages/mcp-server/src/guide.ts` holds a generated copy (`node packages/mcp-server/sync-guide.mjs`) and a hand-written condensed version, and a test fails when they drift. `public/llms.txt` must teach the same rules. Any change to the selection rules lands in all three (P1-5) |
+| 2026-11-12 | MCP tool contract: `search_registry` returns `{ candidates: [...], next_step }` with ranked candidates, never a bare array and never a single answer. `compare_agents` takes 2 to 5 ids. Neither tool loads an agent. Both emit `author` as `{ name, verified }` only, so schema version 2 does not change their output (P1-5) |
 | 2026-11-12 | UI styling goes through the semantic tokens in `src/index.css` (`page`, `surface`, `sunken`, `line`, `edge`, `ink`, `muted`, `subtle`, `accent`) and its `field`, `btn-primary`, `btn-quiet`, `segmented`, and `eyebrow` classes. New components do not use raw palette steps, fills behind labels, shadows, gradients, blur, or a radius above 6px. Teal is for actions and selection only (P1-3) |
 | 2026-11-12 | This README is the plan of record. The Gemini-authored master plan is retired. Corrections to it are listed in [section 9](#9-corrections-to-the-retired-master-plan) |
 | 2026-11-12 | Sign-in is **Google** and **email + password**. Nothing else |
@@ -196,7 +198,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | open |
 | P1-3 | Design revamp per [7.1](#71-design-revamp) | Claude | none | Every checklist item in 7.1 is met in both themes and at 375px | done |
 | P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | open |
-| P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits | open |
+| P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits |done (not yet observed with a live model; that check belongs to P1-7) |
 | P1-6 | Seed coverage: at least two agents per category including `creative`, and at least one agent for each framework | Codex | none | Every category pill and every framework filter returns results | done |
 | P1-7 | Live verification: walk the deployed site and a real MCP connection, file what breaks | Antigravity | P1-2, P1-4 | A written pass or fail for each Phase 1 "done when" | open |
 
@@ -379,13 +381,15 @@ AgentForge/
 ├── firebase.json                 # Hosting (SPA rewrite, caching) + Firestore config
 ├── firestore.rules               # Security rules
 ├── .env.example                  # Every environment variable, documented
+├── docs/
+│   └── AI_GUIDE.md               # Canonical guide for connected AIs (section 7.4)
 ├── scripts/
 │   └── export-catalog.ts         # Builds public/catalog.json
 ├── public/
-│   └── catalog.json              # Generated. The site's only read source
+│   ├── catalog.json              # Generated. The site's only read source
 ├── packages/
 │   └── mcp-server/               # The agentforge-registry npm package
-│       └── src/                  # cli.ts, server.ts, catalog.ts
+│       └── src/                  # cli.ts, server.ts, catalog.ts, discovery.ts, guide.ts
 ├── tests/                        # catalog, MCP, and Firestore emulator tests
 └── src/
     ├── App.tsx                   # Page composition, catalog state, deep links
