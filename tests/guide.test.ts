@@ -53,9 +53,9 @@ async function connect(selector?: string) {
 }
 
 test('the shipped guide is an exact copy of docs/AI_GUIDE.md and covers every required topic', async () => {
-  const canonical = (await readFile('docs/AI_GUIDE.md', 'utf8')).trimEnd()
+  const canonical = (await readFile('docs/AI_GUIDE.md', 'utf8')).replace(/\r\n/g, '\n').trimEnd()
   assert.equal(
-    REGISTRY_GUIDE,
+    REGISTRY_GUIDE.replace(/\r\n/g, '\n'),
     canonical,
     'guide.ts is stale: run `node packages/mcp-server/sync-guide.mjs`',
   )
@@ -85,7 +85,7 @@ test('the shipped guide is an exact copy of docs/AI_GUIDE.md and covers every re
 
 test('llms.txt points at the live catalog and carries the same rules', async () => {
   const llms = await readFile('public/llms.txt', 'utf8')
-  assert.match(llms, /^# AgentForge\n/)
+  assert.match(llms, /^# AgentForge\r?\n/)
   assert.ok(llms.includes('https://agentforge-b10db.web.app/catalog.json'))
   for (const field of [
     'tools_required',
