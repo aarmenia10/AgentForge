@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'task/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FIREBASE_PROJECT: agentforge-b10db
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The catalog is built from the seed file here. Credentials are not
+      # present yet, so the exporter cannot reach Firestore by accident.
+      - name: Build
+        run: npm run build
+        env:
+          AGENTFORGE_CATALOG_SOURCE: seed
+
+      - name: Test
+        run: npm test
+
+      # Deploy only from main, and only once the owner has added the secret.
+      - name: Check for deploy credentials
+        id: creds
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$SA" ]; then
+            printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT is not set. Skipping deploy."
+          fi
+
+      - name: Deploy Hosting and Firestore rules
+        if: steps.creds.outputs.present == 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx firebase deploy --only hosting,firestore:rules --project "$FIREBASE_PROJECT" --non-interactive
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

@@ -40,7 +40,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Sign-in | Not built. The nav shows a disabled "Sign in" placeholder |
 | Publishing | Not built. The only way to add an agent is to edit `src/data/seedAgents.ts` |
 | Stars | Rules and transaction code exist. Unusable until sign-in exists and `agents/{id}` documents are provisioned |
-| CI and deploys | None. Deploys are manual |
+| CI and deploys | `.github/workflows/ci.yml` builds and tests every push. It deploys from `main` only after the owner adds the `FIREBASE_SERVICE_ACCOUNT` repository secret |
 | Lint and format | None configured |
 
 ### Project facts
@@ -192,7 +192,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | ID | Task | Owner | Depends on | Done when | Status |
 | --- | --- | --- | --- | --- | --- |
 | P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
-| P1-2 | CI and deploys: GitHub Actions running typecheck, tests, and build on every push; deploy Hosting and rules on `main`. Add ESLint and Prettier | Codex | Owner adds a service account secret | A push to `main` reaches the live site with no manual step | open |
+| P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` once the `FIREBASE_SERVICE_ACCOUNT` secret exists. Remaining: add ESLint and Prettier and a lint step | Codex | Owner adds the secret | A push to `main` reaches the live site with no manual step | open |
 | P1-3 | Design revamp per [7.1](#71-design-revamp) | Claude | none | Every checklist item in 7.1 is met in both themes and at 375px | open |
 | P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | open |
 | P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits | open |
