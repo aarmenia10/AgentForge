@@ -31,7 +31,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Static catalog | Built. `scripts/export-catalog.ts` validates every manifest and writes `public/catalog.json`. The site reads only that file |
 | Seed agents | 14 validated manifests. At least two in every category, including `creative`, and all five frameworks represented |
 | Validation | Built. `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
-| MCP server | Built in `packages/mcp-server` as `agentforge-registry`. Ships the AI navigation guide, ranked search, and `compare_agents`. **Not published to npm**, so nobody can install it yet |
+| MCP server | Released. `agentforge-registry` 0.1.0 is served from the site at `/mcp/agentforge-registry-0.1.0.tgz` and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
 | Firestore rules | Built for atomic per-user stars. No client can create or edit a manifest |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
@@ -54,7 +54,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Auth domain | `agentforge-b10db.firebaseapp.com` |
 | Plan | Spark (no cost) |
 | Firestore | Database `(default)`, location `nam5`, currently empty |
-| npm package | `agentforge-registry` (name free as of 2026-11-11, not yet published) |
+| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.0.tgz`. Not on the npm registry, by decision |
 | Repository | `aarmenia10/AgentForge`, default branch `main` |
 
 ---
@@ -100,7 +100,7 @@ The web app generates this entry and the server must honor it. The generator is 
   "mcpServers": {
     "agentforge-<agent-id>": {
       "command": "npx",
-      "args": ["-y", "agentforge-registry", "--agent", "<agent-id>@<version>"]
+      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.0.tgz", "--agent", "<agent-id>@<version>"]
     }
   }
 }
@@ -138,6 +138,7 @@ Binding. Newest first. Add to it, do not rewrite history.
 | 2026-11-12 | Agents have a visibility: **public**, **friends**, or **private** |
 | 2026-11-12 | The MCP server must ship with a navigation guide that teaches a connected AI to compare candidates before choosing an agent ([section 7.4](#74-ai-navigation-guide)) |
 | 2026-11-11 | **GitHub is not part of the product.** No GitHub sign-in, no GitHub identity, no GitHub API. The tagline is a comparison only |
+| 2026-11-12 | **The MCP server is distributed from our own site, not the npm registry.** Install snippets run `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-<version>.tgz`. No npm account is involved and no third party can claim the name. Every released tarball stays in `public/mcp/` permanently, because installed configs point at it. Release with `npm run release:mcp`, then commit the tarball and bump `MCP_SERVER_VERSION` in `src/lib/mcpConfig.ts` |
 | 2026-11-11 | The MCP package is the unscoped `agentforge-registry`. The `@agentforge` npm scope and the `agentforge-mcp` name belong to unrelated projects and must never appear in an install snippet |
 | 2026-11-11 | Firestore runs in production mode with the rules in this repo. Never test mode |
 | 2026-11-11 | The schema has no rating field. "Popular" sorts by views, "Top Rated" by stars, "Newest" by `updated_at` |
@@ -196,7 +197,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
 | P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | done |
 | P1-3 | Visual style per [7.1](#71-visual-style): original look kept, pill labels replaced | Claude | none | No pill-shaped labels remain. Both themes and 375px verified | done |
-| P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | blocked (prep done; owner npm publication and live client verification remain) |
+| P1-4 | MCP go-live: live catalog with bundled fallback, Codex in the install panel, standalone packaging, and release as a tarball on the site | Codex, Claude | none | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo. Verified live in P1-7 | done, pending P1-7 |
 | P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits |done (not yet observed with a live model; that check belongs to P1-7) |
 | P1-6 | Seed coverage: at least two agents per category including `creative`, and at least one agent for each framework | Codex | none | Every category pill and every framework filter returns results | done |
 | P1-7 | Live verification: walk the deployed site and a real MCP connection, file what breaks | Antigravity | P1-2, P1-4 | A written pass or fail for each Phase 1 "done when" | open |
@@ -327,7 +328,7 @@ A published manifest is a system prompt that strangers load into their own AI, s
 | **Claude** (lead architect) | Schema and interface contracts, UI and design, written specifications and guides, security rule specs, review of other agents' work | Bulk data entry |
 | **Codex** | Implementing against fixed interfaces: services, security rules, exporter and pipeline work, CI, tests, seed data, npm packaging | Product or schema decisions |
 | **Antigravity** | Anything that needs a real signed-in browser: console checks, live-site walkthroughs, end-to-end verification | Changing source code outside its task |
-| **Owner** | Credentials, console settings, `npm login`, approvals, and every decision marked "owner" | |
+| **Owner** | Credentials, console settings, approvals, and every decision marked "owner" | |
 
 One orchestrator at a time. Claude holds that role now. Session prompts are written against the task IDs in section 6.
 
@@ -344,8 +345,8 @@ So that nobody acts on the old document:
 | Enable Firestore in test mode | Production mode only. Test mode leaves the database world-writable |
 | Live at `agentforge.web.app` | The real URL depends on the assigned project ID. See Project facts |
 | Search uses Fuse.js | Search is a plain in-memory filter in `src/lib/catalog.ts`. That is fine at this catalog size |
-| The MCP server is published | It is built and tested, and not yet published |
-| Phase 1 is complete | The code is. The live link, CI, npm release, and design pass are not |
+| The MCP server is published to npm | It is released as a tarball on the project's own site instead |
+| Phase 1 is complete | It was not when that plan was written. See section 6 for the current state |
 
 ---
 
@@ -384,7 +385,7 @@ to its bundled snapshot when that request fails or returns invalid data.
 closed on errors. An unavailable version pin always fails closed.
 
 For Codex, the install panel generates `codex mcp add <server-name> -- npx -y
-agentforge-registry --agent <id>@<version>`, following the
+<tarball URL> --agent <id>@<version>`, following the
 [official MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
 The package's shared validator is bundled into `dist/cli.js` and manifest types
 are checked at build time; the release has no local web-app dependency.
@@ -415,7 +416,7 @@ AgentForge/
 ├── public/
 │   ├── catalog.json              # Generated. The site's only read source
 ├── packages/
-│   └── mcp-server/               # The agentforge-registry npm package
+│   └── mcp-server/               # The agentforge-registry MCP server
 │       └── src/                  # cli.ts, server.ts, catalog.ts, discovery.ts, guide.ts
 ├── tests/                        # catalog, MCP, and Firestore emulator tests
 └── src/

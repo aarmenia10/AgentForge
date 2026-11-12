@@ -6,6 +6,7 @@ dist/
 dist-ssr/
 packages/mcp-server/catalog.json
 *.tgz
+!public/mcp/*.tgz
 *.tsbuildinfo
 .vite/
 

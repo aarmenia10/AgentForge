@@ -40,3 +40,6 @@ src/types/agent.ts
 tests/catalog.test.ts
 tests/guide.test.ts
 tests/mcp.test.ts
+
+# Released MCP server tarballs are binary artifacts.
+public/mcp/

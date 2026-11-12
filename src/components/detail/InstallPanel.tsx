@@ -102,7 +102,7 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
       )}
 
       <p className="text-xs text-slate-400">
-        Requires Node.js 18 or newer. <code className="font-mono">{MCP_SERVER_PACKAGE}</code> fetches
+        Requires Node.js 22 or newer. <code className="font-mono">{MCP_SERVER_PACKAGE}</code> fetches
         the manifest pinned at v{agent.version}; your prompts never pass through AgentForge.
       </p>
     </div>

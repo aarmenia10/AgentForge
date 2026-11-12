@@ -1,10 +1,18 @@
 import type { AgentManifest } from '@/types/agent'
 
-/**
- * npm package that serves registry agents over MCP stdio.
- * The unscoped package name is the registry's install contract.
- */
+/** Name of the package that serves registry agents over MCP stdio. */
 export const MCP_SERVER_PACKAGE = 'agentforge-registry'
+
+/** Must match packages/mcp-server/package.json. A test enforces it. */
+export const MCP_SERVER_VERSION = '0.1.0'
+
+/**
+ * What `npx` installs. The server is distributed as a tarball on our own
+ * Firebase Hosting site, not through the npm registry, so installs depend on
+ * no account and no package name that a third party could claim. Each
+ * released tarball stays in public/mcp/ forever so old configs keep working.
+ */
+export const MCP_SERVER_SPEC = `https://agentforge-b10db.web.app/mcp/${MCP_SERVER_PACKAGE}-${MCP_SERVER_VERSION}.tgz`
 
 export type McpClient = 'claude_desktop' | 'cursor' | 'claude_code' | 'codex'
 
@@ -70,7 +78,7 @@ export function mcpServerKey(agent: Pick<AgentManifest, 'id'>): string {
 export function buildServerEntry(agent: Pick<AgentManifest, 'id' | 'version'>): McpServerEntry {
   return {
     command: 'npx',
-    args: ['-y', MCP_SERVER_PACKAGE, '--agent', `${agent.id}@${agent.version}`],
+    args: ['-y', MCP_SERVER_SPEC, '--agent', `${agent.id}@${agent.version}`],
   }
 }
 

@@ -3,11 +3,13 @@
 Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
 
 ```sh
-npx -y agentforge-registry --agent postgres-index-tuner@1.0.0
+npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.0.tgz --agent postgres-index-tuner@1.0.0
 ```
 
-The command becomes available after the maintainer publishes this package to npm.
-Before publication, build from the repository and use `node packages/mcp-server/dist/cli.js`.
+The server is distributed as a tarball on the AgentForge site, not through the npm
+registry. To cut a release, bump the version here and in `src/lib/mcpConfig.ts`, run
+`npm run release:mcp` from the repository root, and commit the new file in `public/mcp/`.
+Never delete an old tarball: installed configs point at it.
 
 `--catalog <path-or-https-URL>` overrides `AGENTFORGE_CATALOG_URL`. Otherwise the server
 fetches `https://agentforge-b10db.web.app/catalog.json` with a 10-second timeout and
@@ -19,7 +21,7 @@ version always fails closed; it never silently substitutes another version.
 For OpenAI Codex, install the pinned agent using the documented stdio command:
 
 ```sh
-codex mcp add agentforge-postgres-index-tuner -- npx -y agentforge-registry --agent postgres-index-tuner@1.0.0
+codex mcp add agentforge-postgres-index-tuner -- npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.0.tgz --agent postgres-index-tuner@1.0.0
 ```
 
 See [OpenAI's MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
