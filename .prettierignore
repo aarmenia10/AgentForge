@@ -17,6 +17,7 @@ packages/mcp-server/tsconfig.json
 README.md
 src/App.tsx
 src/components/AgentCard.tsx
+src/components/AgentGrid.tsx
 src/components/detail/AgentDetailModal.tsx
 src/components/detail/InstallPanel.tsx
 src/components/detail/SchemaViewer.tsx
