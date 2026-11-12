@@ -13,6 +13,7 @@ packages/mcp-server/catalog.json
 .env
 .env.*
 !.env.example
+!.env.production
 *.local
 serviceAccount*.json
 

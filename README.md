@@ -33,7 +33,10 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Validation | Built. `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
 | MCP server | Built in `packages/mcp-server` as `agentforge-registry`. **Not published to npm**, so nobody can install it yet |
 | Firestore rules | Built for atomic per-user stars. No client can create or edit a manifest |
-| Firebase project | Live, per the owner. **Not linked in this repo**: no `.firebaserc`, no project ID, no URL recorded |
+| Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
+| Live site | **Stale.** The only release is from 2026-11-11 and predates most of `main`: it shows 6 agents and a "Sign in with GitHub" button. Fixed by the next deploy |
+| Deployed Firestore rules | **Stale.** The live rules are the first baseline (public read, no writes), not the star rules in this repo. Safe, but stars cannot work until the repo's rules are deployed |
+| Firebase Authentication | Never set up in the console. No providers enabled |
 | Sign-in | Not built. The nav shows a disabled "Sign in" placeholder |
 | Publishing | Not built. The only way to add an agent is to edit `src/data/seedAgents.ts` |
 | Stars | Rules and transaction code exist. Unusable until sign-in exists and `agents/{id}` documents are provisioned |
@@ -42,13 +45,15 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 
 ### Project facts
 
-Filled in by task `P1-1`. Until then, use the placeholders and do not guess.
 
 | Fact | Value |
 | --- | --- |
-| Firebase project ID | `PENDING` |
-| Live URL | `PENDING` (will be `https://<project-id>.web.app`) |
-| Firestore location | `PENDING` |
+| Firebase project ID | `agentforge-b10db` (project number `1090755022709`) |
+| Live URL | https://agentforge-b10db.web.app |
+| Catalog URL | https://agentforge-b10db.web.app/catalog.json |
+| Auth domain | `agentforge-b10db.firebaseapp.com` |
+| Plan | Spark (no cost) |
+| Firestore | Database `(default)`, location `nam5`, currently empty |
 | npm package | `agentforge-registry` (name free as of 2026-11-11, not yet published) |
 | Repository | `aarmenia10/AgentForge`, default branch `main` |
 
@@ -186,11 +191,11 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 
 | ID | Task | Owner | Depends on | Done when | Status |
 | --- | --- | --- | --- | --- | --- |
-| P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | Owner supplies project details | `npx firebase-tools deploy --only hosting` works from a clean clone with no prompts | blocked: project details |
-| P1-2 | CI and deploys: GitHub Actions running typecheck, tests, and build on every push; deploy Hosting and rules on `main`. Add ESLint and Prettier | Codex | P1-1, owner adds a service account secret | A push to `main` reaches the live site with no manual step | open |
+| P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
+| P1-2 | CI and deploys: GitHub Actions running typecheck, tests, and build on every push; deploy Hosting and rules on `main`. Add ESLint and Prettier | Codex | Owner adds a service account secret | A push to `main` reaches the live site with no manual step | open |
 | P1-3 | Design revamp per [7.1](#71-design-revamp) | Claude | none | Every checklist item in 7.1 is met in both themes and at 375px | open |
-| P1-4 | MCP go-live: publish `agentforge-registry` to npm, default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel | Codex | P1-1, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | open |
-| P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide) | Claude writes it, Codex wires it | none for writing, P1-4 for shipping | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits | open |
+| P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | open |
+| P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits | open |
 | P1-6 | Seed coverage: at least two agents per category including `creative`, and at least one agent for each framework | Codex | none | Every category pill and every framework filter returns results | open |
 | P1-7 | Live verification: walk the deployed site and a real MCP connection, file what breaks | Antigravity | P1-2, P1-4 | A written pass or fail for each Phase 1 "done when" | open |
 
@@ -407,7 +412,7 @@ AgentForge/
 
 ## 12. Open questions for the owner
 
-1. Firebase project details, to unblock `P1-1`.
+1. Deploy current `main` so the live site stops showing the first build (command in section 10). Until `P1-2` lands this is a manual step.
 2. Confirm or overrule the two proposed defaults in section 4 (review for public agents, mutual friends).
 3. The name. At least three unrelated projects already ship as "AgentForge" on npm, one of them an MCP server. Renaming is cheap now and expensive after launch.
 4. Who reviews public submissions once there are more than the owner can handle.
