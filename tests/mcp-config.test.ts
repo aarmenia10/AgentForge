@@ -70,3 +70,30 @@ test('install spec points at a released tarball that is committed to the site', 
     'Run `npm run release:mcp` and commit the tarball before bumping the version.',
   )
 })
+
+test('command-line clients get a Windows-safe form that survives PowerShell', () => {
+  const agent = SEED_AGENTS[0]
+  const spec = `${agent.id}@${agent.version}`
+  for (const [client, binary] of [
+    ['claude_code', 'claude'],
+    ['codex', 'codex'],
+  ] as const) {
+    const posix = buildInstallSnippet(agent, client)
+    const windows = buildInstallSnippet(agent, client, 'windows')
+    assert.equal(
+      posix,
+      `${binary} mcp add agentforge-${agent.id} -- npx -y ${MCP_SERVER_SPEC} --agent ${spec}`,
+    )
+    // PowerShell strips a bare `--`, so the Windows form must hand the whole
+    // line to cmd, and the line must contain no quote that would end it early.
+    assert.equal(windows, `cmd /c "${posix}"`)
+    assert.ok(!posix.includes('"'))
+  }
+  // File-based clients have one form: the shell argument changes nothing.
+  for (const client of ['claude_desktop', 'cursor'] as const) {
+    assert.equal(
+      buildInstallSnippet(agent, client, 'windows'),
+      buildInstallSnippet(agent, client),
+    )
+  }
+})

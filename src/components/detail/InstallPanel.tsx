@@ -67,19 +67,24 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
             <p>
               {client.configFile
                 ? 'Paste this in. If the file already has an mcpServers block, add the inner entry to it.'
-                : 'Run this command.'}
+                : 'Run the command for your system.'}
             </p>
-            <CodeBlock
-              code={snippet}
-              copyLabel={client.configFile ? 'Copy config' : 'Copy command'}
-              title={
-                client.configFile ?? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <TerminalSquare className="size-3.5" /> shell
-                  </span>
-                )
-              }
-            />
+{client.configFile ? (
+              <CodeBlock code={snippet} copyLabel="Copy config" title={client.configFile} />
+            ) : (
+              <>
+                <CodeBlock
+                  code={snippet}
+                  copyLabel="Copy command"
+                  title={<ShellTitle label="macOS, Linux, or WSL" />}
+                />
+                <CodeBlock
+                  code={buildInstallSnippet(agent, clientId, 'windows')}
+                  copyLabel="Copy command"
+                  title={<ShellTitle label="Windows (PowerShell or Command Prompt)" />}
+                />
+              </>
+            )}
           </div>
         </li>
 
@@ -106,6 +111,14 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
         the manifest pinned at v{agent.version}; your prompts never pass through AgentForge.
       </p>
     </div>
+  )
+}
+
+function ShellTitle({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <TerminalSquare className="size-3.5" /> {label}
+    </span>
   )
 }
 
