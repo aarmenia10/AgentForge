@@ -34,13 +34,13 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | MCP server | Built in `packages/mcp-server` as `agentforge-registry`. **Not published to npm**, so nobody can install it yet |
 | Firestore rules | Built for atomic per-user stars. No client can create or edit a manifest |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
-| Live site | **Stale.** The only release is from 2026-11-11 and predates most of `main`: it shows 6 agents and a "Sign in with GitHub" button. Fixed by the next deploy |
-| Deployed Firestore rules | **Stale.** The live rules are the first baseline (public read, no writes), not the star rules in this repo. Safe, but stars cannot work until the repo's rules are deployed |
+| Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
+| Deployed Firestore rules | Match `firestore.rules` in this repo. CI deploys them with the site |
 | Firebase Authentication | Never set up in the console. No providers enabled |
 | Sign-in | Not built. The nav shows a disabled "Sign in" placeholder |
 | Publishing | Not built. The only way to add an agent is to edit `src/data/seedAgents.ts` |
 | Stars | Rules and transaction code exist. Unusable until sign-in exists and `agents/{id}` documents are provisioned |
-| CI and deploys | `.github/workflows/ci.yml` builds and tests every push. It deploys from `main` only after the owner adds the `FIREBASE_SERVICE_ACCOUNT` repository secret |
+| CI and deploys | `.github/workflows/ci.yml` builds and tests every push and deploys Hosting and rules from `main`. First automated deploy succeeded 2026-11-12 |
 | Lint and format | None configured |
 
 ### Project facts
@@ -192,7 +192,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | ID | Task | Owner | Depends on | Done when | Status |
 | --- | --- | --- | --- | --- | --- |
 | P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
-| P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` once the `FIREBASE_SERVICE_ACCOUNT` secret exists. Remaining: add ESLint and Prettier and a lint step | Codex | Owner adds the secret | A push to `main` reaches the live site with no manual step | open |
+| P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | open |
 | P1-3 | Design revamp per [7.1](#71-design-revamp) | Claude | none | Every checklist item in 7.1 is met in both themes and at 375px | open |
 | P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | open |
 | P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits | open |
@@ -362,7 +362,7 @@ node packages/mcp-server/dist/cli.js --agent postgres-index-tuner@1.0.0
 
 Catalog export: without Google credentials the exporter uses the seed file. Set `AGENTFORGE_CATALOG_SOURCE=firestore` plus Application Default Credentials to merge live records. Details are in `.env.example` and `scripts/export-catalog.ts`.
 
-Deploy by hand until `P1-2` lands:
+Deploys happen automatically on every push to `main`. To deploy by hand:
 
 ```bash
 npm run build && npx firebase-tools deploy --only hosting,firestore:rules
@@ -412,7 +412,6 @@ AgentForge/
 
 ## 12. Open questions for the owner
 
-1. Deploy current `main` so the live site stops showing the first build (command in section 10). Until `P1-2` lands this is a manual step.
 2. Confirm or overrule the two proposed defaults in section 4 (review for public agents, mutual friends).
 3. The name. At least three unrelated projects already ship as "AgentForge" on npm, one of them an MCP server. Renaming is cheap now and expensive after launch.
 4. Who reviews public submissions once there are more than the owner can handle.
