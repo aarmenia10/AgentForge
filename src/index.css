@@ -20,63 +20,107 @@
   --color-navy-900: #0d1830;
   --color-navy-950: #070e1f;
 
-  --shadow-glow: 0 0 0 1px rgb(45 212 191 / 0.25), 0 12px 40px -12px rgb(20 184 166 / 0.35);
-}
-
-:root {
-  --glass-bg: rgb(255 255 255 / 0.68);
-  --glass-bg-strong: rgb(255 255 255 / 0.88);
-  --glass-border: rgb(15 23 42 / 0.08);
-  --glass-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px -16px rgb(15 23 42 / 0.18);
-  --page-glow-a: rgb(45 212 191 / 0.2);
-  --page-glow-b: rgb(58 88 153 / 0.16);
+  /*
+   * Semantic tokens. Components use these (bg-surface, text-muted,
+   * border-line, ...) instead of raw palette steps, so a theme is one block
+   * of overrides. Light values live here; dark values are in `.dark` below.
+   *
+   *   page     page background
+   *   surface  cards, dialog, nav
+   *   sunken   code blocks, quoted text, selected segments
+   *   line     hairline borders and dividers
+   *   edge     input borders and hover borders (3:1 against surface)
+   *   ink      primary text
+   *   muted    secondary text
+   *   subtle   tertiary text (still AA on page and surface, not on sunken)
+   *   accent   actions and selection only
+   */
+  --color-page: #f8fafc;
+  --color-surface: #ffffff;
+  --color-sunken: #f1f5f9;
+  --color-line: #e2e8f0;
+  --color-edge: #808ea3;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-subtle: #64748b;
+  --color-accent: #0f766e;
+  --color-accent-hover: #115e59;
+  --color-on-accent: #ffffff;
 }
 
 .dark {
-  --glass-bg: rgb(21 36 69 / 0.42);
-  --glass-bg-strong: rgb(13 24 48 / 0.9);
-  --glass-border: rgb(255 255 255 / 0.09);
-  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 16px 40px -20px rgb(0 0 0 / 0.7);
-  --page-glow-a: rgb(20 184 166 / 0.16);
-  --page-glow-b: rgb(58 88 153 / 0.3);
-}
-
-/* Frosted surface used by cards, toolbars, and the nav. */
-@utility glass {
-  background-color: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(18px) saturate(1.4);
-}
-
-/* Near-opaque variant for overlays that sit on busy content. */
-@utility glass-strong {
-  background-color: var(--glass-bg-strong);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(24px) saturate(1.4);
+  --color-page: #070e1f;
+  --color-surface: #0d1830;
+  --color-sunken: #0a1326;
+  --color-line: #1e3160;
+  --color-edge: #5a78b8;
+  --color-ink: #e2e8f0;
+  --color-muted: #a3b0c4;
+  --color-subtle: #8593ab;
+  --color-accent: #2dd4bf;
+  --color-accent-hover: #5eead4;
+  --color-on-accent: #070e1f;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
-    @apply min-h-screen bg-slate-50 font-sans text-slate-900 antialiased dark:bg-navy-950 dark:text-slate-100;
-    background-image:
-      radial-gradient(60rem 32rem at 12% -8%, var(--page-glow-a), transparent 60%),
-      radial-gradient(56rem 34rem at 92% 0%, var(--page-glow-b), transparent 62%);
-    background-attachment: fixed;
-    background-repeat: no-repeat;
+    @apply min-h-screen bg-page font-sans text-ink antialiased;
   }
 
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-teal-500;
+    @apply outline-2 outline-offset-2 outline-accent;
   }
 
   ::selection {
-    @apply bg-teal-500/30;
+    background-color: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
+}
+
+@layer components {
+  /* Text inputs and selects. */
+  .field {
+    @apply h-9 rounded-md border border-edge bg-surface px-3 text-sm text-ink placeholder:text-subtle;
+  }
+
+  /* The one filled button style. Reserved for the primary action in a view. */
+  .btn-primary {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-on-accent hover:bg-accent-hover;
+  }
+
+  /* Bordered button for secondary actions. */
+  .btn-quiet {
+    @apply inline-flex items-center gap-1.5 rounded border border-line bg-surface px-2 py-1 text-xs font-medium text-muted hover:border-edge hover:text-ink;
+  }
+
+  /* Small uppercase label for metadata keys and section headings. */
+  .eyebrow {
+    @apply text-[11px] font-medium uppercase tracking-wider text-subtle;
+  }
+
+  /*
+   * Segmented control: joined options inside one hairline border. Options
+   * wrap rather than overflow, so any number of them fits at 375px.
+   */
+  .segmented {
+    @apply inline-flex flex-wrap gap-0.5 rounded-md border border-line bg-surface p-0.5;
+  }
+
+  .segment {
+    @apply h-7 flex-1 rounded px-2.5 text-sm whitespace-nowrap text-muted hover:text-ink;
+  }
+
+  .segment[aria-checked='true'],
+  .segment[aria-pressed='true'] {
+    @apply bg-sunken font-medium text-ink;
   }
 }
 
