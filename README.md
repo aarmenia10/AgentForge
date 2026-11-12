@@ -412,9 +412,9 @@ AgentForge/
 
 ## 12. Open questions for the owner
 
-2. Confirm or overrule the two proposed defaults in section 4 (review for public agents, mutual friends).
-3. The name. At least three unrelated projects already ship as "AgentForge" on npm, one of them an MCP server. Renaming is cheap now and expensive after launch.
-4. Who reviews public submissions once there are more than the owner can handle.
+1. Confirm or overrule the two proposed defaults in section 4 (review for public agents, mutual friends).
+2. The name. At least three unrelated projects already ship as "AgentForge" on npm, one of them an MCP server. Renaming is cheap now and expensive after launch.
+3. Who reviews public submissions once there are more than the owner can handle.
 
 ## License
 
