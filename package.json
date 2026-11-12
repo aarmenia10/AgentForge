@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "build:catalog": "tsx scripts/export-catalog.ts",
-    "build:mcp": "npm --prefix packages/mcp-server run build",
+    "build:mcp": "npm --prefix packages/mcp-server install --no-audit --no-fund && npm --prefix packages/mcp-server run build",
+    "pretest": "npm run build:mcp",
     "test": "tsx --test tests/*.test.ts",
     "test:firestore": "firebase emulators:exec --only firestore --project demo-agentforge \"tsx --test tests/firestore.emulator.ts\""
   },

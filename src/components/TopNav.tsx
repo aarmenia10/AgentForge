@@ -1,7 +1,7 @@
 import { Anvil, Moon, Search, Sun } from 'lucide-react'
 import { useTheme } from '@/theme/ThemeProvider'
 import { AGENT_CATEGORIES, type AgentCategoryTag } from '@/types/agent'
-import { cn, GitHubIcon } from './ui'
+import { cn } from './ui'
 
 interface TopNavProps {
   keyword: string
@@ -65,15 +65,14 @@ export function TopNav({ keyword, onKeywordChange, category, onCategoryChange }:
           >
             {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </button>
-          {/* Placeholder: wired to AuthService.signInWithGitHub in a later pass. */}
+          {/* Placeholder until sign-in ships (README task P2-2). */}
           <button
             type="button"
             disabled
-            title="GitHub sign-in is coming soon"
-            className="inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-xl bg-slate-900 px-3.5 text-sm font-medium text-white opacity-90 dark:bg-white dark:text-navy-950"
+            title="Sign-in is coming soon"
+            className="inline-flex h-10 cursor-not-allowed items-center rounded-xl border border-slate-300 px-3.5 text-sm font-medium text-slate-500 dark:border-white/15 dark:text-slate-400"
           >
-            <GitHubIcon className="size-4" />
-            <span className="hidden sm:inline">Sign in with GitHub</span>
+            Sign in
           </button>
         </div>
       </div>
