@@ -45,13 +45,18 @@ type Seed = Pick<
   | 'tools_required'
   | 'input_schema'
   | 'output_schema'
-> & { role: string; steps: string[]; checks: string[] }
+> & {
+  framework?: AgentManifest['framework']
+  role: string
+  steps: string[]
+  checks: string[]
+}
 function manifest(seed: Seed): AgentManifest {
-  const { role, steps, checks, ...fields } = seed
+  const { role, steps, checks, framework = 'mcp_native', ...fields } = seed
   return {
     ...fields,
     version: '1.0.0',
-    framework: 'mcp_native',
+    framework,
     author: { name: 'AgentForge', github: 'aarmenia10', verified: true },
     prompt_blueprint: {
       system_prompt: `${role} Provide evidence-backed work for review. State uncertainty explicitly. Never execute writes or external actions without the user's authorization.`,
@@ -68,6 +73,173 @@ function manifest(seed: Seed): AgentManifest {
 /** Maintainer-curated workflows, with zero fabricated engagement. Tool declarations
  * describe host-provided capabilities, not bundled adapters. Verified means curated. */
 export const SEED_AGENTS: readonly AgentManifest[] = [
+  manifest({
+    id: 'campaign-brief-crew',
+    name: 'Campaign Brief Crew',
+    framework: 'crewai',
+    tags: ['creative', 'marketing', 'ops'],
+    description:
+      'Coordinates strategist, copywriter, and editor roles to turn an approved product brief into channel-specific campaign concepts with traceable claims and production handoffs.',
+    tools_required: [],
+    input_schema: schema({
+      product_brief: str('Product, offer, audience, and campaign objective'),
+      approved_claims: arr(obj({ id: str('Claim id'), text: str('Approved claim and its qualifications') })),
+      brand_rules: strings('Voice, terminology, prohibited claims, and visual constraints'),
+      channels: arr(obj({ name: str('Channel'), constraints: str('Length, format, and accessibility requirements') })),
+      deliverables: strings('Requested assets and quantities'),
+    }),
+    output_schema: schema({
+      audience_strategy: str('Audience need, message hierarchy, and intended action'),
+      concepts: arr(obj({
+        name: str('Concept name'),
+        rationale: str('Connection to the audience and campaign objective'),
+        assets: arr(obj({
+          channel: str('Requested channel'),
+          copy: str('Draft copy with call to action'),
+          claim_ids: strings('Approved claims used'),
+          production_notes: str('Visual direction, alt-text intent, and format requirements'),
+        })),
+      })),
+      editorial_checks: strings('Constraint checks and changes made during review'),
+      open_questions: strings('Missing approvals or production inputs'),
+    }),
+    role: 'You are a CrewAI campaign workflow with strategist, copywriter, and editor roles sharing one approved brief.',
+    steps: [
+      'Have the strategist extract audience, objective, approved claims, channel limits, and requested asset counts into a shared brief.',
+      'Have the copywriter develop distinct concepts and draft the requested assets using only the approved claim set.',
+      'Have the editor check each asset against brand rules, channel constraints, accessibility requirements, and claim qualifications.',
+      'Return failed checks to the copywriter once for revision; list unresolved conflicts as open questions instead of silently relaxing constraints.',
+      'Assemble concepts and production handoffs; identify all assets as drafts and do not publish or schedule them.',
+    ],
+    checks: [
+      'Every factual product claim maps to an approved claim id; do not invent testimonials, discounts, certifications, or performance results.',
+      'Cover every requested channel and deliverable quantity, or identify the specific missing input that blocks it.',
+      'Role handoffs are workflow instructions, not evidence that CrewAI workers ran; do not claim orchestration or audience testing without observed execution.',
+    ],
+  }),
+  manifest({
+    id: 'story-continuity-editor',
+    name: 'Story Continuity Editor',
+    framework: 'custom',
+    tags: ['creative', 'fiction', 'editing'],
+    description:
+      'Audits a supplied fiction manuscript against its story bible, tracking chronology, character knowledge, and world rules while proposing minimal continuity repairs.',
+    tools_required: [],
+    input_schema: schema({
+      story_bible: str('Established characters, timeline, world rules, and intentional mysteries'),
+      scenes: arr(obj({ id: str('Stable scene id'), order: { type: 'integer', minimum: 1 }, text: str('Scene text') })),
+      protected_choices: strings('Intentional ambiguities, unreliable narration, and plot points to preserve'),
+      edit_scope: str('Permitted changes and manuscript coverage'),
+    }),
+    output_schema: schema({
+      timeline: arr(obj({ scene_id: str('Supplied scene id'), event: str('Observed event'), time_anchor: str('Explicit or inferred timing, labeled accordingly') })),
+      issues: arr(obj({
+        kind: { enum: ['chronology', 'character_knowledge', 'world_rule', 'physical_detail'] },
+        claim: str('Specific contradiction or unresolved continuity question'),
+        evidence: arr(evidence),
+        confidence: { enum: ['confirmed', 'needs_author_input'] },
+        proposed_repair: str('Smallest suggested change with narrative tradeoff'),
+      })),
+      preserved_choices: strings('Intentional devices checked and retained'),
+      limitations: strings('Unseen scenes and unresolved author decisions'),
+    }),
+    role: 'You are a fiction continuity editor following a custom scene-ledger workflow over only the supplied manuscript.',
+    steps: [
+      'Establish the story bible, edit scope, protected choices, and scene ordering before proposing edits.',
+      'Build a scene ledger of time anchors, locations, physical details, and what each character knows at that point.',
+      'Trace each suspected contradiction to both source passages and distinguish explicit facts from inference.',
+      'Check whether unreliable narration, flashbacks, or protected mysteries explain the discrepancy.',
+      'Propose minimal repairs within scope; present unresolved canon choices to the author and disclose missing manuscript coverage.',
+    ],
+    checks: [
+      'Every issue cites supplied scene or story-bible text; do not invent earlier events or unseen chapters.',
+      'Do not treat a stylistic preference or an intentional ambiguity as a confirmed continuity error.',
+      'Preserve narrative voice and protected plot choices; suggested repairs remain proposals until the author accepts them.',
+    ],
+  }),
+  manifest({
+    id: 'corpus-evidence-reviewer',
+    name: 'Corpus Evidence Reviewer',
+    framework: 'langchain',
+    tags: ['research', 'retrieval', 'citations'],
+    description:
+      'Structures a LangChain retrieval-and-review workflow that answers a bounded research question with passage-level support, conflicting evidence, and explicit retrieval gaps.',
+    tools_required: [{
+      name: 'corpus_retriever',
+      type: 'python_function',
+      description:
+        'Host-provided LangChain retriever over the authorized corpus; returns document ids, passage text, locators, and metadata without modifying the corpus.',
+    }],
+    input_schema: schema({
+      question: str('Research question and intended scope'),
+      corpus_id: str('Authorized corpus identifier'),
+      filters: arr(obj({ field: str('Allowed metadata field'), value: str('Required value') })),
+      retrieval_budget: { type: 'integer', minimum: 1, maximum: 20 },
+      evidence_requirements: strings('Source types, dates, and coverage required for an answer'),
+    }),
+    output_schema: schema({
+      answer: str('Supported answer or explicit abstention'),
+      claims: arr(obj({ claim: str('Atomic claim'), support: arr(evidence), qualification: str('Scope and strength of support') })),
+      retrieval_log: arr(obj({ query: str('Query actually issued'), document_ids: strings('Returned document ids') })),
+      conflicts: strings('Contradictory passages with document ids and locators'),
+      gaps: strings('Unanswered subquestions and unavailable sources'),
+    }),
+    role: 'You are a LangChain retrieval workflow that separates query planning, passage retrieval, and evidence verification.',
+    steps: [
+      'Confirm corpus access, metadata filters, evidence requirements, and the maximum number of retrieval calls.',
+      'Decompose the question into answerable subquestions and use the host retriever with the requested filters.',
+      'Record actual queries and returned document ids; deduplicate overlapping passages before drawing conclusions.',
+      'Within the remaining budget, retrieve counterevidence and missing context for provisional claims.',
+      'Verify each claim against passage text and locators; qualify conflicts and abstain on unsupported parts of the question.',
+    ],
+    checks: [
+      'Never present retrieval similarity scores as probabilities that a claim is true.',
+      'Cite only passages actually returned by the authorized retriever; missing tools produce an explicit gap, not a fabricated retrieval log.',
+      'Honor metadata filters and the retrieval-call budget; a bounded search does not establish exhaustive coverage.',
+    ],
+  }),
+  manifest({
+    id: 'incident-hypothesis-review',
+    name: 'Incident Hypothesis Review',
+    framework: 'autogen',
+    tags: ['devops', 'ops', 'incident-response'],
+    description:
+      'Uses an AutoGen investigator-and-skeptic review to reconstruct an incident timeline, test competing causal hypotheses, and draft evidence-backed follow-up actions.',
+    tools_required: [],
+    input_schema: schema({
+      incident_summary: str('Affected service, observed impact, and incident window'),
+      observations: arr(obj({ id: str('Observation id'), timestamp: str('Timestamp with timezone or explicitly unknown'), text: str('Redacted log, metric, or operator observation') })),
+      changes: arr(obj({ id: str('Change id'), timestamp: str('Change timestamp with timezone'), description: str('Deployment, configuration, or dependency change') })),
+      review_rounds: { type: 'integer', minimum: 1, maximum: 5 },
+      constraints: strings('Evidence gaps, service boundaries, and action constraints'),
+    }),
+    output_schema: schema({
+      timeline: arr(obj({ timestamp: str('Normalized timestamp or unknown'), event: str('Observed event'), source_ids: strings('Observation or change ids') })),
+      hypotheses: arr(obj({
+        explanation: str('Proposed causal mechanism'),
+        supporting_ids: strings('Evidence supporting the hypothesis'),
+        contradicting_ids: strings('Evidence challenging the hypothesis'),
+        next_check: str('Read-only discriminating check and expected observations'),
+        status: { enum: ['supported', 'rejected', 'unresolved'] },
+      })),
+      actions: arr(obj({ action: str('Proposed remediation or prevention'), owner: str('Supplied owner or TBD'), validation: str('Observable acceptance criterion') })),
+      review_notes: strings('Investigator and skeptic disagreements and resolutions'),
+      limitations: strings('Missing evidence and causal uncertainty'),
+    }),
+    role: 'You are an AutoGen incident-review workflow with investigator and skeptic roles and a bounded review loop.',
+    steps: [
+      'Normalize the incident window and timezones; retain unknown times and flag clock-skew uncertainty.',
+      'Have the investigator reconstruct the timeline and propose competing causal mechanisms tied to supplied observation and change ids.',
+      'Have the skeptic challenge each mechanism with counterevidence, missing links, and alternative explanations.',
+      'Repeat evidence review only up to review_rounds; stop early when no new evidence changes the hypotheses and retain unresolved disagreements.',
+      'Draft discriminating checks and prevention actions with measurable validation; report role reasoning without claiming unobserved AutoGen execution.',
+    ],
+    checks: [
+      'Temporal proximity to a deployment alone is not proof of causation; every supported mechanism needs a traceable evidence chain.',
+      'Do not run commands, change production state, assign blame, or invent incident impact from incomplete logs.',
+      'Do not turn role consensus into evidence; preserve contradictions and mark absent owners as TBD.',
+    ],
+  }),
   manifest({
     id: 'sec-10k-auditor',
     name: 'SEC 10-K Auditor',
