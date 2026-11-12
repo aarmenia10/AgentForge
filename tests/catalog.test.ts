@@ -2,6 +2,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { SEED_AGENTS } from '../src/data/seedAgents'
+import { AGENT_CATEGORIES, AGENT_FRAMEWORKS } from '../src/types/agent'
 import {
   validateCatalog,
   validateManifest,
@@ -10,10 +11,15 @@ import {
 import { mergeCatalog } from '../scripts/export-catalog'
 import { createFirestoreAgentRepository } from '../src/lib/agentRepository'
 
-test('ten curated seeds and the serialized snapshot satisfy the strict contract', async () => {
+test('curated seeds cover every category and framework and satisfy the strict contract', async () => {
   const agents = validateCatalog([...SEED_AGENTS])
-  assert.equal(agents.length, 10)
-  assert.equal(new Set(agents.map((a) => a.id)).size, 10)
+  assert.equal(new Set(agents.map((a) => a.id)).size, agents.length)
+  for (const { tag } of AGENT_CATEGORIES) {
+    assert.ok(agents.filter((a) => a.tags.includes(tag)).length >= 2, tag)
+  }
+  for (const framework of AGENT_FRAMEWORKS) {
+    assert.ok(agents.some((a) => a.framework === framework), framework)
+  }
   assert.deepEqual(
     validateCatalog(JSON.parse(await readFile('public/catalog.json', 'utf8'))),
     mergeCatalog(SEED_AGENTS, []),
@@ -59,7 +65,7 @@ test('live records override seeds; revocation suppresses seed; invalid live reco
     mergeCatalog(SEED_AGENTS, [
       { ...live, author: { ...live.author, verified: false } },
     ]).length,
-    9,
+    SEED_AGENTS.length - 1,
   )
   assert.throws(() => mergeCatalog(SEED_AGENTS, [{ ...live, bogus: 1 }]))
 })
@@ -90,15 +96,15 @@ test('repository uses only /catalog.json and preserves last valid memory snapsho
     )
     assert.equal(await repository.getAgent('missing'), null)
     const offline = createFirestoreAgentRepository()
-    assert.equal((await offline.listAgents()).length, 10)
+    assert.equal((await offline.listAgents()).length, SEED_AGENTS.length)
     fetchMock.mock.mockImplementation(
       async () => new Response('<html>SPA fallback</html>'),
     )
-    assert.equal((await offline.listAgents()).length, 10)
+    assert.equal((await offline.listAgents()).length, SEED_AGENTS.length)
     fetchMock.mock.mockImplementation(
       async () => new Response('error', { status: 503 }),
     )
-    assert.equal((await offline.listAgents()).length, 10)
+    assert.equal((await offline.listAgents()).length, SEED_AGENTS.length)
   } finally {
     fetchMock.mock.restore()
   }

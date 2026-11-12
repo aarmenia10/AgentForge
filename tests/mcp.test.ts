@@ -13,7 +13,7 @@ import { loadCatalog, selectAgent } from '../packages/mcp-server/src/catalog'
 
 test('catalog loads local files and hosting URLs; missing pins and invalid sources fail closed', async () => {
   const catalog = await loadCatalog('public/catalog.json')
-  assert.equal(catalog.length, 10)
+  assert.equal(catalog.length, SEED_AGENTS.length)
   assert.equal(
     selectAgent(catalog, 'postgres-index-tuner@1.0.0').version,
     '1.0.0',
@@ -34,7 +34,7 @@ test('catalog loads local files and hosting URLs; missing pins and invalid sourc
   const address = http.address() as { port: number }
   try {
     const url = `http://127.0.0.1:${address.port}`
-    assert.equal((await loadCatalog(`${url}/catalog.json`)).length, 10)
+    assert.equal((await loadCatalog(`${url}/catalog.json`)).length, SEED_AGENTS.length)
     await assert.rejects(loadCatalog(`${url}/bad`))
     await assert.rejects(loadCatalog(`${url}/missing`))
   } finally {
