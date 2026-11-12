@@ -132,12 +132,11 @@ Binding. Newest first. Add to it, do not rewrite history.
 | --- | --- |
 | 2026-11-12 | `docs/AI_GUIDE.md` is the canonical AI guide. `packages/mcp-server/src/guide.ts` holds a generated copy (`node packages/mcp-server/sync-guide.mjs`) and a hand-written condensed version, and a test fails when they drift. `public/llms.txt` must teach the same rules. Any change to the selection rules lands in all three (P1-5) |
 | 2026-11-12 | MCP tool contract: `search_registry` returns `{ candidates: [...], next_step }` with ranked candidates, never a bare array and never a single answer. `compare_agents` takes 2 to 5 ids. Neither tool loads an agent. Both emit `author` as `{ name, verified }` only, so schema version 2 does not change their output (P1-5) |
-| 2026-11-12 | UI styling goes through the semantic tokens in `src/index.css` (`page`, `surface`, `sunken`, `line`, `edge`, `ink`, `muted`, `subtle`, `accent`) and its `field`, `btn-primary`, `btn-quiet`, `segmented`, and `eyebrow` classes. New components do not use raw palette steps, fills behind labels, shadows, gradients, blur, or a radius above 6px. Teal is for actions and selection only (P1-3) |
+| 2026-11-12 | **The owner rejected the flat redesign and it was reverted.** The visual style is the original one: glass surfaces, the gradient headline, the gradient logo tile, soft page glow, and cards that lift and glow on hover. The only standing change is that small labels are never pills ([section 7.1](#71-visual-style)). This supersedes the earlier token rule from P1-3 |
 | 2026-11-12 | This README is the plan of record. The Gemini-authored master plan is retired. Corrections to it are listed in [section 9](#9-corrections-to-the-retired-master-plan) |
 | 2026-11-12 | Sign-in is **Google** and **email + password**. Nothing else |
 | 2026-11-12 | Agents have a visibility: **public**, **friends**, or **private** |
 | 2026-11-12 | The MCP server must ship with a navigation guide that teaches a connected AI to compare candidates before choosing an agent ([section 7.4](#74-ai-navigation-guide)) |
-| 2026-11-12 | The UI gets a redesign away from the stock AI-generated look ([section 7.1](#71-design-revamp)) |
 | 2026-11-11 | **GitHub is not part of the product.** No GitHub sign-in, no GitHub identity, no GitHub API. The tagline is a comparison only |
 | 2026-11-11 | The MCP package is the unscoped `agentforge-registry`. The `@agentforge` npm scope and the `agentforge-mcp` name belong to unrelated projects and must never appear in an install snippet |
 | 2026-11-11 | Firestore runs in production mode with the rules in this repo. Never test mode |
@@ -196,7 +195,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | --- | --- | --- | --- | --- | --- |
 | P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
 | P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | open |
-| P1-3 | Design revamp per [7.1](#71-design-revamp) | Claude | none | Every checklist item in 7.1 is met in both themes and at 375px | done |
+| P1-3 | Visual style per [7.1](#71-visual-style): original look kept, pill labels replaced | Claude | none | No pill-shaped labels remain. Both themes and 375px verified | done |
 | P1-4 | MCP go-live: default the catalog source to the live `catalog.json` with the bundled snapshot as fallback, add Codex to the install panel (through `src/lib/mcpConfig.ts` only), then publish `agentforge-registry` to npm. Publishing is the last step and waits for P1-5 | Codex, owner publishes | P1-5 for the publish step, owner runs `npm login` | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo | open |
 | P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits |done (not yet observed with a live model; that check belongs to P1-7) |
 | P1-6 | Seed coverage: at least two agents per category including `creative`, and at least one agent for each framework | Codex | none | Every category pill and every framework filter returns results | done |
@@ -239,25 +238,31 @@ Unscheduled. Hosted agent execution, paid agents with a platform fee, and privat
 
 ## 7. Feature specifications
 
-### 7.1 Design revamp
+### 7.1 Visual style
 
-The current UI reads as machine-made. The tells are specific, and the revamp removes each one.
+The owner likes the original look and it stays. An earlier version of this section called for a flat redesign. That was the orchestrator's overreach, the owner rejected the result, and it was reverted on 2026-11-12.
 
-| Current tell | Replacement |
+**Keep, and match in new work:**
+
+- Frosted glass surfaces (`glass` and `glass-strong` in `src/index.css`) over the soft teal and navy page glow.
+- The headline with gradient text on the emphasized words.
+- The gradient logo tile beside the "AgentForge" wordmark.
+- Hover feedback: cards and category pills lift slightly and light up.
+- Rounded cards and inputs, and the rounded category pills in the hero.
+- The slate, navy, and teal palette, in light and dark themes.
+
+**The one rule that changed: small labels are not pills.** No tinted, ringed, fully rounded capsule behind a short label. Use these instead:
+
+| Label | Treatment |
 | --- | --- |
-| Tinted, ringed, fully rounded pills on every label (framework, stars, tags) | Framework as plain small-caps or monospace text with a 4px-radius hairline border, or no border at all. Stars as a number beside an icon. Tags as plain muted text |
-| Gradient-filled headline text | One solid text color. Emphasis through weight and size |
-| Soft radial glow blobs behind the page | A flat background. At most one quiet texture or a hairline grid |
-| Frosted glass on every surface | Solid surfaces with a 1px border. Blur only on the sticky nav, if anywhere |
-| Glow and lift on card hover | A border color change |
-| Teal-to-navy gradient logo tile | A flat wordmark, single color |
-| "Status dot" pill above the headline | Remove it, or make it one plain line of text |
-| Everything rounded to 16px or more | 6px on cards and inputs, 4px on small elements |
-| Three near-equal accent tints per card | One accent color, used sparingly, for actions and selection only |
+| Framework, tool type | Colored monospace capitals with wide letter spacing, no background (`FrameworkBadge` in `src/components/ui.tsx`) |
+| Star count | A star icon and a number, no background |
+| Line above the headline | Plain uppercase text, no capsule |
+| Active filter chip | Small rounded rectangle, not a capsule |
 
-Direction: closer to a package registry or a developer tool's docs than to a landing page template. Dense, legible, calm. More information per card (version, last update, tool names) and less decoration.
+Tags keep their small rounded-rectangle chips. Numbered step markers stay circular.
 
-Constraints that do not change: light and dark themes, the slate, navy, and teal palette, keyboard access, visible focus states, AA contrast, and no horizontal scroll at 375px.
+Constraints: keyboard access, visible focus states, AA contrast, and no horizontal scroll at 375px. Ask the owner before changing the overall look again.
 
 ### 7.2 Accounts
 

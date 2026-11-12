@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react'
+import { Eye, Star, Wrench } from 'lucide-react'
 import { formatCount, formatRelativeTime } from '@/lib/format'
 import type { AgentManifest } from '@/types/agent'
 import { AuthorTag, FrameworkBadge } from './ui'
@@ -8,60 +8,63 @@ interface AgentCardProps {
   onOpen: (agent: AgentManifest) => void
 }
 
-/** How many tool names a card lists before collapsing the rest into "+N". */
-const MAX_TOOLS_SHOWN = 3
-
 export function AgentCard({ agent, onOpen }: AgentCardProps) {
-  const tools = agent.tools_required
-  const hiddenTools = tools.length - MAX_TOOLS_SHOWN
+  const toolCount = agent.tools_required.length
 
   return (
-    <article className="relative flex h-full flex-col rounded-md border border-line bg-surface p-4 hover:border-edge">
-      <div className="flex items-baseline justify-between gap-3">
-        <h3 className="min-w-0 text-[15px] leading-snug font-semibold">
-          {/* The stretched button makes the whole card one click target. */}
-          <button
-            type="button"
-            onClick={() => onOpen(agent)}
-            className="text-left after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-accent"
-          >
-            {agent.name}
-          </button>
-        </h3>
-        <span className="shrink-0 font-mono text-xs text-subtle">v{agent.version}</span>
-      </div>
-
-      <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted">{agent.description}</p>
-
-      <dl className="mt-3 mb-3 space-y-1 text-xs">
-        <div className="flex gap-2">
-          <dt className="w-10 shrink-0 text-subtle">Tools</dt>
-          <dd className="min-w-0 font-mono break-words text-muted">
-            {tools.length === 0
-              ? 'none'
-              : tools
-                  .slice(0, MAX_TOOLS_SHOWN)
-                  .map((tool) => tool.name)
-                  .join(', ')}
-            {hiddenTools > 0 && <span className="text-subtle"> +{hiddenTools}</span>}
-          </dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="w-10 shrink-0 text-subtle">Tags</dt>
-          <dd className="min-w-0 break-words text-muted">{agent.tags.join(', ')}</dd>
-        </div>
-      </dl>
-
-      <footer className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-2.5 text-xs text-subtle">
+    <article className="glass group relative flex h-full flex-col rounded-2xl p-5 transition duration-200 hover:-translate-y-1 hover:shadow-glow">
+      <div className="flex items-start justify-between gap-3">
         <FrameworkBadge framework={agent.framework} />
-        <AuthorTag author={agent.author} />
-        <span className="ml-auto inline-flex items-center gap-1">
-          <Star className="size-3.5" aria-hidden="true" />
+        <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-amber-600 dark:text-amber-300">
+          <Star className="size-3.5 fill-current" />
           {formatCount(agent.stats.stars)}
           <span className="sr-only"> stars</span>
         </span>
-        <span>{formatRelativeTime(agent.stats.updated_at)}</span>
+      </div>
+
+      <h3 className="mt-4 text-lg font-semibold tracking-tight">
+        {/* The stretched button makes the whole card one click target. */}
+        <button
+          type="button"
+          onClick={() => onOpen(agent)}
+          className="text-left after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-teal-500"
+        >
+          {agent.name}
+        </button>
+        <span className="ml-2 font-mono text-xs font-normal text-slate-400">v{agent.version}</span>
+      </h3>
+
+      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        {agent.description}
+      </p>
+
+      <ul className="mb-4 mt-4 flex flex-wrap gap-1.5" aria-label="Tags">
+        {agent.tags.slice(0, 3).map((tag) => (
+          <li
+            key={tag}
+            className="rounded-md bg-slate-900/5 px-2 py-0.5 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300"
+          >
+            #{tag}
+          </li>
+        ))}
+      </ul>
+
+      <footer className="mt-auto flex items-center justify-between gap-3 border-t border-slate-900/5 pt-4 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
+        <AuthorTag author={agent.author} />
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="inline-flex items-center gap-1" title="Required tools">
+            <Wrench className="size-3.5" />
+            {toolCount} {toolCount === 1 ? 'tool' : 'tools'}
+          </span>
+          <span className="inline-flex items-center gap-1" title="Views">
+            <Eye className="size-3.5" />
+            {formatCount(agent.stats.views)}
+          </span>
+        </div>
       </footer>
+      <p className="mt-2 text-[11px] text-slate-400">
+        Updated {formatRelativeTime(agent.stats.updated_at)}
+      </p>
     </article>
   )
 }
