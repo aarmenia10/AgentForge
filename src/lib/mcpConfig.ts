@@ -87,20 +87,39 @@ export function buildMcpConfig(agent: Pick<AgentManifest, 'id' | 'version'>): Mc
   return { mcpServers: { [mcpServerKey(agent)]: buildServerEntry(agent) } }
 }
 
-/** Ready-to-paste text for the chosen client. */
+/** Which terminal a command-line snippet is written for. */
+export type SnippetShell = 'posix' | 'windows'
+
+/** The executable each command-line client is installed through. */
+const CLI_BINARIES: Partial<Record<McpClient, string>> = {
+  claude_code: 'claude',
+  // https://learn.chatgpt.com/docs/extend/mcp?surface=cli
+  // The CLI writes Codex's mcp_servers configuration in config.toml.
+  codex: 'codex',
+}
+
+/** True when the client is set up by running a command, not by editing a file. */
+export function isCliClient(client: McpClient): boolean {
+  return client in CLI_BINARIES
+}
+
+/**
+ * Ready-to-paste text for the chosen client.
+ *
+ * Command-line clients separate their own options from the server command
+ * with a bare `--`. PowerShell consumes that token before the client sees it,
+ * so the pasted command fails with "unknown option '-y'" (found in P1-7).
+ * The Windows form runs the same command through `cmd /c`, which passes `--`
+ * through untouched and works from both PowerShell and Command Prompt.
+ */
 export function buildInstallSnippet(
   agent: Pick<AgentManifest, 'id' | 'version'>,
   client: McpClient,
+  shell: SnippetShell = 'posix',
 ): string {
-  if (client === 'claude_code') {
-    const { command, args } = buildServerEntry(agent)
-    return `claude mcp add ${mcpServerKey(agent)} -- ${command} ${args.join(' ')}`
-  }
-  if (client === 'codex') {
-    // https://learn.chatgpt.com/docs/extend/mcp?surface=cli
-    // The CLI writes Codex's mcp_servers configuration in config.toml.
-    const { command, args } = buildServerEntry(agent)
-    return `codex mcp add ${mcpServerKey(agent)} -- ${command} ${args.join(' ')}`
-  }
-  return JSON.stringify(buildMcpConfig(agent), null, 2)
+  const binary = CLI_BINARIES[client]
+  if (!binary) return JSON.stringify(buildMcpConfig(agent), null, 2)
+  const { command, args } = buildServerEntry(agent)
+  const line = `${binary} mcp add ${mcpServerKey(agent)} -- ${command} ${args.join(' ')}`
+  return shell === 'windows' ? `cmd /c "${line}"` : line
 }

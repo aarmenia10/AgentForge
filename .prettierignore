@@ -43,3 +43,6 @@ tests/mcp.test.ts
 
 # Released MCP server tarballs are binary artifacts.
 public/mcp/
+
+# Verification records are evidence and are kept exactly as filed.
+docs/verification/

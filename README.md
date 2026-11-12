@@ -138,6 +138,7 @@ Binding. Newest first. Add to it, do not rewrite history.
 | 2026-11-12 | Agents have a visibility: **public**, **friends**, or **private** |
 | 2026-11-12 | The MCP server must ship with a navigation guide that teaches a connected AI to compare candidates before choosing an agent ([section 7.4](#74-ai-navigation-guide)) |
 | 2026-11-11 | **GitHub is not part of the product.** No GitHub sign-in, no GitHub identity, no GitHub API. The tagline is a comparison only |
+| 2026-11-12 | Command-line install snippets come in two forms. PowerShell strips the bare `--` that `claude mcp add` and `codex mcp add` require, so the install panel also shows a Windows form that wraps the same line in `cmd /c "..."`. Any new command-line client added to `src/lib/mcpConfig.ts` gets both forms (P1-7, bug 1) |
 | 2026-11-12 | **The MCP server is distributed from our own site, not the npm registry.** Install snippets run `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-<version>.tgz`. No npm account is involved and no third party can claim the name. Every released tarball stays in `public/mcp/` permanently, because installed configs point at it. Release with `npm run release:mcp`, then commit the tarball and bump `MCP_SERVER_VERSION` in `src/lib/mcpConfig.ts` |
 | 2026-11-11 | The MCP package is the unscoped `agentforge-registry`. The `@agentforge` npm scope and the `agentforge-mcp` name belong to unrelated projects and must never appear in an install snippet |
 | 2026-11-11 | Firestore runs in production mode with the rules in this repo. Never test mode |
@@ -197,10 +198,15 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
 | P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | done |
 | P1-3 | Visual style per [7.1](#71-visual-style): original look kept, pill labels replaced | Claude | none | No pill-shaped labels remain. Both themes and 375px verified | done |
-| P1-4 | MCP go-live: live catalog with bundled fallback, Codex in the install panel, standalone packaging, and release as a tarball on the site | Codex, Claude | none | The snippet from the site connects in Claude Desktop, Claude Code, Cursor, and Codex on a machine that has never seen the repo. Verified live in P1-7 | done, pending P1-7 |
+| P1-4 | MCP go-live: live catalog with bundled fallback, Codex in the install panel, standalone packaging, and release as a tarball on the site | Codex, Claude | none | The snippet from the site connects on a machine that has never seen the repo | done. Verified live for Claude Code in P1-7. Codex connection not yet tested on a real machine |
 | P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits |done (not yet observed with a live model; that check belongs to P1-7) |
 | P1-6 | Seed coverage: at least two agents per category including `creative`, and at least one agent for each framework | Codex | none | Every category pill and every framework filter returns results | done |
-| P1-7 | Live verification: walk the deployed site and a real MCP connection, file what breaks | Antigravity | P1-2, P1-4 | A written pass or fail for each Phase 1 "done when" | open |
+| P1-7 | Live verification: walk the deployed site and a real MCP connection, file what breaks | Antigravity | P1-2, P1-4 | A written pass or fail for each Phase 1 "done when" | done. Report in `docs/verification/P1-7.md`: 25 pass, 1 not tested, 1 bug (fixed). Open follow-ups below the table |
+
+**Phase 1 is complete.** Two follow-ups from P1-7 remain open and do not block Phase 2:
+
+- **Guide behavior on Claude and Codex.** The three AI-behavior runs passed, but on Antigravity's own model, which had read the pass conditions. Nobody has yet watched a cold Claude or Codex session follow the guide. Owner check: connect the unpinned server and give it only "I need help reviewing the security of my Kubernetes setup."
+- **Codex connection.** Check 21 was not tested because Codex was not installed on the test machine.
 
 ### Phase 2: Accounts, publishing, and sharing
 
