@@ -31,7 +31,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Static catalog | Built. `scripts/export-catalog.ts` validates every manifest and writes `public/catalog.json`. The site reads only that file |
 | Seed agents | 14 validated manifests. At least two in every category, including `creative`, and all five frameworks represented |
 | Validation | Built. `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
-| MCP server | Released. `agentforge-registry` 0.1.0 is served from the site at `/mcp/agentforge-registry-0.1.0.tgz` and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
+| MCP server | Released. `agentforge-registry` 0.1.1 is served from the site at `/mcp/agentforge-registry-0.1.1.tgz` (0.1.0 stays available) and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
 | Firestore rules | Built for atomic per-user stars. No client can create or edit a manifest |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
@@ -54,7 +54,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Auth domain | `agentforge-b10db.firebaseapp.com` |
 | Plan | Spark (no cost) |
 | Firestore | Database `(default)`, location `nam5`, currently empty |
-| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.0.tgz`. Not on the npm registry, by decision |
+| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.1.tgz`. Not on the npm registry, by decision |
 | Repository | `aarmenia10/AgentForge`, default branch `main` |
 
 ---
@@ -100,7 +100,7 @@ The web app generates this entry and the server must honor it. The generator is 
   "mcpServers": {
     "agentforge-<agent-id>": {
       "command": "npx",
-      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.0.tgz", "--agent", "<agent-id>@<version>"]
+      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.1.tgz", "--agent", "<agent-id>@<version>"]
     }
   }
 }
@@ -131,6 +131,11 @@ Binding. Newest first. Add to it, do not rewrite history.
 | Date | Decision |
 | --- | --- |
 | 2026-11-12 | `docs/AI_GUIDE.md` is the canonical AI guide. `packages/mcp-server/src/guide.ts` holds a generated copy (`node packages/mcp-server/sync-guide.mjs`) and a hand-written condensed version, and a test fails when they drift. `public/llms.txt` must teach the same rules. Any change to the selection rules lands in all three (P1-5) |
+| 2026-11-13 | **Owner confirmed: public agents need the owner's approval before they appear.** Private and friends agents publish instantly |
+| 2026-11-13 | **Owner confirmed: friends are mutual.** One person sends a request and the other accepts |
+| 2026-11-13 | **"Verified author" is the only wording for the badge.** It means the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent. Never shorten it to "Verified" in UI text, docs, or guide text. The manifest field stays `author.verified`; MCP tool results report it as `author.verified_author` so an AI cannot misread it. This supersedes the `{ name, verified }` shape in the tool contract entry below |
+| 2026-11-13 | The AI guide says **when to look**: check the registry at the start of any specialized task, and always when the user says "use AgentForge". It also requires checking that an already-loaded agent fits the task, because a loaded agent survives a cleared conversation. The dependable way for a user to trigger a search is to say "Use AgentForge to find an agent for ...", and the install tab tells them so |
+| 2026-11-13 | MCP server 0.1.1 released with the guide changes above and `verified_author`. 0.1.0 stays hosted |
 | 2026-11-12 | MCP tool contract: `search_registry` returns `{ candidates: [...], next_step }` with ranked candidates, never a bare array and never a single answer. `compare_agents` takes 2 to 5 ids. Neither tool loads an agent. Both emit `author` as `{ name, verified }` only, so schema version 2 does not change their output (P1-5) |
 | 2026-11-12 | **The owner rejected the flat redesign and it was reverted.** The visual style is the original one: glass surfaces, the gradient headline, the gradient logo tile, soft page glow, and cards that lift and glow on hover. The only standing change is that small labels are never pills ([section 7.1](#71-visual-style)). This supersedes the earlier token rule from P1-3 |
 | 2026-11-12 | This README is the plan of record. The Gemini-authored master plan is retired. Corrections to it are listed in [section 9](#9-corrections-to-the-retired-master-plan) |
@@ -143,11 +148,6 @@ Binding. Newest first. Add to it, do not rewrite history.
 | 2026-11-11 | The MCP package is the unscoped `agentforge-registry`. The `@agentforge` npm scope and the `agentforge-mcp` name belong to unrelated projects and must never appear in an install snippet |
 | 2026-11-11 | Firestore runs in production mode with the rules in this repo. Never test mode |
 | 2026-11-11 | The schema has no rating field. "Popular" sorts by views, "Top Rated" by stars, "Newest" by `updated_at` |
-
-**Proposed, awaiting the owner** (treat as defaults until overruled):
-
-- Public agents go through owner review before they appear in the catalog. Private and friends agents publish instantly.
-- "Friends" means mutual: one person sends a request and the other accepts.
 
 ---
 
@@ -173,7 +173,7 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 Both changes land together so the seeds, validator, catalog, and MCP server migrate once.
 
-- `author` becomes `{ uid, name, handle, verified }`. `handle` is an AgentForge username, unique, lowercase. The author tag in the UI drops the GitHub icon and the link to github.com.
+- `author` becomes `{ uid, name, handle, verified }`. `verified` keeps its name and its meaning (verified author: identity confirmed, nothing more). `handle` is an AgentForge username, unique, lowercase. The author tag in the UI drops the GitHub icon and the link to github.com.
 - New field `visibility: 'public' | 'friends' | 'private'`.
 - New field `schema_version: 2`.
 
@@ -205,7 +205,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 
 **Phase 1 is complete.** Two follow-ups from P1-7 remain open and do not block Phase 2:
 
-- **Guide behavior on Claude and Codex.** The three AI-behavior runs passed, but on Antigravity's own model, which had read the pass conditions. Nobody has yet watched a cold Claude or Codex session follow the guide. Owner check: connect the unpinned server and give it only "I need help reviewing the security of my Kubernetes setup."
+- **Guide behavior, unprompted.** Owner-tested on Claude Code on Windows, 2026-11-12. With "Use AgentForge to find..." Claude searched five ways, compared, and reported its choice: pass. With the plain task it also used the registry, but a previously loaded agent's tool was still visible, so a fully cold unprompted run is still unobserved. Version 0.1.1 adds the when-to-look rule. Not yet tested on Codex.
 - **Codex connection.** Check 21 was not tested because Codex was not installed on the test machine.
 
 ### Phase 2: Accounts, publishing, and sharing
@@ -309,6 +309,7 @@ Deliverables:
 
 What the guide must teach:
 
+- **When to look.** At the start of any specialized task, and always when the user asks for AgentForge. Before using an agent that is already loaded, check that it fits the task.
 - **How the registry is laid out.** Categories, tags, frameworks, what a manifest contains, and what each field is for.
 - **How to search.** Run more than one query (the task's domain, the action, the expected output). Never stop at the first hit.
 - **How to choose.** Shortlist at least three candidates when they exist. For each, check that the input schema matches what the user can provide, that the output schema matches what the user wants, that the required tools are available in this client, whether the author is verified, and how recently it was updated. Prefer the narrowest agent that fully covers the task over a broad one that partly covers it.
@@ -451,9 +452,8 @@ AgentForge/
 
 ## 12. Open questions for the owner
 
-1. Confirm or overrule the two proposed defaults in section 4 (review for public agents, mutual friends).
-2. The name. At least three unrelated projects already ship as "AgentForge" on npm, one of them an MCP server. Renaming is cheap now and expensive after launch.
-3. Who reviews public submissions once there are more than the owner can handle.
+1. The name. At least three unrelated projects already ship as "AgentForge" on npm, one of them an MCP server. Renaming is cheap now and expensive after launch.
+2. Who reviews public submissions once there are more than the owner can handle.
 
 ## License
 
