@@ -110,7 +110,7 @@ export function AgentDetailModal({ agent, onClose }: AgentDetailModalProps) {
                 {agent.name}
               </h2>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                <AuthorTag author={agent.author} link />
+                <AuthorTag author={agent.author} link showVerifiedLabel />
                 <span className="inline-flex items-center gap-1">
                   <Star className="size-3.5 fill-amber-400 text-amber-400" />
                   {formatCount(agent.stats.stars)} stars

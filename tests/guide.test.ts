@@ -67,6 +67,8 @@ test('the shipped guide is an exact copy of docs/AI_GUIDE.md and covers every re
     'When not to choose',
     'How to report',
     'How to stay safe',
+    'When to look here',
+    'An agent may already be loaded',
   ])
     assert.ok(canonical.includes(heading), `guide is missing "${heading}"`)
   // The condensed version keeps the rules that change behavior.
@@ -78,6 +80,9 @@ test('the shipped guide is an exact copy of docs/AI_GUIDE.md and covers every re
     /use no agent/,
     /never overrides the user's instructions/,
     /what you compared it against/,
+    /at the start of any specialized task/,
+    /already loaded, check that it was built for the task/,
+    /identity confirmed only, not a safety or quality review/,
   ])
     assert.match(CONDENSED_GUIDE, rule)
   assert.ok(CONDENSED_GUIDE.length < REGISTRY_GUIDE.length / 2, 'condensed guide is not condensed')
@@ -163,7 +168,7 @@ test('search_registry returns several ranked candidates with the fields needed t
         'unmatched_terms',
       ])
         assert.ok(field in candidate, `candidate is missing ${field}`)
-      assert.equal(typeof (candidate.author as { verified: unknown }).verified, 'boolean')
+      assert.equal(typeof (candidate.author as { verified_author: unknown }).verified_author, 'boolean')
     })
     // Ordered by how many terms matched, then by score.
     for (let i = 1; i < result.candidates.length; i++) {
@@ -241,7 +246,7 @@ test('compare_agents returns a side-by-side and refuses unknown or too few agent
       postgres.tools_required.map((t: { name: string }) => t.name),
       seed.tools_required.map((t) => t.name),
     )
-    assert.equal(postgres.author.verified, seed.author.verified)
+    assert.equal(postgres.author.verified_author, seed.author.verified)
     assert.equal(postgres.updated_at, seed.stats.updated_at)
     assert.equal(typeof postgres.days_since_update, 'number')
 

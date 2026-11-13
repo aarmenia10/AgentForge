@@ -38,29 +38,58 @@ export function FrameworkBadge({ framework }: { framework: AgentFramework }) {
   )
 }
 
-export function AuthorTag({ author, link = false }: { author: AgentAuthor; link?: boolean }) {
-  const content = (
+/**
+ * "Verified author" means the registry confirmed who the author is. It is not
+ * a review of the agent, so the wording never shortens to just "Verified".
+ */
+export const VERIFIED_AUTHOR_LABEL = 'Verified author'
+const VERIFIED_AUTHOR_HINT =
+  'Verified author: the registry confirmed who this author is. It is not a safety check or a review of the agent.'
+
+export function AuthorTag({
+  author,
+  link = false,
+  showVerifiedLabel = false,
+}: {
+  author: AgentAuthor
+  link?: boolean
+  /** Spell the badge out beside the name. Cards stay icon-only for space. */
+  showVerifiedLabel?: boolean
+}) {
+  const badge = author.verified && (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 text-teal-600 dark:text-teal-300"
+      title={VERIFIED_AUTHOR_HINT}
+    >
+      <BadgeCheck className="size-3.5" aria-hidden={showVerifiedLabel} aria-label={showVerifiedLabel ? undefined : VERIFIED_AUTHOR_LABEL} />
+      {showVerifiedLabel && <span>{VERIFIED_AUTHOR_LABEL}</span>}
+    </span>
+  )
+  const identity = (
     <>
       <GitHubIcon className="size-3.5 shrink-0" />
       <span className="truncate">@{author.github}</span>
-      {author.verified && (
-        <BadgeCheck className="size-3.5 shrink-0 text-teal-500" aria-label="Verified author" />
-      )}
     </>
   )
   const className =
     'inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400'
-  return link ? (
-    <a
-      href={`https://github.com/${author.github}`}
-      target="_blank"
-      rel="noreferrer"
-      className={cn(className, 'hover:text-teal-600 dark:hover:text-teal-300')}
-    >
-      {content}
-    </a>
-  ) : (
-    <span className={className}>{content}</span>
+  // The badge sits outside the link so its tooltip explains the badge, not the link.
+  return (
+    <span className={className}>
+      {link ? (
+        <a
+          href={`https://github.com/${author.github}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex min-w-0 items-center gap-1.5 hover:text-teal-600 dark:hover:text-teal-300"
+        >
+          {identity}
+        </a>
+      ) : (
+        identity
+      )}
+      {badge}
+    </span>
   )
 }
 

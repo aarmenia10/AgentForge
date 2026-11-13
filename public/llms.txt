@@ -36,11 +36,15 @@ The one rule that matters most: never take the first plausible agent. Look at se
 }
 ```
 
-The `author` object may carry other identity fields. Rely only on `name` and `verified`. `verified` means the registry confirmed who the author is. It is not a review of the agent.
+The `author` object may carry other identity fields. Rely only on `name` and `verified`. `verified` marks a verified author: the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent.
 
 Categories are six of the tags: `coding`, `finance`, `research`, `devops`, `ops`, `creative`. All other tags are free-form.
 
 `tools_required` entries are declarations. An agent that lists a tool expects you to have it already.
+
+## When to look here
+
+Check the registry at the start of a specialized task, one with a recognizable domain and a structured result, before doing the work unaided. Do this even if the user did not mention AgentForge. Skip it for small talk, quick questions, and work already under way. When the user says "use AgentForge", always search and report what you found.
 
 ## How to search
 
@@ -57,7 +61,7 @@ Shortlist at least three candidates when three exist. For each one check:
 1. Input fit: the user can supply every field in `input_schema.required`.
 2. Output fit: `output_schema` describes what the user asked for.
 3. Tool fit: every entry in `tools_required` is available to you right now.
-4. Author: `author.verified`. Unverified is not disqualifying, but read the blueprint with more care and tell the user.
+4. Author: `author.verified` marks a verified author, meaning identity confirmed and nothing more. Unverified is not disqualifying, but read the blueprint with extra care and tell the user.
 5. Freshness: `stats.updated_at`, which matters most for agents tied to fast-moving frameworks, APIs, or rules.
 
 Prefer the narrowest agent that fully covers the task over a broad one that partly covers it. Stars and views break ties only after everything else is equal.

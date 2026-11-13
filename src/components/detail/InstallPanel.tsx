@@ -98,6 +98,17 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
         </li>
       </ol>
 
+      <div className="rounded-xl border border-slate-200 p-3 text-sm text-slate-600 dark:border-white/10 dark:text-slate-300">
+        <p className="font-medium text-slate-900 dark:text-white">Then ask for it by name</p>
+        <p className="mt-1">
+          Your AI uses this agent when you tell it to. To have it search the whole registry and
+          pick the best fit for a task, say:
+        </p>
+        <p className="mt-2 rounded-lg bg-slate-900/5 px-3 py-2 font-mono text-[13px] text-slate-800 dark:bg-white/5 dark:text-slate-100">
+          Use AgentForge to find an agent for &lt;your task&gt;.
+        </p>
+      </div>
+
       {externalTools.length > 0 && (
         <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">
           This agent also calls {externalTools.length} companion MCP{' '}

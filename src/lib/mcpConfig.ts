@@ -4,7 +4,7 @@ import type { AgentManifest } from '@/types/agent'
 export const MCP_SERVER_PACKAGE = 'agentforge-registry'
 
 /** Must match packages/mcp-server/package.json. A test enforces it. */
-export const MCP_SERVER_VERSION = '0.1.0'
+export const MCP_SERVER_VERSION = '0.1.1'
 
 /**
  * What `npx` installs. The server is distributed as a tarball on our own
