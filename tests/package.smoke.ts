@@ -67,12 +67,8 @@ test(
       )
       t.diagnostic(`npm pack: ${pack.filename}; files: ${paths.join(', ')}`)
 
-      const tarball = join(temporary, pack.filename)
-      assert.deepEqual(
-        await readFile(tarball),
-        await readFile(resolve('public/mcp', pack.filename)),
-        'Committed release must match the package that is tested',
-      )
+      // Install the committed artifact; gzip metadata can differ across npm versions.
+      const tarball = resolve('public/mcp', pack.filename)
       // A minimal consumer manifest keeps npm from finding any ancestor project.
       await writeFile(
         join(installDir, 'package.json'),
@@ -92,6 +88,18 @@ test(
         await readFile(join(installedPackage, 'package.json'), 'utf8'),
       )
       assert.equal(manifest.name, 'agentforge-registry')
+      assert.equal(
+        manifest.version,
+        JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8'))
+          .version,
+      )
+      for (const file of ['dist/cli.js', 'catalog.json', 'README.md']) {
+        assert.deepEqual(
+          await readFile(join(installedPackage, file)),
+          await readFile(join(packageDir, file)),
+          'Committed release contains current ' + file,
+        )
+      }
       assert.equal(manifest.dependencies.agentforge, undefined)
       for (const version of Object.values(manifest.dependencies) as string[]) {
         assert.doesNotMatch(version, /^(?:file:|link:|workspace:|\.|\/)/)
