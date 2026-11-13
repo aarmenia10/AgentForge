@@ -2,27 +2,45 @@ import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { SEED_AGENTS } from '../src/data/seedAgents'
-import { validateCatalog, validateManifest } from '../src/lib/validateManifest'
-import type { AgentManifest } from '../src/types/agent'
+import {
+  validateCatalog,
+  validateManifest,
+  validateAgentRecord,
+  manifestSchema,
+} from '../src/lib/validateManifest'
+import type { AgentManifest, AgentRecord } from '../src/types/agent'
 
 export function mergeCatalog(
   seeds: readonly AgentManifest[],
   live: unknown[],
 ): AgentManifest[] {
+  // Seeds are maintainer-approved manifests; live documents carry explicit review metadata.
   const records = new Map(
-    validateCatalog([...seeds])
-      .filter((a) => a.author.verified)
-      .map((a) => [a.id, a]),
+    validateCatalog(
+      seeds
+        .map(validateManifest)
+        .filter((agent) => agent.visibility === 'public'),
+    ).map((agent) => [agent.id, agent]),
   )
-  // Validate even records that will be excluded. Invalid live data must not silently ship.
-  for (const agent of validateCatalog(live)) {
-    if (agent.author.verified) records.set(agent.id, agent)
-    else records.delete(agent.id) // A revoked verification must also suppress the seed.
+  const ids = new Set<string>()
+  // Validate excluded documents too: malformed live data fails the build.
+  for (const value of live) {
+    const record = validateAgentRecord(value)
+    if (ids.has(record.id)) throw new Error('Duplicate live id: ' + record.id)
+    ids.add(record.id)
+    if (record.visibility === 'public' && record.review_status === 'approved') {
+      records.set(record.id, manifestSchema.strip().parse(record))
+    } else {
+      // A privacy or review change must also suppress a seed with the same id.
+      records.delete(record.id)
+    }
   }
-  return [...records.values()].sort((a, b) => a.id.localeCompare(b.id, 'en'))
+  return validateCatalog([...records.values()]).sort((a, b) =>
+    a.id.localeCompare(b.id, 'en'),
+  )
 }
 
-async function readLiveRecords(): Promise<AgentManifest[]> {
+async function readLiveRecords(): Promise<AgentRecord[]> {
   if (process.env.AGENTFORGE_CATALOG_SOURCE === 'seed') return []
   const { applicationDefault, initializeApp, deleteApp } =
     await import('firebase-admin/app')
@@ -43,7 +61,7 @@ async function readLiveRecords(): Promise<AgentManifest[]> {
           cause: error,
         })
       console.error(
-        'No Application Default Credentials found; exporting verified seeds only.',
+        'No Application Default Credentials found; exporting approved public seeds only.',
       )
       return []
     }
@@ -58,7 +76,7 @@ async function readLiveRecords(): Promise<AgentManifest[]> {
   try {
     const snapshot = await getFirestore(app).collection('agents').get()
     return snapshot.docs.map((doc) => {
-      const agent = validateManifest(doc.data())
+      const agent = validateAgentRecord(doc.data())
       if (agent.id !== doc.id)
         throw new Error(`Firestore document id mismatch: ${doc.id}`)
       return agent
@@ -77,7 +95,7 @@ export async function exportCatalog() {
   await writeFile(temporary, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8')
   await rename(temporary, output)
   console.error(
-    `Exported ${catalog.length} verified agents to public/catalog.json`,
+    `Exported ${catalog.length} approved public agents to public/catalog.json`,
   )
 }
 

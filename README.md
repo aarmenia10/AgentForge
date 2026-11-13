@@ -23,15 +23,15 @@ This README is the project's single source of truth. It replaces the earlier "Ph
 
 ## 1. What exists today
 
-Verified on `main` at the time of writing. `npm run build` passes and `npm test` passes 29 of 29. `npm run test:package` also passes a standalone tarball install and MCP smoke test.
+Verified for P2-1: `npm run lint`, `npm run format:check`, `npm run build`, `npm test`, and `npm run test:package` pass. The unit/integration suite passes 35 tests; package checks cover the exact 0.2.0 release plus both immutable older tarballs falling back from version 2 to their bundled version 1 catalogs.
 
 | Area | State |
 | --- | --- |
 | Web catalog | Built. Search, category pills, framework filter, sort, four-tab detail view, `?agent=<id>` deep links, light and dark themes |
-| Static catalog | Built. `scripts/export-catalog.ts` validates every manifest and writes `public/catalog.json`. The site reads only that file |
-| Seed agents | 14 validated manifests. At least two in every category, including `creative`, and all five frameworks represented |
-| Validation | Built. `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
-| MCP server | Released. `agentforge-registry` 0.1.1 is served from the site at `/mcp/agentforge-registry-0.1.1.tgz` (0.1.0 stays available) and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
+| Static catalog | Built. `scripts/export-catalog.ts` validates version 2 records, exports only public and approved agents, strips Firestore metadata, and writes `public/catalog.json`. The site reads only that file |
+| Seed agents | 14 validated schema version 2 public manifests with the AgentForge author identity. At least two in every category, including `creative`, and all five frameworks represented |
+| Validation | Built. Strict version 2 manifest and Firestore record validation in `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
+| MCP server | Released. `agentforge-registry` 0.2.0 is served from the site at `/mcp/agentforge-registry-0.2.0.tgz` (0.1.0 and 0.1.1 stay available) and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
 | Firestore rules | Built for atomic per-user stars. No client can create or edit a manifest |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
@@ -54,7 +54,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Auth domain | `agentforge-b10db.firebaseapp.com` |
 | Plan | Spark (no cost) |
 | Firestore | Database `(default)`, location `nam5`, currently empty |
-| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.1.tgz`. Not on the npm registry, by decision |
+| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.0.tgz`. Not on the npm registry, by decision |
 | Repository | `aarmenia10/AgentForge`, default branch `main` |
 
 ---
@@ -108,7 +108,7 @@ The web app generates this entry and the server must honor it. The generator is 
   "mcpServers": {
     "agentforge-<agent-id>": {
       "command": "npx",
-      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.1.1.tgz", "--agent", "<agent-id>@<version>"]
+      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.0.tgz", "--agent", "<agent-id>@<version>"]
     }
   }
 }
@@ -138,6 +138,7 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 | Date | Decision |
 | --- | --- |
+| 2026-11-13 | P2-1: schema version 2 is current; MCP 0.2.0 ships it. Catalog inclusion depends on public visibility and approval, independently of author verification. Maintainer seeds are approved in source; live privacy/review changes suppress matching seeds. Immutable 0.1.0 and 0.1.1 releases keep their bundled version 1 fallback, covered by package tests |
 | 2026-11-12 | `docs/AI_GUIDE.md` is the canonical AI guide. `packages/mcp-server/src/guide.ts` holds a generated copy (`node packages/mcp-server/sync-guide.mjs`) and a hand-written condensed version, and a test fails when they drift. `public/llms.txt` must teach the same rules. Any change to the selection rules lands in all three (P1-5) |
 | 2026-11-13 | **Owner confirmed: public agents need the owner's approval before they appear.** Private and friends agents publish instantly |
 | 2026-11-13 | **Owner confirmed: friends are mutual.** One person sends a request and the other accepts |
@@ -164,13 +165,15 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 `src/types/agent.ts`. Field names are snake_case because the manifest is serialized as-is.
 
-### Version 1 (current)
+### Version 2 (current)
 
 | Field | Type | Notes |
 | --- | --- | --- |
+| `schema_version` | `2` | Required literal discriminator |
+| `visibility` | `'public' \| 'friends' \| 'private'` | Only public, approved records enter the catalog |
 | `id` | `string` | Unique slug, also the Firestore document id |
 | `name`, `version`, `description` | `string` | `version` is semver |
-| `author` | `{ name, github, verified }` | **`github` is removed in version 2** |
+| `author` | `{ uid: string, name: string, handle: string, verified: boolean }` | AgentForge identity. Handle is 3 to 30 lowercase letters, digits, or hyphens, starting and ending with a letter or digit. Uniqueness enforcement belongs to P2-3 |
 | `tags` | `string[]` | Lowercase. Category pills map 1:1 onto tags |
 | `framework` | `'crewai' \| 'langchain' \| 'autogen' \| 'mcp_native' \| 'custom'` | |
 | `tools_required` | `{ name, type, endpoint?, description }[]` | `type` is `mcp_tool`, `python_function`, or `rest_api` |
@@ -178,15 +181,15 @@ Binding. Newest first. Add to it, do not rewrite history.
 | `prompt_blueprint` | `{ system_prompt, instructions[], verification_rules[] }` | |
 | `stats` | `{ stars, views, updated_at }` | `updated_at` is ISO 8601 |
 
-### Version 2 (task `P2-1`)
+`author.verified` means **Verified author**: the registry confirmed identity. It is not a safety check, quality rating, or review of the agent. MCP search and comparison results keep reporting `author` as `{ name, verified_author }`.
 
-Both changes land together so the seeds, validator, catalog, and MCP server migrate once.
+### Firestore documents
 
-- `author` becomes `{ uid, name, handle, verified }`. `verified` keeps its name and its meaning (verified author: identity confirmed, nothing more). `handle` is an AgentForge username, unique, lowercase. The author tag in the UI drops the GitHub icon and the link to github.com.
-- New field `visibility: 'public' | 'friends' | 'private'`.
-- New field `schema_version: 2`.
+`AgentRecord` extends `AgentManifest` with `owner_uid: string`, `review_status: 'pending' | 'approved' | 'rejected'`, and `shared_with: string[]` (at most 100 uids). These three fields never appear in `catalog.json`. The exporter validates documents even when they will be excluded, and suppresses an existing seed when its live record becomes non-public or loses approval. Source-controlled seeds are maintainer-approved public manifests.
 
-Firestore adds fields that never appear in `catalog.json`: `owner_uid`, `shared_with` (uids, for friends visibility), and `review_status: 'pending' | 'approved' | 'rejected'`.
+### Version 1 compatibility
+
+Version 1 is retired. The immutable 0.1.0 and 0.1.1 server tarballs reject the version 2 live catalog and fall back to their bundled version 1 snapshots. `npm run test:package` runs both committed releases against the new catalog and checks initialization, the bundled manifest, and search.
 
 ---
 
@@ -223,7 +226,7 @@ Goal: people sign in, publish their own agents, and choose who sees them.
 
 | ID | Task | Owner | Depends on | Done when | Status |
 | --- | --- | --- | --- | --- | --- |
-| P2-1 | Schema version 2 per [section 5](#5-schema-contract): update the contract, then migrate seeds, validator, exporter, MCP server, and tests | Claude (contract), Codex (migration) | Phase 1 | No `github` field or GitHub icon remains outside the footer's source link. Build and tests pass | open |
+| P2-1 | Schema version 2 per [section 5](#5-schema-contract): update the contract, then migrate seeds, validator, exporter, MCP server, and tests | Claude (contract), Codex (migration) | Phase 1 | No `github` field or author icon remains. Footer source link and icon stay. All five required checks pass | done |
 | P2-2 | Sign-in per [7.2](#72-accounts): implement `AuthService` in `src/lib/auth.ts`, build the sign-in dialog and account menu | Codex (service), Claude (UI) | P1-1, owner enables both providers in the console | Sign up, sign in, sign out, and password reset work on the live site with both methods | open |
 | P2-3 | Profiles and friends: `users/{uid}`, unique handles, friend requests | Codex (data and rules), Claude (UI) | P2-2 | Two test accounts can become friends and unfriend. Rules tests cover every denial | open |
 | P2-4 | Manifest Studio: a guided form that builds a valid manifest with live validation and a visibility choice | Claude | P2-1, P2-2 | A signed-in user publishes an agent without writing JSON | open |

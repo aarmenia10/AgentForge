@@ -1,12 +1,15 @@
 [
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "academic-paper-synthesizer",
     "name": "Academic Paper Synthesizer",
     "version": "1.0.0",
     "description": "Builds a reproducible literature-review evidence matrix, extracts verified citations, and separates study findings from cross-study inference.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -224,13 +227,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "campaign-brief-crew",
     "name": "Campaign Brief Crew",
     "version": "1.0.0",
     "description": "Coordinates strategist, copywriter, and editor roles to turn an approved product brief into channel-specific campaign concepts with traceable claims and production handoffs.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -443,13 +449,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "churn-risk-forecaster",
     "name": "Churn Risk Forecaster",
     "version": "1.0.0",
     "description": "Designs leakage-resistant churn classification with temporal cohorts, calibrated probabilities, interpretable features, and retention-capacity thresholds.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -660,13 +669,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "corpus-evidence-reviewer",
     "name": "Corpus Evidence Reviewer",
     "version": "1.0.0",
     "description": "Structures a LangChain retrieval-and-review workflow that answers a bounded research question with passage-level support, conflicting evidence, and explicit retrieval gaps.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -882,13 +894,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "executive-strategy-memo",
     "name": "Executive Strategy Memo",
     "version": "1.0.0",
     "description": "Turns sourced business constraints into a decision memo with comparable alternatives, sensitivity analysis, success criteria, and reversal triggers.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -1113,13 +1128,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "fastapi-mcp-scaffolder",
     "name": "FastAPI + MCP Scaffolder",
     "version": "1.0.0",
     "description": "Designs typed FastAPI REST endpoints and MCP adapters with authentication boundaries, validation, timeouts, and deployment checks.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -1291,13 +1309,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "incident-hypothesis-review",
     "name": "Incident Hypothesis Review",
     "version": "1.0.0",
     "description": "Uses an AutoGen investigator-and-skeptic review to reconstruct an incident timeline, test competing causal hypotheses, and draft evidence-backed follow-up actions.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -1563,13 +1584,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "k8s-manifest-hardening",
     "name": "Kubernetes Manifest Hardening",
     "version": "1.0.0",
     "description": "Audits YAML against versioned Pod Security Standards and proposes resource, identity, and network-policy changes with operational impact.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -1758,13 +1782,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "postgres-index-tuner",
     "name": "Postgres Index Tuner",
     "version": "1.0.0",
     "description": "Explains PostgreSQL execution-plan bottlenecks and designs workload-aware indexes with validation, write-cost tradeoffs, and rollback SQL.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -1938,13 +1965,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "python-regex-deobfuscator",
     "name": "Python Regex Deobfuscator",
     "version": "1.0.0",
     "description": "Explains Python regex token by token, derives test vectors, and flags backtracking risks without unbounded execution.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -2109,13 +2139,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "react19-tailwind-modernizer",
     "name": "React 19 + Tailwind Modernizer",
     "version": "1.0.0",
     "description": "Plans AST-based React 19 and Tailwind v4 migrations while preserving component behavior, accessibility, and build compatibility.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -2297,13 +2330,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "sec-10k-auditor",
     "name": "SEC 10-K Auditor",
     "version": "1.0.0",
     "description": "Reconciles SEC 10-K financial statements and footnotes to surface cash-flow quality, debt maturity, and solvency risks with filing-level evidence.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -2546,13 +2582,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "solidity-reentrancy-guard",
     "name": "Solidity Reentrancy Guard",
     "version": "1.0.0",
     "description": "Traces EVM external-call and storage dependencies to identify reentrancy paths and propose minimal guards with local regression tests.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [
@@ -2759,13 +2798,16 @@
     }
   },
   {
+    "schema_version": 2,
+    "visibility": "public",
     "id": "story-continuity-editor",
     "name": "Story Continuity Editor",
     "version": "1.0.0",
     "description": "Audits a supplied fiction manuscript against its story bible, tracking chronology, character knowledge, and world rules while proposing minimal continuity repairs.",
     "author": {
+      "uid": "agentforge",
       "name": "AgentForge",
-      "github": "aarmenia10",
+      "handle": "agentforge",
       "verified": true
     },
     "tags": [

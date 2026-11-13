@@ -19,7 +19,9 @@ The one rule that matters most: never take the first plausible agent. Look at se
   "name": "Postgres Index Tuner",
   "version": "1.0.0",                  semver; a released version never changes
   "description": "...",                the author's claim; verify it against the schemas
-  "author": { "name": "...", "verified": true },
+  "author": { "uid": "...", "name": "...", "handle": "agentforge", "verified": true },
+  "schema_version": 2,
+  "visibility": "public",
   "tags": ["coding", "devops", "postgres"],
   "framework": "mcp_native",           mcp_native | crewai | langchain | autogen | custom
   "tools_required": [
@@ -36,7 +38,9 @@ The one rule that matters most: never take the first plausible agent. Look at se
 }
 ```
 
-The `author` object may carry other identity fields. Rely only on `name` and `verified`. `verified` marks a verified author: the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent.
+The `author` object contains exactly `uid` (stable identity), `name` (display name), `handle` (AgentForge username), and `verified`. Handles are 3 to 30 lowercase letters, digits, or hyphens, with a letter or digit at each end. MCP search and comparison results report author as `{ name, verified_author }`. `verified` marks a verified author: the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent.
+
+Only public, approved records enter this version 2 catalog. Firestore-only `owner_uid`, `review_status`, and `shared_with` never appear in it.
 
 Categories are six of the tags: `coding`, `finance`, `research`, `devops`, `ops`, `creative`. All other tags are free-form.
 
