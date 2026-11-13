@@ -80,6 +80,13 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
  The user's own model subscription does the inference
 ```
 
+There are two ways in for an AI app, and both read the same `catalog.json`:
+
+| Path | For | How the user connects | State |
+| --- | --- | --- | --- |
+| Local server (`agentforge-registry`, via `npx`) | Desktop and command-line clients with Node installed | A config snippet or one command from the install tab | Live |
+| Remote connector (Cloudflare Workers) | Any client that accepts a remote MCP URL, including phone and web apps | Paste one URL into the app's connector settings | Planned, task P2-10 |
+
 ### Read path
 
 | Operation | Source | Firestore reads |
@@ -87,6 +94,7 @@ Verified on `main` at the time of writing. `npm run build` passes and `npm test`
 | Browse, search, filter, sort public agents | `catalog.json` on Hosting, filtered in memory | 0 |
 | MCP server loads a public agent | `catalog.json` from Hosting, bundled snapshot as fallback | 0 |
 | "My agents" and "Shared with me" | Firestore, bounded queries, signed-in users only | A few per visit |
+| Remote connector answers a search | `catalog.json` from Hosting, cached briefly in the Worker | 0 |
 | Publish, star, friend | Firestore writes behind security rules | n/a |
 
 The Spark plan allows 50,000 document reads and 20,000 writes per day, 1 GiB of Firestore storage, and 360 MB per day of Hosting transfer. A collection query bills one read per document returned, which is why public browsing never touches Firestore.
@@ -115,7 +123,7 @@ The version is pinned so an installed agent cannot change underneath its user.
 These hold through Phase 3. Breaking one requires the owner's explicit sign-off, recorded in the decision log.
 
 1. **No server-side inference.** AgentForge never calls a model and never proxies a model call.
-2. **No paid infrastructure.** Firebase stays on Spark. That means no Cloud Functions and no server we operate.
+2. **No paid infrastructure.** Firebase stays on Spark, which means no Cloud Functions. One free-tier hosted service is permitted: the remote connector on Cloudflare Workers ([section 7.6](#76-remote-connector)). It must stay stateless, hold no user data, and run on a plan that pauses at its limit instead of billing.
 3. **Public browsing costs zero Firestore reads.** It is served from `catalog.json`.
 4. **No client can make an agent public by itself.** A manifest reaches `catalog.json` only through the review path in `P2-7`.
 5. **Installed agents are version-pinned.** A manifest never mutates under a user.
@@ -135,6 +143,7 @@ Binding. Newest first. Add to it, do not rewrite history.
 | 2026-11-13 | **Owner confirmed: friends are mutual.** One person sends a request and the other accepts |
 | 2026-11-13 | **"Verified author" is the only wording for the badge.** It means the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent. Never shorten it to "Verified" in UI text, docs, or guide text. The manifest field stays `author.verified`; MCP tool results report it as `author.verified_author` so an AI cannot misread it. This supersedes the `{ name, verified }` shape in the tool contract entry below |
 | 2026-11-13 | The AI guide says **when to look**: check the registry at the start of any specialized task, and always when the user says "use AgentForge". It also requires checking that an already-loaded agent fits the task, because a loaded agent survives a cleared conversation. The dependable way for a user to trigger a search is to say "Use AgentForge to find an agent for ...", and the install tab tells them so |
+| 2026-11-13 | **Invariant 2 amended with the owner's sign-off.** "No server we operate" becomes "no paid infrastructure". A free Cloudflare Workers service may host the remote connector so that AgentForge can be added by URL in an AI app's connector settings, including on phones. Firebase remains the home of the site, catalog, accounts, and data. Nothing moves to Cloudflare except the connector |
 | 2026-11-13 | MCP server 0.1.1 released with the guide changes above and `verified_author`. 0.1.0 stays hosted |
 | 2026-11-12 | MCP tool contract: `search_registry` returns `{ candidates: [...], next_step }` with ranked candidates, never a bare array and never a single answer. `compare_agents` takes 2 to 5 ids. Neither tool loads an agent. Both emit `author` as `{ name, verified }` only, so schema version 2 does not change their output (P1-5) |
 | 2026-11-12 | **The owner rejected the flat redesign and it was reverted.** The visual style is the original one: glass surfaces, the gradient headline, the gradient logo tile, soft page glow, and cards that lift and glow on hover. The only standing change is that small labels are never pills ([section 7.1](#71-visual-style)). This supersedes the earlier token rule from P1-3 |
@@ -223,6 +232,7 @@ Goal: people sign in, publish their own agents, and choose who sees them.
 | P2-7 | Review queue and catalog pipeline: an admin screen to approve or reject public submissions, and a CI job that rebuilds `catalog.json` from approved agents | Codex (pipeline), Claude (UI) | P1-2, P2-5, P2-6 | An approved agent appears on the live site within one pipeline run. An unapproved one never does | open |
 | P2-8 | Stars: provision `agents/{id}` on approval and add the star button | Codex | P2-2, P2-7 | Starring persists, is one per user, and shows in the catalog after the next rebuild | open |
 | P2-9 | "My agents" and "Shared with me" views | Claude | P2-5 | A user sees their own private, friends, and pending agents, and agents friends shared with them | open |
+| P2-10 | Remote connector per [7.6](#76-remote-connector): a hosted MCP endpoint on Cloudflare Workers, deployed by CI, plus an "Add as a connector" option on the install tab | Codex (service), Claude (install tab) | P2-1, owner creates a Cloudflare account and adds two repository secrets | The connector URL, added in Claude's connector settings, lets Claude on desktop, web, and phone search and load public agents with nothing installed | open |
 
 ### Phase 3: Runtime and reach
 
@@ -327,6 +337,19 @@ A published manifest is a system prompt that strangers load into their own AI, s
 - Unverified authors get a visible warning on the install tab.
 
 ---
+
+### 7.6 Remote connector
+
+The local server needs Node and a terminal, and cannot run on a phone or in a web app. The remote connector is the same registry behind one web address that a user pastes into their AI app's connector settings.
+
+- **Where it runs.** Cloudflare Workers, free plan. Code lives in `packages/connector/`. CI deploys it with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets.
+- **What it is.** An MCP server over Streamable HTTP at `/mcp`. Public, read-only, no sign-in.
+- **Stateless.** A shared web service cannot remember which agent one user loaded. So it has no `switch_agent` and no per-agent tool. It offers `search_registry`, `compare_agents`, and `get_agent`, which returns the full blueprint in one call. It serves the same guide, with the same rules, through its instructions and the `registry_guide` resource and prompt.
+- **One source of logic.** Search, comparison, validation, and the guide text are shared with `packages/mcp-server`, not copied. The two must not drift, and a test enforces it.
+- **Data.** It reads `catalog.json` from Firebase Hosting, caches it for a few minutes, and falls back to a bundled snapshot. It stores nothing and logs no user content.
+- **Limits.** When the free plan's daily request limit is reached, the connector stops answering until the next day. The site and the local server are unaffected. No setting may be enabled that converts overage into charges.
+- **Not in scope yet.** Private and friends agents need sign-in on the connection itself (OAuth). That is Phase 3, with P3-1.
+- **Listing.** Adding the URL as a custom connector works as soon as the service is live. Appearing in an AI vendor's built-in connector directory requires that vendor's review and is a later, separate step.
 
 ## 8. Who does what
 
