@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { Ajv2020 } from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
-import type { AgentManifest } from '../types/agent'
+import type { AgentManifest, AgentRecord } from '../types/agent'
 
 const text = z
   .string()
@@ -13,17 +13,27 @@ export const versionSchema = z
   .regex(
     /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?$/,
   )
+export const authorHandleSchema = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/)
+  .refine(
+    (value) => value === value.trim(),
+    'Handle must not contain whitespace',
+  )
 const schemaDocument = z.record(z.string(), z.unknown())
 
 /** Strict runtime counterpart of the canonical interface. Never coerce live data. */
 export const manifestSchema = z.strictObject({
+  schema_version: z.literal(2),
+  visibility: z.enum(['public', 'friends', 'private']),
   id: agentIdSchema,
   name: text,
   version: versionSchema,
   description: text,
   author: z.strictObject({
+    uid: text,
     name: text,
-    github: z.string().regex(/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/),
+    handle: authorHandleSchema,
     verified: z.boolean(),
   }),
   tags: z
@@ -58,6 +68,19 @@ export const manifestSchema = z.strictObject({
   }),
 }) satisfies z.ZodType<AgentManifest>
 
+export const agentRecordSchema = manifestSchema.extend({
+  owner_uid: text,
+  review_status: z.enum(['pending', 'approved', 'rejected']),
+  shared_with: z.array(text).max(100),
+}) satisfies z.ZodType<AgentRecord>
+
+export function validateAgentRecord(value: unknown): AgentRecord {
+  const record = agentRecordSchema.parse(value)
+  // Strip storage metadata before reusing manifest and JSON Schema validation.
+  validateManifest(manifestSchema.strip().parse(record))
+  return record
+}
+
 export function createSchemaValidator() {
   // No remote reference fetching. Unresolvable refs fail closed during compilation.
   const ajv = new Ajv2020({
@@ -88,6 +111,8 @@ export function validateCatalog(value: unknown): AgentManifest[] {
   const agents = value.map(validateManifest)
   const ids = new Set<string>()
   for (const agent of agents) {
+    if (agent.visibility !== 'public')
+      throw new Error('Catalog contains a non-public agent: ' + agent.id)
     if (ids.has(agent.id)) throw new Error(`Duplicate catalog id: ${agent.id}`)
     ids.add(agent.id)
   }

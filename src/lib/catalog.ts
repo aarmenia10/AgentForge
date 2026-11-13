@@ -40,7 +40,7 @@ function matchesKeyword(agent: AgentManifest, keyword: string): boolean {
     agent.id,
     agent.description,
     agent.author.name,
-    agent.author.github,
+    agent.author.handle,
     agent.framework,
     ...agent.tags,
     ...agent.tools_required.map((t) => t.name),

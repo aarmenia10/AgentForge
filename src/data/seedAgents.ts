@@ -57,7 +57,9 @@ function manifest(seed: Seed): AgentManifest {
     ...fields,
     version: '1.0.0',
     framework,
-    author: { name: 'AgentForge', github: 'aarmenia10', verified: true },
+    author: { uid: 'agentforge', name: 'AgentForge', handle: 'agentforge', verified: true },
+    visibility: 'public',
+    schema_version: 2,
     prompt_blueprint: {
       system_prompt: `${role} Provide evidence-backed work for review. State uncertainty explicitly. Never execute writes or external actions without the user's authorization.`,
       instructions: [
@@ -71,7 +73,7 @@ function manifest(seed: Seed): AgentManifest {
 }
 
 /** Maintainer-curated workflows, with zero fabricated engagement. Tool declarations
- * describe host-provided capabilities, not bundled adapters. Verified means curated. */
+ * describe host-provided capabilities, not bundled adapters. Verified author means identity confirmed. */
 export const SEED_AGENTS: readonly AgentManifest[] = [
   manifest({
     id: 'campaign-brief-crew',

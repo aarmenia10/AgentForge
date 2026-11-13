@@ -4,6 +4,8 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
+import { pathToFileURL } from 'node:url'
 import { dirname, join, relative, resolve } from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
@@ -66,6 +68,11 @@ test(
       t.diagnostic(`npm pack: ${pack.filename}; files: ${paths.join(', ')}`)
 
       const tarball = join(temporary, pack.filename)
+      assert.deepEqual(
+        await readFile(tarball),
+        await readFile(resolve('public/mcp', pack.filename)),
+        'Committed release must match the package that is tested',
+      )
       // A minimal consumer manifest keeps npm from finding any ancestor project.
       await writeFile(
         join(installDir, 'package.json'),
@@ -160,3 +167,141 @@ test(
     }
   },
 )
+
+for (const version of ['0.1.0', '0.1.1']) {
+  test(
+    'committed ' +
+      version +
+      ' tarball rejects version 2 and serves its bundled snapshot',
+    { timeout: 180_000 },
+    async (t) => {
+      const npmCli = process.env.npm_execpath
+      assert.ok(npmCli, 'Run this check with npm run test:package')
+      const tarball = resolve(
+        'public/mcp/agentforge-registry-' + version + '.tgz',
+      )
+      const originalHash = createHash('sha256')
+        .update(await readFile(tarball))
+        .digest('hex')
+      const newCatalog = JSON.parse(
+        await readFile('public/catalog.json', 'utf8'),
+      )
+      assert.ok(newCatalog.length > 0)
+      assert.ok(
+        newCatalog.every(
+          (a: { schema_version: number }) => a.schema_version === 2,
+        ),
+      )
+      const cwd = await mkdtemp(join(tmpdir(), 'agentforge-legacy-'))
+      try {
+        await writeFile(
+          join(cwd, 'package.json'),
+          JSON.stringify({ name: 'legacy-consumer', private: true }),
+        )
+        await run(
+          process.execPath,
+          [npmCli, 'install', '--omit=dev', '--no-audit', '--no-fund', tarball],
+          {
+            cwd,
+            windowsHide: true,
+            timeout: 120_000,
+            maxBuffer: 4 * 1024 * 1024,
+          },
+        )
+        const executable = join(
+          cwd,
+          'node_modules/agentforge-registry/dist/cli.js',
+        )
+        // Exercise the actual released validator and default fallback. Only the
+        // live HTTP response is replaced, with the exact new catalog bytes.
+        const shim = join(cwd, 'live-v2.mjs')
+        await writeFile(
+          shim,
+          [
+            "import { readFileSync } from 'node:fs'",
+            'const body = readFileSync(' +
+              JSON.stringify(resolve('public/catalog.json')) +
+              ', "utf8")',
+            'globalThis.fetch = async (url) => {',
+            '  if (url !== "https://agentforge-b10db.web.app/catalog.json") throw new Error("Unexpected catalog URL")',
+            '  console.error("legacy default fetched version 2 catalog")',
+            '  return new Response(body)',
+            '}',
+          ].join('\n'),
+        )
+        const transport = new StdioClientTransport({
+          command: process.execPath,
+          args: [
+            '--import',
+            pathToFileURL(shim).href,
+            executable,
+            '--agent',
+            'postgres-index-tuner@1.0.0',
+          ],
+          cwd,
+          stderr: 'pipe',
+        })
+        let stderr = ''
+        transport.stderr?.on('data', (chunk) => {
+          stderr += chunk.toString()
+        })
+        const client = new Client({
+          name: 'legacy-fallback-test',
+          version: '1.0.0',
+        })
+        try {
+          try {
+            await client.connect(transport)
+          } catch (error) {
+            throw new Error('Legacy server failed: ' + stderr, { cause: error })
+          }
+          assert.equal(client.getServerVersion()?.version, version)
+          const manifest = await client.readResource({
+            uri: 'agentforge://active/manifest',
+          })
+          const active = JSON.parse(
+            (manifest.contents[0] as { text: string }).text,
+          )
+          assert.equal(active.id, 'postgres-index-tuner')
+          assert.equal(
+            active.schema_version,
+            undefined,
+            'Must use the bundled v1 manifest',
+          )
+          assert.equal(active.author.handle, undefined)
+          assert.equal(typeof active.author.github, 'string')
+          const search = await client.callTool({
+            name: 'search_registry',
+            arguments: { query: 'postgres' },
+          })
+          assert.notEqual(search.isError, true)
+          const result = JSON.parse(
+            (search.content as { text: string }[])[0].text,
+          )
+          assert.ok(
+            result.candidates.some(
+              (a: { id: string }) => a.id === 'postgres-index-tuner',
+            ),
+          )
+          assert.match(stderr, /legacy default fetched version 2 catalog/)
+          t.diagnostic(
+            version +
+              ': fetched v2 catalog; initialized; bundled v1 manifest confirmed; search_registry("postgres") returned postgres-index-tuner',
+          )
+        } finally {
+          await client.close()
+        }
+        assert.equal(
+          createHash('sha256')
+            .update(await readFile(tarball))
+            .digest('hex'),
+          originalHash,
+        )
+      } finally {
+        assert.equal(dirname(cwd), resolve(tmpdir()))
+        assert.ok(cwd.startsWith(join(resolve(tmpdir()), 'agentforge-legacy-')))
+        await rm(cwd, { recursive: true, force: true })
+      }
+    },
+  )
+}

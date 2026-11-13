@@ -65,7 +65,7 @@ export function createRegistryServer(
 ) {
   let active = selector ? selectAgent(catalog, selector) : undefined
   const server = new Server(
-    { name: 'agentforge-registry', version: '0.1.1' },
+    { name: 'agentforge-registry', version: '0.2.0' },
     {
       capabilities: {
         tools: { listChanged: true },

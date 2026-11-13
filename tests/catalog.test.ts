@@ -6,8 +6,11 @@ import { AGENT_CATEGORIES, AGENT_FRAMEWORKS } from '../src/types/agent'
 import {
   validateCatalog,
   validateManifest,
+  validateAgentRecord,
   createSchemaValidator,
 } from '../src/lib/validateManifest'
+import { queryAgents, DEFAULT_QUERY } from '../src/lib/catalog'
+import type { AgentRecord } from '../src/types/agent'
 import { mergeCatalog } from '../scripts/export-catalog'
 import { createFirestoreAgentRepository } from '../src/lib/agentRepository'
 
@@ -53,9 +56,9 @@ test('rejects malformed manifests, nested extras, versions, dates, counters, and
   assert.throws(() => validateCatalog([base, base]))
 })
 
-test('live records override seeds; revocation suppresses seed; invalid live records fail', () => {
+test('live records override seeds; approval and privacy changes suppress seeds; invalid live records fail', () => {
   const base = SEED_AGENTS[0]
-  const live = { ...base, version: '1.1.0', stats: { ...base.stats, stars: 5 } }
+  const live: AgentRecord = { ...base, version: '1.1.0', stats: { ...base.stats, stars: 5 }, owner_uid: 'owner', review_status: 'approved', shared_with: [] }
   assert.equal(
     mergeCatalog(SEED_AGENTS, [live]).find((a) => a.id === base.id)?.stats
       .stars,
@@ -63,7 +66,7 @@ test('live records override seeds; revocation suppresses seed; invalid live reco
   )
   assert.equal(
     mergeCatalog(SEED_AGENTS, [
-      { ...live, author: { ...live.author, verified: false } },
+      { ...live, review_status: 'rejected' },
     ]).length,
     SEED_AGENTS.length - 1,
   )
@@ -108,4 +111,62 @@ test('repository uses only /catalog.json and preserves last valid memory snapsho
   } finally {
     fetchMock.mock.restore()
   }
+})
+
+test('version 2 requires identity, visibility, and the schema discriminator; handles follow the contract', () => {
+  const base = SEED_AGENTS[0]
+  for (const handle of ['abc', 'a-b', '123', 'a--b', 'a'.repeat(30)]) {
+    assert.equal(validateManifest({ ...base, author: { ...base.author, handle } }).author.handle, handle)
+  }
+  for (const handle of ['', 'ab', '-abc', 'abc-', 'Abc', 'a_b', 'a b', '@abc', 'ébc', 'a'.repeat(31), 'abc\n']) {
+    assert.throws(() => validateManifest({ ...base, author: { ...base.author, handle } }), handle)
+  }
+  for (const patch of [
+    { schema_version: undefined }, { schema_version: 1 }, { schema_version: '2' },
+    { visibility: undefined }, { visibility: 'unlisted' },
+    { author: { ...base.author, uid: undefined } }, { author: { ...base.author, uid: ' ' } },
+    { author: { ...base.author, handle: undefined } },
+    { author: { name: 'Legacy', github: 'legacy', verified: true } },
+    { owner_uid: 'owner' }, { review_status: 'approved' }, { shared_with: [] },
+  ]) assert.throws(() => validateManifest({ ...base, ...patch }))
+  for (const visibility of ['private', 'friends'] as const) {
+    assert.equal(validateManifest({ ...base, visibility }).visibility, visibility)
+    assert.throws(() => validateCatalog([{ ...base, visibility }]))
+  }
+})
+
+test('only approved public records enter catalog.json; storage metadata never leaks', () => {
+  const base: AgentRecord = { ...SEED_AGENTS[0], owner_uid: 'owner', review_status: 'approved', shared_with: ['friend'] }
+  const records = (['public', 'friends', 'private'] as const).flatMap(visibility =>
+    (['approved', 'pending', 'rejected'] as const).map(review_status =>
+      ({ ...base, id: visibility+'-'+review_status, visibility, review_status })))
+  // Identity verification does not substitute for approval or gate an approved record.
+  records.push({ ...base, id: 'unverified-approved', author: { ...base.author, verified: false } })
+  const catalogJson = JSON.stringify(mergeCatalog([], records))
+  const catalog = JSON.parse(catalogJson)
+  assert.deepEqual(catalog.map((a: { id: string }) => a.id), ['public-approved', 'unverified-approved'])
+  for (const field of ['owner_uid', 'review_status', 'shared_with']) assert.ok(!catalogJson.includes(field))
+  for (const visibility of ['friends', 'private'] as const) {
+    assert.ok(!mergeCatalog(SEED_AGENTS, [{ ...base, visibility }]).some(a => a.id === base.id))
+  }
+  assert.throws(() => mergeCatalog([], [base, base]))
+  assert.throws(() => mergeCatalog([SEED_AGENTS[0], SEED_AGENTS[0]], []))
+  for (const patch of [
+    { owner_uid: undefined }, { owner_uid: '' }, { review_status: undefined }, { review_status: 'unknown' },
+    { shared_with: undefined }, { shared_with: [1] }, { shared_with: Array(101).fill('friend') },
+    { unexpected: true }, { input_schema: { type: 'bad-type' } },
+  ]) {
+    assert.throws(() => validateAgentRecord({ ...base, ...patch }))
+    assert.throws(() => mergeCatalog([], [{ ...base, visibility: 'private', ...patch }]))
+  }
+})
+
+test('seeds have the registry identity and web search matches an AgentForge handle', () => {
+  for (const seed of SEED_AGENTS) {
+    assert.deepEqual(seed.author, { uid: 'agentforge', name: 'AgentForge', handle: 'agentforge', verified: true })
+    assert.equal(seed.visibility, 'public')
+    assert.equal(seed.schema_version, 2)
+  }
+  const agent = { ...SEED_AGENTS[0], author: { ...SEED_AGENTS[0].author, handle: 'unique-author-42' } }
+  assert.deepEqual(queryAgents([agent], { ...DEFAULT_QUERY, keyword: 'UNIQUE-AUTHOR-42' }), [agent])
 })

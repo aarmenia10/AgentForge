@@ -48,11 +48,9 @@ const VERIFIED_AUTHOR_HINT =
 
 export function AuthorTag({
   author,
-  link = false,
   showVerifiedLabel = false,
 }: {
   author: AgentAuthor
-  link?: boolean
   /** Spell the badge out beside the name. Cards stay icon-only for space. */
   showVerifiedLabel?: boolean
 }) {
@@ -65,29 +63,11 @@ export function AuthorTag({
       {showVerifiedLabel && <span>{VERIFIED_AUTHOR_LABEL}</span>}
     </span>
   )
-  const identity = (
-    <>
-      <GitHubIcon className="size-3.5 shrink-0" />
-      <span className="truncate">@{author.github}</span>
-    </>
-  )
   const className =
     'inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400'
-  // The badge sits outside the link so its tooltip explains the badge, not the link.
   return (
     <span className={className}>
-      {link ? (
-        <a
-          href={`https://github.com/${author.github}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex min-w-0 items-center gap-1.5 hover:text-teal-600 dark:hover:text-teal-300"
-        >
-          {identity}
-        </a>
-      ) : (
-        identity
-      )}
+      <span className="truncate">@{author.handle}</span>
       {badge}
     </span>
   )

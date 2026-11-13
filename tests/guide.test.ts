@@ -20,7 +20,9 @@ function agent(id: string, patch: Partial<AgentManifest> = {}): AgentManifest {
     name: id,
     version: '1.0.0',
     description: '',
-    author: { name: 'Test', github: 'test', verified: true },
+    schema_version: 2,
+    visibility: 'public',
+    author: { uid: 'test', name: 'Test', handle: 'test', verified: true },
     tags: [],
     framework: 'mcp_native',
     tools_required: [],
@@ -246,7 +248,7 @@ test('compare_agents returns a side-by-side and refuses unknown or too few agent
       postgres.tools_required.map((t: { name: string }) => t.name),
       seed.tools_required.map((t) => t.name),
     )
-    assert.equal(postgres.author.verified_author, seed.author.verified)
+    assert.deepEqual(postgres.author, { name: seed.author.name, verified_author: seed.author.verified })
     assert.equal(postgres.updated_at, seed.stats.updated_at)
     assert.equal(typeof postgres.days_since_update, 'number')
 
@@ -292,7 +294,7 @@ test('compareAgents reports shared and unique requirements and unverified author
   })
   const b = agent('b', {
     tags: ['coding', 'docs'],
-    author: { name: 'Other', github: 'other', verified: false },
+    author: { uid: 'other', name: 'Other', handle: 'other', verified: false },
     input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
     stats: { stars: 3, views: 9, updated_at: '2026-01-10T00:00:00.000Z' },
   })

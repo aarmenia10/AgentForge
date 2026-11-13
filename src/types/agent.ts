@@ -16,9 +16,11 @@ export type AgentToolType = 'mcp_tool' | 'python_function' | 'rest_api'
 export type JsonSchema = Record<string, any>
 
 export interface AgentAuthor {
+  uid: string
   name: string
-  /** GitHub handle without the leading "@". */
-  github: string
+  /** AgentForge username: 3 to 30 lowercase letters, digits, or hyphens; alphanumeric ends. */
+  handle: string
+  /** Verified author: the registry confirmed identity, not safety or quality. */
   verified: boolean
 }
 
@@ -46,6 +48,8 @@ export interface AgentStats {
 }
 
 export interface AgentManifest {
+  schema_version: 2
+  visibility: 'public' | 'friends' | 'private'
   /** Unique, URL-safe slug. Doubles as the Firestore document id. */
   id: string
   name: string
@@ -61,6 +65,13 @@ export interface AgentManifest {
   output_schema: JsonSchema
   prompt_blueprint: PromptBlueprint
   stats: AgentStats
+}
+
+/** Firestore document metadata. Never serialize these fields into catalog.json. */
+export interface AgentRecord extends AgentManifest {
+  owner_uid: string
+  review_status: 'pending' | 'approved' | 'rejected'
+  shared_with: string[]
 }
 
 /* ---------- UI-facing constants derived from the contract ---------- */
