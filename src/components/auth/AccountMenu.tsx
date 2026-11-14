@@ -34,11 +34,12 @@ export function AccountMenu() {
 }
 
 function SignedInMenu() {
-  const { user, needsEmailVerification, resendVerification, signOut } =
-    useAuth()
+  const { user, needsEmailVerification, refreshUser, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [resent, setResent] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const [checking, setChecking] = useState<'idle' | 'checking' | 'not-yet'>(
+    'idle',
+  )
   const [signingOut, setSigningOut] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -71,15 +72,17 @@ function SignedInMenu() {
     }
   }
 
-  async function onResend() {
-    if (!resendVerification) return
-    setResent('sending')
+  async function onCheckVerified() {
+    if (checking === 'checking') return
+    setChecking('checking')
+    setError(null)
     try {
-      await resendVerification()
-      setResent('sent')
+      const fresh = await refreshUser()
+      // A verified user drops the reminder through the auth listener.
+      setChecking(fresh?.emailVerified ? 'idle' : 'not-yet')
     } catch {
-      setResent('idle')
-      setError('Could not resend the link. Try again in a minute.')
+      setChecking('idle')
+      setError('Could not check right now. Try again in a minute.')
     }
   }
 
@@ -153,19 +156,18 @@ function SignedInMenu() {
               Open the link we sent to {user.email}. Publishing and friend
               requests unlock once it is confirmed.
             </p>
-            {resendVerification && (
-              <button
-                type="button"
-                onClick={onResend}
-                disabled={resent !== 'idle'}
-                className="mt-2 text-xs font-semibold text-amber-900 underline-offset-2 hover:underline disabled:no-underline disabled:opacity-70 dark:text-amber-100"
-              >
-                {resent === 'sent'
-                  ? 'Link sent'
-                  : resent === 'sending'
-                    ? 'Sending'
-                    : 'Resend link'}
-              </button>
+            <button
+              type="button"
+              onClick={onCheckVerified}
+              aria-disabled={checking === 'checking' || undefined}
+              className="mt-2 text-xs font-semibold text-amber-900 underline underline-offset-2 aria-disabled:opacity-70 dark:text-amber-100"
+            >
+              {checking === 'checking' ? 'Checking' : 'I have confirmed it'}
+            </button>
+            {checking === 'not-yet' && (
+              <p role="status" className="mt-1 text-xs">
+                Not confirmed yet. Open the link in the email, then try again.
+              </p>
             )}
           </div>
         )}

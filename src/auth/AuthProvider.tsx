@@ -6,24 +6,22 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import type { AuthService, AuthUser } from '@/lib/auth'
-import {
-  readEmailVerified,
-  type AuthServiceWithVerification,
-} from './capabilities'
 import { loadAuthService } from './loadAuthService'
 import { hasSessionHint, setSessionHint } from './session'
 
-// The dialog is its own chunk too: a visitor who never opens it downloads neither
+// The dialog is its own chunk: a visitor who never opens it downloads neither
 // the form nor Firebase.
 const SignInDialog = lazy(() => import('@/components/auth/SignInDialog'))
 
+/** How long a remembered session may take to restore before we show "Sign in". */
+const RESTORE_TIMEOUT_MS = 8000
+
 /**
- * - `signed-out`: no user. Firebase may not even be loaded.
+ * - `signed-out`: no user.
  * - `restoring`: this browser had a session; waiting for Firebase to confirm it.
  * - `signed-in`: `user` is set.
  */
@@ -39,14 +37,13 @@ export interface OpenSignInOptions {
 interface AuthContextValue {
   status: AuthStatus
   user: AuthUser | null
-  /** True when the account signed up with email and has not confirmed the address yet. */
+  /** Signed in with email and the address is not confirmed yet. */
   needsEmailVerification: boolean
-  /** Present only when the service can resend the verification email. */
-  resendVerification: (() => Promise<void>) | null
   dialog: (OpenSignInOptions & { open: true }) | null
+  /** Ask for sign-in. Call this only when the user tries an action that needs it. */
   openSignIn: (options?: OpenSignInOptions) => void
   closeSignIn: () => void
-  /** Starts loading the service (and Firebase) without opening anything. */
+  /** Resolves the service and starts downloading Firebase, without opening anything. */
   prepare: () => Promise<AuthService>
   signInWithGoogle: () => Promise<AuthUser>
   signInWithEmail: (email: string, password: string) => Promise<AuthUser>
@@ -56,6 +53,8 @@ interface AuthContextValue {
     displayName: string,
   ) => Promise<AuthUser>
   sendPasswordReset: (email: string) => Promise<void>
+  /** Reloads the user after they follow the verification link. */
+  refreshUser: () => Promise<AuthUser | null>
   signOut: () => Promise<void>
 }
 
@@ -66,62 +65,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasSessionHint() ? 'restoring' : 'signed-out',
   )
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [service, setService] = useState<AuthServiceWithVerification | null>(
-    null,
-  )
-  const [signedUpUid, setSignedUpUid] = useState<string | null>(null)
   const [dialog, setDialog] = useState<AuthContextValue['dialog']>(null)
-  const unsubscribe = useRef<(() => void) | null>(null)
 
-  const prepare = useCallback(async () => {
-    const loaded = await loadAuthService()
-    if (!unsubscribe.current) {
-      unsubscribe.current = loaded.onAuthChange((next) => {
-        setUser(next)
-        setStatus(next ? 'signed-in' : 'signed-out')
-        setSessionHint(next !== null)
+  // Subscribe once. For a visitor with no remembered session this loads no
+  // Firebase code: the service reports "signed out" from memory.
+  useEffect(() => {
+    let active = true
+    let subscribing = true
+    let unsubscribe: (() => void) | undefined
+    const restoring = hasSessionHint()
+    const timer = restoring
+      ? window.setTimeout(() => {
+          if (!active) return
+          setStatus((current) =>
+            current === 'restoring' ? 'signed-out' : current,
+          )
+        }, RESTORE_TIMEOUT_MS)
+      : undefined
+
+    loadAuthService()
+      .then(({ service }) => {
+        if (!active) return
+        unsubscribe = service.onAuthChange((next) => {
+          // The service answers "null" immediately on subscribe, before a
+          // remembered session has been restored. Wait for the real answer.
+          if (subscribing && restoring && next === null) return
+          window.clearTimeout(timer)
+          setUser(next)
+          setStatus(next ? 'signed-in' : 'signed-out')
+          setSessionHint(next !== null)
+        })
+        subscribing = false
       })
-      setService(loaded)
+      .catch(() => {
+        if (!active) return
+        setSessionHint(false)
+        setStatus('signed-out')
+      })
+
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+      unsubscribe?.()
     }
-    return loaded
   }, [])
 
-  // Restore a returning user's session. First-time visitors skip this entirely.
-  useEffect(() => {
-    if (!hasSessionHint()) return
-    prepare().catch(() => {
-      setSessionHint(false)
-      setStatus('signed-out')
-    })
-  }, [prepare])
-
-  useEffect(
-    () => () => {
-      unsubscribe.current?.()
-      unsubscribe.current = null
-    },
-    [],
-  )
+  const prepare = useCallback(async () => {
+    const { service } = await loadAuthService()
+    if (import.meta.env.VITE_AUTH_STUB !== '1') {
+      // Warm the Firebase Auth chunk so the Google window can open straight
+      // from the click instead of after a download, which pop-up blockers punish.
+      void import('@/lib/firebaseAuth').catch(() => {})
+    }
+    return service
+  }, [])
 
   const openSignIn = useCallback((options: OpenSignInOptions = {}) => {
     setDialog({ open: true, ...options })
   }, [])
   const closeSignIn = useCallback(() => setDialog(null), [])
 
-  const value = useMemo<AuthContextValue>(() => {
-    const verified = user ? readEmailVerified(user) : undefined
-    // Without an `emailVerified` field from the service, the only account known
-    // to be unverified is one created in this tab.
-    const needsEmailVerification =
-      user !== null &&
-      (verified === false ||
-        (verified === undefined && user.uid === signedUpUid))
-    const resend = service?.sendEmailVerification?.bind(service) ?? null
-    return {
+  const value = useMemo<AuthContextValue>(
+    () => ({
       status,
       user,
-      needsEmailVerification,
-      resendVerification: resend,
+      needsEmailVerification: user !== null && !user.emailVerified,
       dialog,
       openSignIn,
       closeSignIn,
@@ -129,30 +137,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithGoogle: async () => (await prepare()).signInWithGoogle(),
       signInWithEmail: async (email, password) =>
         (await prepare()).signInWithEmail(email, password),
-      signUpWithEmail: async (email, password, displayName) => {
-        const created = await (
-          await prepare()
-        ).signUpWithEmail(email, password, displayName)
-        setSignedUpUid(created.uid)
-        return created
-      },
+      signUpWithEmail: async (email, password, displayName) =>
+        (await prepare()).signUpWithEmail(email, password, displayName),
       sendPasswordReset: async (email) =>
         (await prepare()).sendPasswordReset(email),
+      refreshUser: async () => (await loadAuthService()).refreshUser(),
       signOut: async () => {
-        await (await prepare()).signOut()
+        await (await loadAuthService()).service.signOut()
         setSessionHint(false)
       },
-    }
-  }, [
-    status,
-    user,
-    signedUpUid,
-    service,
-    dialog,
-    openSignIn,
-    closeSignIn,
-    prepare,
-  ])
+    }),
+    [status, user, dialog, openSignIn, closeSignIn, prepare],
+  )
 
   return (
     <AuthContext value={value}>

@@ -32,8 +32,6 @@ const MESSAGES: Record<string, string> = {
   'auth/operation-not-allowed':
     'This sign-in method is not switched on yet. Try again later.',
   'auth/unauthorized-domain': 'Sign-in is not set up for this web address yet.',
-  'auth/unavailable':
-    'Sign-in is not switched on yet. Browsing and installing agents work without an account.',
 }
 
 const FALLBACK: Record<AuthAction, string> = {
@@ -65,12 +63,4 @@ export function isUserCancellation(error: unknown): boolean {
     code === 'auth/popup-closed-by-user' ||
     code === 'auth/cancelled-popup-request'
   )
-}
-
-/** Thrown by the loader when `src/lib/auth.ts` exports no `authService` yet. */
-export class AuthUnavailableError extends Error {
-  readonly code = 'auth/unavailable'
-  constructor() {
-    super('No AuthService implementation is exported from src/lib/auth.ts')
-  }
 }

@@ -1,15 +1,25 @@
-import type { AuthService } from '@/lib/auth'
-import { AuthUnavailableError } from './authErrors'
+import {
+  authService,
+  refreshAuthUser,
+  type AuthService,
+  type AuthUser,
+} from '@/lib/auth'
 
-let pending: Promise<AuthService> | null = null
+export interface LoadedAuth {
+  service: AuthService
+  /** Reloads the user, e.g. after they follow the email verification link. */
+  refreshUser: () => Promise<AuthUser | null>
+}
+
+let pending: Promise<LoadedAuth> | null = null
 
 /**
- * Loads the sign-in implementation on demand. Nothing here is imported by the
- * page at startup, so Firebase never downloads for a visitor who does not open
- * the sign-in dialog. Concurrent callers share one load; a failed load can be
- * retried.
+ * Resolves the sign-in implementation. `src/lib/auth.ts` is small and imports
+ * Firebase only through its own dynamic `import()`, so holding a reference to
+ * it here costs a signed-out visitor nothing. Firebase downloads when a sign-in
+ * method is called, or on page load only for a browser that had a session.
  */
-export function loadAuthService(): Promise<AuthService> {
+export function loadAuthService(): Promise<LoadedAuth> {
   if (!pending) {
     pending = importService().catch((error: unknown) => {
       pending = null
@@ -19,14 +29,12 @@ export function loadAuthService(): Promise<AuthService> {
   return pending
 }
 
-async function importService(): Promise<AuthService> {
+async function importService(): Promise<LoadedAuth> {
   // Local verification only. Vite replaces the flag at build time, so the stub
   // is dropped from every build that does not set VITE_AUTH_STUB=1.
   if (import.meta.env.VITE_AUTH_STUB === '1') {
-    const { createStubAuthService } = await import('./stubAuthService')
-    return createStubAuthService()
+    const { getStubAuth } = await import('./stubAuthService')
+    return getStubAuth()
   }
-  const mod: { authService?: AuthService } = await import('@/lib/auth')
-  if (!mod.authService) throw new AuthUnavailableError()
-  return mod.authService
+  return { service: authService, refreshUser: refreshAuthUser }
 }

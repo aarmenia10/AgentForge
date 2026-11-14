@@ -2,11 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import {
-  AuthUnavailableError,
-  describeAuthError,
-  isUserCancellation,
-} from '../src/auth/authErrors'
+import { describeAuthError, isUserCancellation } from '../src/auth/authErrors'
 
 const ROOT = resolve(import.meta.dirname, '..')
 
@@ -38,13 +34,6 @@ test('unknown errors never leak SDK text', () => {
   )
   assert.equal(message, 'Could not send the reset email. Try again.')
   assert.doesNotMatch(describeAuthError('boom', 'sign-in'), /boom/)
-})
-
-test('a missing service explains that browsing still works', () => {
-  assert.match(
-    describeAuthError(new AuthUnavailableError(), 'load'),
-    /without an account/,
-  )
 })
 
 test('closing the Google window is not treated as an error', () => {

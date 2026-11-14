@@ -10,7 +10,6 @@ import {
 } from 'react'
 import { useAuth, type SignInMode } from '@/auth/AuthProvider'
 import {
-  AuthUnavailableError,
   describeAuthError,
   isUserCancellation,
   type AuthAction,
@@ -44,7 +43,7 @@ export default function SignInDialog() {
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState<AuthAction | null>(null)
   const [serviceState, setServiceState] = useState<
-    'loading' | 'ready' | 'unavailable' | 'failed'
+    'loading' | 'ready' | 'failed'
   >('loading')
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -69,11 +68,9 @@ export default function SignInDialog() {
     let cancelled = false
     prepare()
       .then(() => !cancelled && setServiceState('ready'))
-      .catch((error: unknown) => {
+      .catch(() => {
         if (cancelled) return
-        setServiceState(
-          error instanceof AuthUnavailableError ? 'unavailable' : 'failed',
-        )
+        setServiceState('failed')
       })
     return () => {
       cancelled = true
@@ -179,17 +176,12 @@ export default function SignInDialog() {
     })
   }
 
-  const unavailable = serviceState === 'unavailable'
   // Busy controls stay focusable (aria-disabled, readOnly) so keyboard focus and
   // Escape keep working while a request is in flight.
   const isBusy = busy !== null
   const isForm = view === 'sign-in' || view === 'sign-up' || view === 'reset'
   const loadMessage =
-    serviceState === 'unavailable'
-      ? describeAuthError(new AuthUnavailableError(), 'load')
-      : serviceState === 'failed'
-        ? describeAuthError(null, 'load')
-        : null
+    serviceState === 'failed' ? describeAuthError(null, 'load') : null
   const shownError = formError ?? loadMessage
 
   return (
@@ -265,7 +257,7 @@ export default function SignInDialog() {
             <button
               type="button"
               onClick={onGoogle}
-              disabled={unavailable || serviceState !== 'ready'}
+              disabled={serviceState !== 'ready'}
               aria-disabled={isBusy || undefined}
               className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white/80 px-5 text-sm font-medium text-slate-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10 aria-disabled:cursor-wait aria-disabled:opacity-70"
             >
@@ -302,7 +294,6 @@ export default function SignInDialog() {
                   autoComplete="name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  disabled={unavailable}
                   readOnly={isBusy}
                   aria-invalid={fieldErrors.name ? true : undefined}
                   aria-describedby={
@@ -321,7 +312,6 @@ export default function SignInDialog() {
                 autoComplete="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                disabled={unavailable}
                 readOnly={isBusy}
                 aria-invalid={fieldErrors.email ? true : undefined}
                 aria-describedby={
@@ -362,7 +352,6 @@ export default function SignInDialog() {
                     }
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    disabled={unavailable}
                     readOnly={isBusy}
                     aria-invalid={fieldErrors.password ? true : undefined}
                     aria-describedby={
@@ -396,7 +385,6 @@ export default function SignInDialog() {
 
             <button
               type="submit"
-              disabled={unavailable}
               aria-disabled={isBusy || undefined}
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-500 px-5 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-wait aria-disabled:opacity-70"
             >
