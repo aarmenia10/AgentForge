@@ -48,24 +48,42 @@ jobs:
       - name: Test
         run: npx tsx --test tests/connector.test.ts
 
+      # A secret pasted with a stray line break or extra line makes the API
+      # reject the request header. Use the first non-empty line, trimmed.
       - name: Check for Cloudflare credentials
         id: creds
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
+          clean() { printf '%s\n' "$1" | tr -d '\r' | awk 'NF { print $1; exit }'; }
+          lines() { printf '%s\n' "$1" | awk 'NF' | wc -l | tr -d ' '; }
+          if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
             echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set. Skipping deploy."
+            exit 0
           fi
+          TOKEN_CLEAN=$(clean "$TOKEN")
+          ACCOUNT_CLEAN=$(clean "$ACCOUNT")
+          echo "::add-mask::$TOKEN_CLEAN"
+          echo "::add-mask::$ACCOUNT_CLEAN"
+          for name in TOKEN ACCOUNT; do
+            eval "value=\$$name"
+            count=$(lines "$value")
+            if [ "$count" != "1" ]; then
+              echo "::warning::The CLOUDFLARE secret for $name has $count non-empty lines. Using the first. Re-save the secret with only the value."
+            fi
+          done
+          echo "Token length: ${#TOKEN_CLEAN}. Account ID length: ${#ACCOUNT_CLEAN} (expected 32)."
+          {
+            echo "CLOUDFLARE_API_TOKEN=$TOKEN_CLEAN"
+            echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_CLEAN"
+            echo "present=true"
+          } >> "$GITHUB_ENV"
+          echo "present=true" >> "$GITHUB_OUTPUT"
 
       - name: Deploy
         if: steps.creds.outputs.present == 'true'
         working-directory: packages/connector
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy
 
       - name: Smoke-test the live connector
