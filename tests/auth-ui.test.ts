@@ -47,7 +47,8 @@ test('closing the Google window is not treated as an error', () => {
  * and fail if any of them is a Firebase package. Dynamic `import()` and
  * `import type` are allowed; they do not load at startup.
  */
-test('the startup import graph contains no Firebase module', () => {
+/** Every file reachable from `src/main.tsx` by static import, and any Firebase imports. */
+function walkStartupGraph() {
   const seen = new Set<string>()
   const offenders: string[] = []
   const staticImport =
@@ -87,9 +88,36 @@ test('the startup import graph contains no Firebase module', () => {
   }
 
   visit(join(ROOT, 'src', 'main.tsx'))
+  return { seen, offenders }
+}
+
+test('the startup import graph contains no Firebase module', () => {
+  const { seen, offenders } = walkStartupGraph()
   assert.ok(
     seen.has(join(ROOT, 'src', 'auth', 'AuthProvider.tsx')),
     'walker reached AuthProvider',
   )
   assert.deepEqual(offenders, [])
+})
+
+/**
+ * P2-11: every page except the home page is a React.lazy chunk, so no
+ * signed-in page, and not the account gate, ships in the startup bundle.
+ */
+test('no signed-in page module is statically reachable from the entry', () => {
+  const { seen } = walkStartupGraph()
+  const rel = [...seen].map((file) => file.slice(ROOT.length + 1))
+  assert.ok(rel.includes('src/pages/HomePage.tsx'), 'walker reached HomePage')
+  assert.ok(rel.includes('src/router/Router.tsx'), 'walker reached the router')
+  const pages = rel.filter(
+    (file) =>
+      file.startsWith('src/pages/') && file !== 'src/pages/HomePage.tsx',
+  )
+  assert.deepEqual(pages, [])
+  for (const gated of [
+    'src/components/RequireAccount.tsx',
+    'src/services/agents.ts',
+  ]) {
+    assert.ok(!rel.includes(gated), `${gated} is in the startup graph`)
+  }
 })

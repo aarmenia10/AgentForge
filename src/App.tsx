@@ -1,55 +1,29 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AgentGrid } from './components/AgentGrid'
-import { AgentDetailModal } from './components/detail/AgentDetailModal'
-import { ExplorerToolbar } from './components/ExplorerToolbar'
-import { ConnectorCard } from './components/ConnectorCard'
-import { Hero } from './components/Hero'
+import { lazy, Suspense, useCallback, useState, type ComponentType } from 'react'
+import { PageHold } from './components/PageShell'
 import { TopNav } from './components/TopNav'
 import { GitHubIcon } from './components/ui'
-import { agentRepository } from './lib/agentRepository'
-import { DEFAULT_QUERY, queryAgents, type CatalogQuery } from './lib/catalog'
-import type { AgentManifest } from './types/agent'
+import { DEFAULT_QUERY, type CatalogQuery } from './lib/catalog'
+import { HomePage } from './pages/HomePage'
+import { useRoute } from './router/Router'
+import type { RouteName } from './router/routes'
 
-const AGENT_PARAM = 'agent'
-
-function readAgentParam(): string | null {
-  return new URLSearchParams(window.location.search).get(AGENT_PARAM)
+// Every page but the home page is its own chunk. None of them, and nothing
+// that reaches Firebase, is in the startup bundle (tests/auth-ui.test.ts).
+const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
+  me: lazy(() => import('./pages/MePage')),
+  settings: lazy(() => import('./pages/SettingsPage')),
+  studio: lazy(() => import('./pages/StudioPage')),
+  review: lazy(() => import('./pages/ReviewPage')),
+  profile: lazy(() => import('./pages/ProfilePage')),
+  'not-found': lazy(() => import('./pages/NotFoundPage')),
 }
 
-/** Mirrors the open agent into `?agent=<id>` so detail views are shareable. */
-function writeAgentParam(id: string | null) {
-  const url = new URL(window.location.href)
-  if (id) url.searchParams.set(AGENT_PARAM, id)
-  else url.searchParams.delete(AGENT_PARAM)
-  window.history.pushState(null, '', url)
-}
-
+/** The shell: nav, the routed page, the footer. */
 export default function App() {
-  const [agents, setAgents] = useState<AgentManifest[]>([])
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const { route } = useRoute()
+  // Lives here, not in HomePage, because the nav's search box drives it. It
+  // also means a search survives a trip to another page and back.
   const [query, setQuery] = useState<CatalogQuery>(DEFAULT_QUERY)
-  const [openId, setOpenId] = useState<string | null>(readAgentParam)
-
-  useEffect(() => {
-    let cancelled = false
-    agentRepository
-      .listAgents()
-      .then((list) => {
-        if (cancelled) return
-        setAgents(list)
-        setStatus('ready')
-      })
-      .catch(() => !cancelled && setStatus('error'))
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    const onPopState = () => setOpenId(readAgentParam())
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
-  }, [])
 
   const patchQuery = useCallback(
     (patch: Partial<CatalogQuery>) => setQuery((current) => ({ ...current, ...patch })),
@@ -60,56 +34,33 @@ export default function App() {
     [],
   )
 
-  const openAgent = useCallback((agent: AgentManifest) => {
-    setOpenId(agent.id)
-    writeAgentParam(agent.id)
-    void agentRepository.recordView(agent.id).catch(() => {})
-  }, [])
-
-  const closeAgent = useCallback(() => {
-    setOpenId(null)
-    writeAgentParam(null)
-  }, [])
-
-  const visible = useMemo(() => queryAgents(agents, query), [agents, query])
-  const openedAgent = useMemo(
-    () => agents.find((agent) => agent.id === openId) ?? null,
-    [agents, openId],
-  )
+  const isHome = route.name === 'home'
+  const Page = route.name === 'home' ? null : PAGES[route.name]
 
   return (
-    <>
+    // A column so the footer sits at the bottom of short pages.
+    <div className="flex min-h-dvh flex-col">
       <TopNav
-        keyword={query.keyword}
-        onKeywordChange={(keyword) => patchQuery({ keyword })}
-        category={query.category}
-        onCategoryChange={(category) => patchQuery({ category })}
+        search={
+          isHome
+            ? {
+                keyword: query.keyword,
+                onKeywordChange: (keyword) => patchQuery({ keyword }),
+                category: query.category,
+                onCategoryChange: (category) => patchQuery({ category }),
+              }
+            : undefined
+        }
       />
 
-      <main>
-        <Hero
-          category={query.category}
-          onCategoryChange={(category) => patchQuery({ category })}
-          agentCount={agents.length}
-        />
-
-        <div id="connect" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-12 sm:px-6">
-          <ConnectorCard />
-        </div>
-
-        <section id="explore" className="mx-auto max-w-7xl scroll-mt-20 px-4 pb-24 sm:px-6">
-          <h2 className="mb-4 text-xl font-semibold tracking-tight">Explore agents</h2>
-          <ExplorerToolbar
-            query={query}
-            onChange={patchQuery}
-            onReset={resetQuery}
-            resultCount={visible.length}
-          />
-          <div className="mt-6">
-            <AgentGrid agents={visible} status={status} onOpen={openAgent} onReset={resetQuery} />
-          </div>
-        </section>
-      </main>
+      {Page ? (
+        <Suspense fallback={<PageHold />}>
+          {/* Keyed so each arrival mounts fresh, e.g. /u/a to /u/b. */}
+          <Page key={`${route.name}:${route.params.handle ?? ''}`} />
+        </Suspense>
+      ) : (
+        <HomePage query={query} patchQuery={patchQuery} resetQuery={resetQuery} />
+      )}
 
       <footer className="border-t border-slate-900/5 py-8 dark:border-white/10">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 text-sm text-slate-500 sm:px-6 dark:text-slate-400">
@@ -125,10 +76,6 @@ export default function App() {
           </a>
         </div>
       </footer>
-
-      {openedAgent && (
-        <AgentDetailModal key={openedAgent.id} agent={openedAgent} onClose={closeAgent} />
-      )}
-    </>
+    </div>
   )
 }
