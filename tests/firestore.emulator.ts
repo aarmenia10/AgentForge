@@ -21,6 +21,7 @@ import {
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import { toggleStarInFirestore } from '../src/services/firestore'
 import './profiles.emulator'
+import './visibility.emulator'
 
 test('real Firestore transactions and rules enforce atomic stars and per-user ownership', async () => {
   const env = await initializeTestEnvironment({
@@ -30,6 +31,7 @@ test('real Firestore transactions and rules enforce atomic stars and per-user ow
   const id = SEED_AGENTS[0].id
   const path = `agents/${id}`
   try {
+    await env.clearFirestore()
     await env.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), path), {
         ...SEED_AGENTS[0],

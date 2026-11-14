@@ -32,13 +32,13 @@ Verified for P2-1: `npm run lint`, `npm run format:check`, `npm run build`, `npm
 | Seed agents | 14 validated schema version 2 public manifests with the AgentForge author identity. At least two in every category, including `creative`, and all five frameworks represented |
 | Validation | Built. Strict version 2 manifest and Firestore record validation in `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
 | MCP server | Released. `agentforge-registry` 0.2.0 is served from the site at `/mcp/agentforge-registry-0.2.0.tgz` (0.1.0 and 0.1.1 stay available) and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
-| Firestore rules | Built for atomic per-user stars. No client can create or edit a manifest |
+| Firestore rules | Profiles, unique handles, mutual friends, visibility, owner submissions, admin review/verification, and atomic per-user stars. Private/friends reads use current ownership/friendship |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
 | Deployed Firestore rules | Match `firestore.rules` in this repo. CI deploys them with the site |
 | Firebase Authentication | Email and password is enabled: a sign-in attempt from the site on 2026-11-14 got `INVALID_LOGIN_CREDENTIALS` back, not `OPERATION_NOT_ALLOWED`. Google is unconfirmed |
 | Sign-in | Built (P2-2). A quiet "Sign in" in the nav opens a dialog with Google and email and password. Signed in, it becomes an account menu with a verify-your-email reminder. Signed-out visitors load no Firebase code |
-| Publishing | Not built. The only way to add an agent is to edit `src/data/seedAgents.ts` |
+| Publishing | Typed submission and visibility services implemented; Studio and review/catalog pipeline remain P2-4/P2-7 |
 | Stars | Rules and transaction code exist. Unusable until sign-in exists and `agents/{id}` documents are provisioned |
 | CI and deploys | `.github/workflows/ci.yml` builds and tests every push and deploys Hosting and rules from `main`. First automated deploy succeeded 2026-11-12 |
 | Lint and format | ESLint recommended rules run in CI. Prettier checks new and conforming files, with an explicit legacy formatting baseline |
@@ -138,6 +138,9 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 | Date | Decision |
 | --- | --- |
+| 2026-11-14 | **Owner confirmed: owners may reset review_status only to pending.** Every owner manifest or visibility edit invalidates approval. Only admins may approve/reject or change author.verified. Creation always starts pending with author.verified false, including for admin clients; email verification is required for submission and owner edits |
+| 2026-11-14 | P2-5: friendship authorization checks the current accepted users/{owner_uid}/relationships/{viewer_uid} record. Atomic unfriend deletes both records and revokes server access immediately, without agent writes. shared_with remains in AgentRecord for schema compatibility but grants no access; new records use an empty list. This supersedes the list-based authorization originally suggested in 7.3. Agent reads in the service require the server, preventing an offline fallback to formerly shared cached data |
+| 2026-11-14 | P2-5 query contract: My agents filters owner_uid; Shared with me first pages accepted relationships, then pages one friend's agents with owner_uid and visibility=friends. Review pages filter visibility=public and review_status. Every list is capped at 50, ordered by document id, with a cursor. Public browsing still uses catalog.json. Admins may read pending/rejected public submissions, but have no private/friends read bypass |
 | 2026-11-14 | P2-3 data: profiles and handle lookup require sign-in; profile and relationship queries are capped at 50 and paginate by handle or uid. Handle claims and renames are atomic with the profile (a rename releases the old claim); agentforge, admin, and support are reserved. Mutual requests live in matching users/{uid}/relationships/{otherUid} records with sender_uid, status (pending or accepted), and created_at. Rules require both copies to be created, accepted, or removed together; only the recipient accepts. removeFriendship also cancels or declines pending requests. The sender must have a verified email |
 | 2026-11-14 | P2-2 UI: features that need an account call `useAuth().openSignIn({ reason })` when the user tries the action. Nothing gates browsing, the detail view, or the install tab. `src/main.tsx` must not reach a Firebase module through static imports, and `tests/auth-ui.test.ts` fails if it does. `VITE_AUTH_STUB=1` builds the site with an in-memory AuthService for local UI checks; production builds never include it |
 | 2026-11-14 | P2-6 spec: `docs/SAFETY_LINTER.md` defines rules SL-01 to SL-15. A `block` finding keeps a record out of `catalog.json` and fails the build for a seed. The only way to clear a false positive is an owner-approved entry in `safety-linter-allow.json`, pinned to agent, version, rule, field, and text hash. A clean lint result is never shown as a safety signal |
@@ -234,7 +237,7 @@ Goal: people sign in, publish their own agents, and choose who sees them.
 | P2-2 | Sign-in per [7.2](#72-accounts): implement `AuthService` in `src/lib/auth.ts`, build the sign-in dialog and account menu | Codex (service), Claude (UI) | P1-1, owner enables both providers in the console | Sign up, sign in, sign out, and password reset work on the live site with both methods | service and UI done. Email and password is live on the Firebase project; Google provider, authorized domain, and a full live walkthrough with both methods remain (owner and Antigravity) |
 | P2-3 | Profiles and friends: `users/{uid}`, unique handles, friend requests | Codex (data and rules), Claude (UI) | P2-2 | Two test accounts can become friends and unfriend. Rules tests cover every denial | data and rules done; UI/live account walkthrough remains |
 | P2-4 | Manifest Studio: a guided form that builds a valid manifest with live validation and a visibility choice | Claude | P2-1, P2-2 | A signed-in user publishes an agent without writing JSON | open |
-| P2-5 | Visibility storage and rules per [7.3](#73-visibility) | Codex | P2-1, P2-3 | Rules tests prove a private agent is unreadable by anyone else and a friends agent is readable only by friends | open |
+| P2-5 | Visibility storage and rules per [7.3](#73-visibility) | Codex | P2-1, P2-3 | Rules tests prove a private agent is unreadable by anyone else and a friends agent is readable only by friends | done; rules, typed services, bounded queries and revocation covered by emulator tests |
 | P2-6 | Safety linter per [7.5](#75-safety-linter) | Claude (rule spec), Codex (implementation) | P2-1 | The linter runs in the Studio and again in the exporter. A flagged manifest cannot reach the catalog | spec done (`docs/SAFETY_LINTER.md`); implementation open |
 | P2-7 | Review queue and catalog pipeline: an admin screen to approve or reject public submissions, and a CI job that rebuilds `catalog.json` from approved agents | Codex (pipeline), Claude (UI) | P1-2, P2-5, P2-6 | An approved agent appears on the live site within one pipeline run. An unapproved one never does | open |
 | P2-8 | Stars: provision `agents/{id}` on approval and add the star button | Codex | P2-2, P2-7 | Starring persists, is one per user, and shows in the catalog after the next rebuild | open |
@@ -307,10 +310,23 @@ Constraints: keyboard access, visible focus states, AA contrast, and no horizont
 Rules of the design:
 
 - Private and friends agents **never** enter `catalog.json`. The exporter must drop anything that is not both `public` and `approved`, and a test must prove it.
-- Friends visibility is enforced by security rules, not by the UI. A friends agent stores `shared_with`, a list of friend uids capped at 100, and the rule checks membership. Changing a friendship updates the list.
-- Every Firestore query for these views is constrained by `owner_uid` or `shared_with` so that it matches the rules and stays bounded.
+- Friends visibility is enforced by security rules using the current accepted relationship with the owner. `shared_with` is retained as schema metadata (at most 100 entries), but ignored for authorization; no agent cleanup is required on unfriend.
+- Every account-view query is constrained by `owner_uid`, and shared-agent queries additionally require `visibility == 'friends'`. Page size is 1 to 50. Shared with me pages accepted relationships first, then requests one owner's page at a time.
 - Changing an agent from private or friends to public sends it to review. Changing public to private removes it from the next catalog build.
+- Every owner content or visibility edit sets `review_status` to `pending`, while preserving `author.verified` and aggregate counters. Only an admin can approve/reject or change author verification. Client deletion remains denied; visibility changes remove an agent from public circulation on the next catalog build.
 - Until `P3-1`, private and friends agents are usable from the website only (copy the blueprint). The local MCP server sees public agents.
+
+The UI imports the lazy functions in `src/services/agents.ts`:
+
+| Operation | Functions |
+| --- | --- |
+| Submit, edit, change visibility | `createAgent(manifest)`, `updateAgent(manifest)`, `setAgentVisibility(id, visibility)` |
+| Account views | `getAgentRecord(id)`, `listMyAgents(pageSize?, afterId?)`, `listSharedAgents(ownerUid, pageSize?, afterId?)` |
+| Admin views/actions | `isCurrentUserAdmin()`, `listReviewQueue(status?, pageSize?, afterId?)`, `reviewAgent(id, status)`, `setAuthorVerified(id, verified)` |
+
+Lists return `{ items, cursor }`. Pass the cursor to the next call; an empty page has a null cursor. For Shared with me, use `listRelationships('accepted', pageSize, afterUid)` from `src/services/profiles.ts` to page the owners. All agent reads require the server and fail closed offline. Creation derives author identity from the caller's profile and initializes counters, approval, and verification; updates preserve counters and admin verification.
+
+**Owner setup:** use the Firebase console (Firestore Database) or a trusted Admin SDK to create `admins/{your Firebase Auth uid}`, for example with `{ role: 'admin' }`. Authorization depends on the document's existence. No browser client, including an admin, can create, edit, or delete admin membership. Deploy the committed query indexes once with `npx firebase deploy --only firestore:indexes --project agentforge-b10db`; the existing CI deploys rules but does not deploy indexes.
 
 ### 7.4 AI navigation guide
 

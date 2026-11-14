@@ -60,6 +60,78 @@ service cloud.firestore {
         && getAfter(userPath(request.auth.uid)).data.handle != handle;
     }
     function agentPath(agentId) { return /databases/$(database)/documents/agents/$(agentId); }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    function currentFriend(owner) {
+      return signedIn() && get(relationshipPath(owner, request.auth.uid)).data.status == 'accepted';
+    }
+    function readableAgent(data) {
+      return (signedIn() && data.owner_uid == request.auth.uid)
+        || (data.visibility == 'public' && (data.review_status == 'approved' || isAdmin()))
+        || (data.visibility == 'friends' && currentFriend(data.owner_uid));
+    }
+    function validAgent(data, agentId) {
+      // Required fields are accessed below, so missing fields deny without a second key scan.
+      return data.keys().hasOnly(['schema_version', 'visibility', 'id', 'name', 'version', 'description',
+          'author', 'tags', 'framework', 'tools_required', 'input_schema', 'output_schema',
+          'prompt_blueprint', 'stats', 'owner_uid', 'review_status', 'shared_with'])
+        && data.schema_version == 2
+        && data.id == agentId && agentId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+        && data.visibility in ['public', 'friends', 'private']
+        && data.review_status in ['pending', 'approved', 'rejected']
+        && data.owner_uid is string && data.owner_uid.size() > 0
+        && data.name is string && data.name.size() > 0
+        && data.version is string && data.version.size() > 0
+        && data.description is string && data.description.size() > 0
+        && data.author is map
+        && data.author.keys().hasOnly(['uid', 'name', 'handle', 'verified'])
+        && data.author.uid == data.owner_uid
+        && data.author.name is string && data.author.name.size() > 0
+        && data.author.handle is string && data.author.handle.matches('^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$')
+        && data.author.verified is bool
+        && data.tags is list && data.tags.size() > 0
+        && data.framework in ['crewai', 'langchain', 'autogen', 'mcp_native', 'custom']
+        && data.tools_required is list && data.input_schema is map && data.output_schema is map
+        && data.prompt_blueprint is map
+        && data.prompt_blueprint.keys().hasOnly(['system_prompt', 'instructions', 'verification_rules'])
+        && data.prompt_blueprint.system_prompt is string && data.prompt_blueprint.system_prompt.size() > 0
+        && data.prompt_blueprint.instructions is list && data.prompt_blueprint.instructions.size() > 0
+        && data.prompt_blueprint.verification_rules is list && data.prompt_blueprint.verification_rules.size() > 0
+        && data.stats is map
+        && data.stats.keys().hasOnly(['stars', 'views', 'updated_at'])
+        && data.stats.stars is int && data.stats.stars >= 0
+        && data.stats.views is int && data.stats.views >= 0
+        && data.stats.updated_at is string
+        && data.shared_with is list && data.shared_with.size() <= 100;
+    }
+    function ownIdentity(data) {
+      return data.owner_uid == request.auth.uid && data.author.uid == request.auth.uid
+        && data.author.handle == get(userPath(request.auth.uid)).data.handle;
+    }
+    function ownerEdit(agentId) {
+      let before = resource.data;
+      let after = request.resource.data;
+      return verifiedEmail() && before.owner_uid == request.auth.uid
+        && after.owner_uid == before.owner_uid
+        && after.author.verified == before.author.verified
+        && after.review_status == 'pending'
+        && after.stats.stars == before.stats.stars && after.stats.views == before.stats.views
+        && (after.shared_with == before.shared_with || after.shared_with == [])
+        && ownIdentity(after) && validAgent(after, agentId);
+    }
+    function adminEdit() {
+      // All other fields are unchanged; only validate the two admin-editable values.
+      return isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['review_status', 'author'])
+        && request.resource.data.author.diff(resource.data.author).affectedKeys().hasOnly(['verified'])
+        && request.resource.data.review_status in ['pending', 'approved', 'rejected']
+        && request.resource.data.author.verified is bool;
+    }
     function starPath(agentId) { return /databases/$(database)/documents/agents/$(agentId)/stars/$(request.auth.uid); }
     function validStarDelta(agentId) {
       let before = get(agentPath(agentId)).data;
@@ -72,20 +144,31 @@ service cloud.firestore {
         && existsAfter(starPath(agentId)) != exists(starPath(agentId));
     }
     match /agents/{agentId} {
-      // Catalog reads use Hosting. Only star transactions need this document.
-      allow get: if signedIn();
-      allow list: if false;
-      allow update: if signedIn() && validStarDelta(agentId);
-      // Admin import/publish pipeline owns manifests; clients cannot forge verification.
-      allow create, delete: if false;
+      // Public browsing still uses Hosting; these reads serve account views and stars.
+      allow get: if (signedIn() && !exists(agentPath(agentId))) || readableAgent(resource.data);
+      allow list: if bounded() && readableAgent(resource.data);
+      allow create: if verifiedEmail() && ownIdentity(request.resource.data)
+        && request.resource.data.review_status == 'pending'
+        && request.resource.data.author.verified == false
+        && request.resource.data.stats.stars == 0 && request.resource.data.stats.views == 0
+        && request.resource.data.shared_with == []
+        && validAgent(request.resource.data, agentId);
+      allow update: if (signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats'])
+          && readableAgent(resource.data) && validStarDelta(agentId))
+        || ownerEdit(agentId) || adminEdit();
+      allow delete: if false;
       match /stars/{userId} {
-        allow get: if signedIn() && request.auth.uid == userId;
+        allow get: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(agentPath(agentId)).data);
         allow create: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(agentPath(agentId)).data)
           && request.resource.data.keys().hasOnly(['user_id', 'created_at'])
           && request.resource.data.user_id == userId
           && request.resource.data.created_at == request.time
           && validStarDelta(agentId);
-        allow delete: if signedIn() && request.auth.uid == userId && validStarDelta(agentId);
+        allow delete: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(agentPath(agentId)).data) && validStarDelta(agentId);
       }
     }
   }
