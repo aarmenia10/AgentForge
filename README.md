@@ -36,8 +36,8 @@ Verified for P2-1: `npm run lint`, `npm run format:check`, `npm run build`, `npm
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
 | Deployed Firestore rules | Match `firestore.rules` in this repo. CI deploys them with the site |
-| Firebase Authentication | Never set up in the console. No providers enabled |
-| Sign-in | Not built. The nav shows a disabled "Sign in" placeholder |
+| Firebase Authentication | Email and password is enabled: a sign-in attempt from the site on 2026-11-14 got `INVALID_LOGIN_CREDENTIALS` back, not `OPERATION_NOT_ALLOWED`. Google is unconfirmed |
+| Sign-in | Built (P2-2). A quiet "Sign in" in the nav opens a dialog with Google and email and password. Signed in, it becomes an account menu with a verify-your-email reminder. Signed-out visitors load no Firebase code |
 | Publishing | Not built. The only way to add an agent is to edit `src/data/seedAgents.ts` |
 | Stars | Rules and transaction code exist. Unusable until sign-in exists and `agents/{id}` documents are provisioned |
 | CI and deploys | `.github/workflows/ci.yml` builds and tests every push and deploys Hosting and rules from `main`. First automated deploy succeeded 2026-11-12 |
@@ -139,6 +139,8 @@ Binding. Newest first. Add to it, do not rewrite history.
 | Date | Decision |
 | --- | --- |
 | 2026-11-14 | P2-3 data: profiles and handle lookup require sign-in; profile and relationship queries are capped at 50 and paginate by handle or uid. Handle claims and renames are atomic with the profile (a rename releases the old claim); agentforge, admin, and support are reserved. Mutual requests live in matching users/{uid}/relationships/{otherUid} records with sender_uid, status (pending or accepted), and created_at. Rules require both copies to be created, accepted, or removed together; only the recipient accepts. removeFriendship also cancels or declines pending requests. The sender must have a verified email |
+| 2026-11-14 | P2-2 UI: features that need an account call `useAuth().openSignIn({ reason })` when the user tries the action. Nothing gates browsing, the detail view, or the install tab. `src/main.tsx` must not reach a Firebase module through static imports, and `tests/auth-ui.test.ts` fails if it does. `VITE_AUTH_STUB=1` builds the site with an in-memory AuthService for local UI checks; production builds never include it |
+| 2026-11-14 | P2-6 spec: `docs/SAFETY_LINTER.md` defines rules SL-01 to SL-15. A `block` finding keeps a record out of `catalog.json` and fails the build for a seed. The only way to clear a false positive is an owner-approved entry in `safety-linter-allow.json`, pinned to agent, version, rule, field, and text hash. A clean lint result is never shown as a safety signal |
 | 2026-11-14 | P2-2 service: `authService` keeps the AuthService method contract. AuthUser adds `emailVerified`; `refreshAuthUser()` reloads verification and forces a fresh ID token after the email link. Auth and Firestore are separate lazy imports. Observing a new signed-out visitor does not load either SDK; a local session marker enables Firebase session restoration for returning users |
 | 2026-11-13 | P2-1: schema version 2 is current; MCP 0.2.0 ships it. Catalog inclusion depends on public visibility and approval, independently of author verification. Maintainer seeds are approved in source; live privacy/review changes suppress matching seeds. Immutable 0.1.0 and 0.1.1 releases keep their bundled version 1 fallback, covered by package tests |
 | 2026-11-12 | `docs/AI_GUIDE.md` is the canonical AI guide. `packages/mcp-server/src/guide.ts` holds a generated copy (`node packages/mcp-server/sync-guide.mjs`) and a hand-written condensed version, and a test fails when they drift. `public/llms.txt` must teach the same rules. Any change to the selection rules lands in all three (P1-5) |
@@ -229,15 +231,15 @@ Goal: people sign in, publish their own agents, and choose who sees them.
 | ID | Task | Owner | Depends on | Done when | Status |
 | --- | --- | --- | --- | --- | --- |
 | P2-1 | Schema version 2 per [section 5](#5-schema-contract): update the contract, then migrate seeds, validator, exporter, MCP server, and tests | Claude (contract), Codex (migration) | Phase 1 | No `github` field or author icon remains. Footer source link and icon stay. All five required checks pass | done |
-| P2-2 | Sign-in per [7.2](#72-accounts): implement `AuthService` in `src/lib/auth.ts`, build the sign-in dialog and account menu | Codex (service), Claude (UI) | P1-1, owner enables both providers in the console | Sign up, sign in, sign out, and password reset work on the live site with both methods | service done; UI and owner console/live verification remain |
+| P2-2 | Sign-in per [7.2](#72-accounts): implement `AuthService` in `src/lib/auth.ts`, build the sign-in dialog and account menu | Codex (service), Claude (UI) | P1-1, owner enables both providers in the console | Sign up, sign in, sign out, and password reset work on the live site with both methods | service and UI done. Email and password is live on the Firebase project; Google provider, authorized domain, and a full live walkthrough with both methods remain (owner and Antigravity) |
 | P2-3 | Profiles and friends: `users/{uid}`, unique handles, friend requests | Codex (data and rules), Claude (UI) | P2-2 | Two test accounts can become friends and unfriend. Rules tests cover every denial | data and rules done; UI/live account walkthrough remains |
 | P2-4 | Manifest Studio: a guided form that builds a valid manifest with live validation and a visibility choice | Claude | P2-1, P2-2 | A signed-in user publishes an agent without writing JSON | open |
 | P2-5 | Visibility storage and rules per [7.3](#73-visibility) | Codex | P2-1, P2-3 | Rules tests prove a private agent is unreadable by anyone else and a friends agent is readable only by friends | open |
-| P2-6 | Safety linter per [7.5](#75-safety-linter) | Claude (rule spec), Codex (implementation) | P2-1 | The linter runs in the Studio and again in the exporter. A flagged manifest cannot reach the catalog | open |
+| P2-6 | Safety linter per [7.5](#75-safety-linter) | Claude (rule spec), Codex (implementation) | P2-1 | The linter runs in the Studio and again in the exporter. A flagged manifest cannot reach the catalog | spec done (`docs/SAFETY_LINTER.md`); implementation open |
 | P2-7 | Review queue and catalog pipeline: an admin screen to approve or reject public submissions, and a CI job that rebuilds `catalog.json` from approved agents | Codex (pipeline), Claude (UI) | P1-2, P2-5, P2-6 | An approved agent appears on the live site within one pipeline run. An unapproved one never does | open |
 | P2-8 | Stars: provision `agents/{id}` on approval and add the star button | Codex | P2-2, P2-7 | Starring persists, is one per user, and shows in the catalog after the next rebuild | open |
 | P2-9 | "My agents" and "Shared with me" views | Claude | P2-5 | A user sees their own private, friends, and pending agents, and agents friends shared with them | open |
-| P2-10 | Remote connector per [7.6](#76-remote-connector): a hosted MCP endpoint on Cloudflare Workers, deployed by CI, plus an "Add as a connector" option on the install tab | Codex (service), Claude (install tab) | P2-1, owner creates a Cloudflare account and adds two repository secrets | The connector URL, added in Claude's connector settings, lets Claude on desktop, web, and phone search and load public agents with nothing installed | open |
+| P2-10 | Remote connector per [7.6](#76-remote-connector): a hosted MCP endpoint on Cloudflare Workers, deployed by CI, plus an "Add as a connector" option on the install tab | Codex (service), Claude (install tab) | P2-1, owner creates a Cloudflare account and adds two repository secrets | The connector URL, added in Claude's connector settings, lets Claude on desktop, web, and phone search and load public agents with nothing installed | open. Install tab blocked until `MCP_CONNECTOR_URL` is exported from `src/lib/mcpConfig.ts` |
 
 ### Phase 3: Runtime and reach
 
@@ -445,7 +447,8 @@ AgentForge/
 ├── firestore.rules               # Security rules
 ├── .env.example                  # Every environment variable, documented
 ├── docs/
-│   └── AI_GUIDE.md               # Canonical guide for connected AIs (section 7.4)
+│   ├── AI_GUIDE.md               # Canonical guide for connected AIs (section 7.4)
+│   └── SAFETY_LINTER.md          # Safety linter rule specification (P2-6)
 ├── scripts/
 │   └── export-catalog.ts         # Builds public/catalog.json
 ├── public/
@@ -461,9 +464,10 @@ AgentForge/
     ├── theme/ThemeProvider.tsx   # Light and dark
     ├── data/seedAgents.ts        # Seed manifests
     ├── services/firestore.ts     # Star transactions
+    ├── auth/                     # AuthProvider, useAuth, error messages, dev stub
     ├── lib/
     │   ├── agentRepository.ts    # Data-access interface, static snapshot reads
-    │   ├── auth.ts               # AuthService interface (unimplemented)
+    │   ├── auth.ts               # AuthService, lazy Firebase sign-in
     │   ├── catalog.ts            # Pure filter and sort
     │   ├── firebase.ts           # Lazy Firebase initialization
     │   ├── mcpConfig.ts          # Install snippet generators
@@ -472,6 +476,7 @@ AgentForge/
     └── components/
         ├── ui.tsx                # Badges, author tag, copy button, code block
         ├── TopNav.tsx, Hero.tsx, ExplorerToolbar.tsx
+        ├── auth/                 # SignInDialog, AccountMenu
         ├── AgentCard.tsx, AgentGrid.tsx
         └── detail/               # AgentDetailModal, SchemaViewer, InstallPanel
 ```
