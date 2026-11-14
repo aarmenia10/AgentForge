@@ -1,6 +1,7 @@
 import { Anvil, Moon, Search, Sun } from 'lucide-react'
 import { useTheme } from '@/theme/ThemeProvider'
 import { AGENT_CATEGORIES, type AgentCategoryTag } from '@/types/agent'
+import { AccountMenu } from './auth/AccountMenu'
 import { cn } from './ui'
 
 interface TopNavProps {
@@ -65,15 +66,7 @@ export function TopNav({ keyword, onKeywordChange, category, onCategoryChange }:
           >
             {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </button>
-          {/* Placeholder until sign-in ships (README task P2-2). */}
-          <button
-            type="button"
-            disabled
-            title="Sign-in is coming soon"
-            className="inline-flex h-10 cursor-not-allowed items-center rounded-xl border border-slate-300 px-3.5 text-sm font-medium text-slate-500 dark:border-white/15 dark:text-slate-400"
-          >
-            Sign in
-          </button>
+          <AccountMenu />
         </div>
       </div>
     </header>
