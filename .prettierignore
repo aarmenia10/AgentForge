@@ -31,7 +31,6 @@ src/components/TopNav.tsx
 src/components/ui.tsx
 src/data/seedAgents.ts
 src/index.css
-src/lib/auth.ts
 src/lib/catalog.ts
 src/lib/format.ts
 src/lib/mcpConfig.ts

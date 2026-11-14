@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore'
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import { toggleStarInFirestore } from '../src/services/firestore'
+import './profiles.emulator'
 
 test('real Firestore transactions and rules enforce atomic stars and per-user ownership', async () => {
   const env = await initializeTestEnvironment({
@@ -30,7 +31,12 @@ test('real Firestore transactions and rules enforce atomic stars and per-user ow
   const path = `agents/${id}`
   try {
     await env.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), path), SEED_AGENTS[0])
+      await setDoc(doc(context.firestore(), path), {
+        ...SEED_AGENTS[0],
+        owner_uid: SEED_AGENTS[0].author.uid,
+        shared_with: [],
+        review_status: 'approved',
+      })
     })
     const alice = env.authenticatedContext('alice').firestore()
     const bob = env.authenticatedContext('bob').firestore()
@@ -56,7 +62,7 @@ test('real Firestore transactions and rules enforce atomic stars and per-user ow
         },
       )
       const exported = JSON.parse(await readFile('public/catalog.json', 'utf8'))
-      assert.equal(exported.length, 10)
+      assert.equal(exported.length, SEED_AGENTS.length)
       assert.equal(
         exported.find((a: { id: string }) => a.id === id).stats.stars,
         2,
