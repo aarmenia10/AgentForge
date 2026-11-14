@@ -25,8 +25,8 @@ export async function toggleStarInFirestore(
       return await runTransaction(db, async (transaction) => {
         // All reads precede writes; retries re-read both the count and this user's star.
         const agent = await transaction.get(agentRef)
-        const star = await transaction.get(starRef)
         if (!agent.exists()) throw new Error(`Agent does not exist: ${agentId}`)
+        const star = await transaction.get(starRef)
         const current: unknown = agent.get('stats.stars')
         if (
           typeof current !== 'number' ||
