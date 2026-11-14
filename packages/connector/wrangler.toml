@@ -1,0 +1,12 @@
+# AgentForge remote connector (README section 7.6).
+# Free plan only. Do not add Durable Objects, KV, D1, R2, Queues, or any
+# binding here: the connector is stateless by decision and must cost nothing.
+name = "agentforge-connector"
+main = "src/worker.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = false
+
+[observability]
+enabled = false

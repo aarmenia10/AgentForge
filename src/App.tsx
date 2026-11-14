@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AgentGrid } from './components/AgentGrid'
 import { AgentDetailModal } from './components/detail/AgentDetailModal'
 import { ExplorerToolbar } from './components/ExplorerToolbar'
+import { ConnectorCard } from './components/ConnectorCard'
 import { Hero } from './components/Hero'
 import { TopNav } from './components/TopNav'
 import { GitHubIcon } from './components/ui'
@@ -91,6 +92,10 @@ export default function App() {
           onCategoryChange={(category) => patchQuery({ category })}
           agentCount={agents.length}
         />
+
+        <div id="connect" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-12 sm:px-6">
+          <ConnectorCard />
+        </div>
 
         <section id="explore" className="mx-auto max-w-7xl scroll-mt-20 px-4 pb-24 sm:px-6">
           <h2 className="mb-4 text-xl font-semibold tracking-tight">Explore agents</h2>

@@ -91,10 +91,18 @@ export interface SearchOptions {
   category?: string
   framework?: string
   limit?: number
+  /** Name of the tool that loads an agent, for the next_step hint. */
+  loadTool?: string
 }
 
 export function searchCatalog(catalog: readonly AgentManifest[], options: SearchOptions) {
-  const { query = '', category, framework, limit = DEFAULT_SEARCH_LIMIT } = options
+  const {
+    query = '',
+    category,
+    framework,
+    limit = DEFAULT_SEARCH_LIMIT,
+    loadTool = 'switch_agent',
+  } = options
   const terms = queryTerms(query)
   const pool = catalog.filter(
     (agent) =>
@@ -142,7 +150,7 @@ export function searchCatalog(catalog: readonly AgentManifest[], options: Search
       'Only one candidate matched this query. Do not load it yet. Run more queries from other angles to find alternatives, then judge it against required_inputs, output_fields, and tools_required. If it does not fit, use no agent.'
   else
     next_step =
-      'These are candidates, not a recommendation. Rank is word overlap only. Run further queries from other angles, shortlist at least three when they exist, then call compare_agents with their ids before switch_agent. If none fits the task, say so and use no agent.'
+      `These are candidates, not a recommendation. Rank is word overlap only. Run further queries from other angles, shortlist at least three when they exist, then call compare_agents with their ids before ${loadTool}. If none fits the task, say so and use no agent.`
 
   return {
     query,

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import {
   MCP_CLIENTS,
+  MCP_CONNECTOR_URL,
   MCP_SERVER_PACKAGE,
   MCP_SERVER_SPEC,
   MCP_SERVER_VERSION,
@@ -96,4 +97,11 @@ test('command-line clients get a Windows-safe form that survives PowerShell', ()
       buildInstallSnippet(agent, client),
     )
   }
+})
+
+test('connector link is an https URL ending in /mcp', () => {
+  const url = new URL(MCP_CONNECTOR_URL)
+  assert.equal(url.protocol, 'https:')
+  assert.equal(url.pathname, '/mcp')
+  assert.equal(url.hostname, 'agentforge-connector.lesslimit.workers.dev')
 })
