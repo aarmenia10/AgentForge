@@ -139,6 +139,7 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 | Date | Decision |
 | --- | --- |
+| 2026-11-14 | **P2-11 router contract.** No router library. `src/router/routes.ts` is a pure `matchRoute(pathname)` returning `{ name, params }` (one trailing slash tolerated, `/u/<handle>` validated with `authorHandleSchema`, anything else is `not-found`); add a route there and a title in `routeTitle`. `src/router/Router.tsx` provides `useRoute()` (`route`, `location`, `go(to, { replace })`) and `<Link to>`, which navigates in place on a plain left click only. Never call `history.pushState` for a page change; use `go` or `Link`. On a path change the router scrolls to the top, sets `document.title`, and focuses the page's `main h1`. Every page but `HomePage` is a `React.lazy` chunk in `App.tsx`, and `tests/auth-ui.test.ts` fails if `src/pages/*`, `RequireAccount`, or `src/services/agents` becomes statically reachable from `src/main.tsx`. Signed-in pages wrap their content in `src/components/RequireAccount.tsx` (hold while restoring, a purpose panel plus one `openSignIn({ reason })` while signed out, render in place after sign-in, go to `/` on sign-out). New pages use `PageShell` for the frame. `?agent=<id>` stays owned by `HomePage` |
 | 2026-11-14 | **Owner confirmed: owners may reset review_status only to pending.** Every owner manifest or visibility edit invalidates approval. Only admins may approve/reject or change author.verified. Creation always starts pending with author.verified false, including for admin clients; email verification is required for submission and owner edits |
 | 2026-11-14 | **Owner decided: a private agent may be saved even when the safety linter reports block findings.** Only its author can load it. The block still prevents sharing with friends and submitting for public review |
 | 2026-11-14 | **Owner decided: only admins approve safety-linter exceptions** (entries in `safety-linter-allow.json`). Today that is the owner and one named partner |
@@ -250,7 +251,7 @@ Goal: people sign in, publish their own agents, and choose who sees them.
 | P2-8 | Stars: provision `agents/{id}` on approval and add the star button | Codex | P2-2, P2-7 | Starring persists, is one per user, and shows in the catalog after the next rebuild | open |
 | P2-9 | "My agents" and "Shared with me" pages at `/me`: the signed-in user's agents with visibility and review status, edit and change-visibility actions, and agents friends shared with them | Claude | P2-5, P2-11 | A user sees their own private, friends, and pending agents, and agents friends shared with them | open |
 | P2-10 | Remote connector per [7.6](#76-remote-connector): a hosted MCP endpoint on Cloudflare Workers, deployed by CI, plus a copyable connector link on the home page and the install tab | Claude | P2-1, owner's Cloudflare account and two repository secrets | The connector URL, added in Claude's connector settings, lets Claude on desktop, web, and phone search and load public agents with nothing installed | done. Live at the URL in Project facts. CI smoke-tests it after every deploy. Owner-tested in ChatGPT on 2026-11-14 (authentication set to none): it searched, compared, chose, and described "Verified author" correctly. Not yet tested in the Claude app or on a phone |
-| P2-11 | App shell and routing: real pages and URLs for what follows (`/me`, `/u/<handle>`, `/settings`, `/studio`, `/review`), keeping `?agent=<id>` links working. Everything else in wave 3 builds on this, so it goes first | Claude | P2-2 | Each page has its own URL, survives a reload, and works with the back button. Signed-out visitors who open a signed-in page are asked to sign in | open |
+| P2-11 | App shell and routing: real pages and URLs for what follows (`/me`, `/u/<handle>`, `/settings`, `/studio`, `/review`), keeping `?agent=<id>` links working. Everything else in wave 3 builds on this, so it goes first | Claude | P2-2 | Each page has its own URL, survives a reload, and works with the back button. Signed-out visitors who open a signed-in page are asked to sign in | done. Pages are placeholders with no nav links; each screen session adds its own link. Verified with Playwright on a `VITE_AUTH_STUB=1` build; the `/review` admin check against real Firestore is unverified until a real admin signs in |
 | P2-12 | Public profile page at `/u/<handle>`: display name, handle, "Verified author" badge, and that author's public agents. Built from `catalog.json`, so it costs no Firestore reads and works signed out | Claude | P2-11 | Clicking an author anywhere opens their profile | open |
 | P2-13 | Settings page: change display name and handle, see the verify-email state and resend the email, sign out, and find the connector link | Claude (UI), Codex (a resend-verification method on `authService`) | P2-11, P2-3 | A user changes their handle and the change shows on their agents after the next catalog build | open |
 | P2-14 | Welcome step and connector placement: after a first sign-up, show a welcome step whose first item is the connector link. **Remove the connector card from the home page.** It stays at the top of each agent's install tab (so signed-out visitors can still find it) and in Settings | Claude | P2-11, P2-13 | The home page has no connector card. A new account sees the welcome step once | open |
@@ -493,9 +494,15 @@ AgentForge/
 ├── packages/
 │   └── mcp-server/               # The agentforge-registry MCP server
 │       └── src/                  # cli.ts, server.ts, catalog.ts, discovery.ts, guide.ts
-├── tests/                        # catalog, MCP, and Firestore emulator tests
+├── tests/                        # catalog, MCP, routes, and Firestore emulator tests
 └── src/
-    ├── App.tsx                   # Page composition, catalog state, deep links
+    ├── main.tsx                  # Entry: theme, router, auth providers
+    ├── App.tsx                   # Shell: nav, routed page (lazy chunks), footer
+    ├── router/
+    │   ├── routes.ts             # Pure matchRoute(pathname) and page titles
+    │   └── Router.tsx            # RouterProvider, useRoute, go, Link
+    ├── pages/                    # HomePage (catalog, ?agent=) and lazy pages:
+    │                             # Me, Settings, Studio, Review, Profile, NotFound
     ├── index.css                 # Tailwind import, palette, surface utilities
     ├── types/agent.ts            # CANONICAL CONTRACT
     ├── theme/ThemeProvider.tsx   # Light and dark
@@ -513,6 +520,8 @@ AgentForge/
     └── components/
         ├── ui.tsx                # Badges, author tag, copy button, code block
         ├── TopNav.tsx, Hero.tsx, ExplorerToolbar.tsx
+        ├── PageShell.tsx         # Frame and h1 for every page except home
+        ├── RequireAccount.tsx    # Gate for signed-in pages
         ├── auth/                 # SignInDialog, AccountMenu
         ├── AgentCard.tsx, AgentGrid.tsx
         └── detail/               # AgentDetailModal, SchemaViewer, InstallPanel
