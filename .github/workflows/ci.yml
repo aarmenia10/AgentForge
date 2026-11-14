@@ -62,6 +62,18 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: npx firebase deploy --only hosting,firestore:rules --project "$FIREBASE_PROJECT" --non-interactive
 
+      # Indexes need the "Cloud Datastore Index Admin" role on the deploy
+      # service account. Until the owner grants it, this step warns and the
+      # rest of the deploy still counts as successful.
+      - name: Deploy Firestore indexes
+        if: steps.creds.outputs.present == 'true'
+        continue-on-error: true
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: |
+          npx firebase deploy --only firestore:indexes --project "$FIREBASE_PROJECT" --non-interactive \
+            || { echo "::warning::Firestore indexes were not deployed. Grant the deploy service account the Cloud Datastore Index Admin role."; exit 1; }
+
       - name: Remove credentials
         if: always()
         run: rm -f "$RUNNER_TEMP/sa.json"

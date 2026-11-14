@@ -31,7 +31,7 @@ Verified for P2-1: `npm run lint`, `npm run format:check`, `npm run build`, `npm
 | Static catalog | Built. `scripts/export-catalog.ts` validates version 2 records, exports only public and approved agents, strips Firestore metadata, and writes `public/catalog.json`. The site reads only that file |
 | Seed agents | 14 validated schema version 2 public manifests with the AgentForge author identity. At least two in every category, including `creative`, and all five frameworks represented |
 | Validation | Built. Strict version 2 manifest and Firestore record validation in `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
-| MCP server | Released. `agentforge-registry` 0.2.0 is served from the site at `/mcp/agentforge-registry-0.2.0.tgz` (0.1.0 and 0.1.1 stay available) and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
+| MCP server | Released. `agentforge-registry` 0.2.1 is served from the site at `/mcp/agentforge-registry-0.2.1.tgz` (0.1.0, 0.1.1, and 0.2.0 stay available) and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
 | Firestore rules | Profiles, unique handles, mutual friends, visibility, owner submissions, admin review/verification, and atomic per-user stars. Private/friends reads use current ownership/friendship |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
@@ -54,7 +54,8 @@ Verified for P2-1: `npm run lint`, `npm run format:check`, `npm run build`, `npm
 | Auth domain | `agentforge-b10db.firebaseapp.com` |
 | Plan | Spark (no cost) |
 | Firestore | Database `(default)`, location `nam5`, currently empty |
-| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.0.tgz`. Not on the npm registry, by decision |
+| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.1.tgz`. Not on the npm registry, by decision |
+| Remote connector | https://agentforge-connector.lesslimit.workers.dev/mcp (Cloudflare Workers, free plan, account subdomain `lesslimit`) |
 | Repository | `aarmenia10/AgentForge`, default branch `main` |
 
 ---
@@ -85,7 +86,7 @@ There are two ways in for an AI app, and both read the same `catalog.json`:
 | Path | For | How the user connects | State |
 | --- | --- | --- | --- |
 | Local server (`agentforge-registry`, via `npx`) | Desktop and command-line clients with Node installed | A config snippet or one command from the install tab | Live |
-| Remote connector (Cloudflare Workers) | Any client that accepts a remote MCP URL, including phone and web apps | Paste one URL into the app's connector settings | Planned, task P2-10 |
+| Remote connector (Cloudflare Workers) | Any client that accepts a remote MCP URL, including phone and web apps | Paste one URL into the app's connector settings | Built, task P2-10. Deployed by `.github/workflows/connector.yml` |
 
 ### Read path
 
@@ -108,7 +109,7 @@ The web app generates this entry and the server must honor it. The generator is 
   "mcpServers": {
     "agentforge-<agent-id>": {
       "command": "npx",
-      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.0.tgz", "--agent", "<agent-id>@<version>"]
+      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.1.tgz", "--agent", "<agent-id>@<version>"]
     }
   }
 }
@@ -139,6 +140,8 @@ Binding. Newest first. Add to it, do not rewrite history.
 | Date | Decision |
 | --- | --- |
 | 2026-11-14 | **Owner confirmed: owners may reset review_status only to pending.** Every owner manifest or visibility edit invalidates approval. Only admins may approve/reject or change author.verified. Creation always starts pending with author.verified false, including for admin clients; email verification is required for submission and owner edits |
+| 2026-11-14 | P2-10: the connector lives in `packages/connector/`. Its Worker entry file `src/worker.ts` may export only the default handler, because the Workers runtime rejects any other export. Logic shared with the local server lives in `packages/mcp-server/src/shared.ts` and `src/lib/manifestSchema.ts`, which must stay free of Node APIs and Ajv (Ajv generates code at runtime, which Workers forbid). The connector validates the catalog's shape with zod only. A test fails if the two servers' search or compare results differ |
+| 2026-11-14 | The local server's committed tarball must match its source byte for byte, so any change under `packages/mcp-server/src/` needs a version bump and `npm run release:mcp`. The shared-code extraction for P2-10 is released as 0.2.1 with no behavior change |
 | 2026-11-14 | P2-5: friendship authorization checks the current accepted users/{owner_uid}/relationships/{viewer_uid} record. Atomic unfriend deletes both records and revokes server access immediately, without agent writes. shared_with remains in AgentRecord for schema compatibility but grants no access; new records use an empty list. This supersedes the list-based authorization originally suggested in 7.3. Agent reads in the service require the server, preventing an offline fallback to formerly shared cached data |
 | 2026-11-14 | P2-5 query contract: My agents filters owner_uid; Shared with me first pages accepted relationships, then pages one friend's agents with owner_uid and visibility=friends. Review pages filter visibility=public and review_status. Every list is capped at 50, ordered by document id, with a cursor. Public browsing still uses catalog.json. Admins may read pending/rejected public submissions, but have no private/friends read bypass |
 | 2026-11-14 | P2-3 data: profiles and handle lookup require sign-in; profile and relationship queries are capped at 50 and paginate by handle or uid. Handle claims and renames are atomic with the profile (a rename releases the old claim); agentforge, admin, and support are reserved. Mutual requests live in matching users/{uid}/relationships/{otherUid} records with sender_uid, status (pending or accepted), and created_at. Rules require both copies to be created, accepted, or removed together; only the recipient accepts. removeFriendship also cancels or declines pending requests. The sender must have a verified email |
@@ -242,7 +245,7 @@ Goal: people sign in, publish their own agents, and choose who sees them.
 | P2-7 | Review queue and catalog pipeline: an admin screen to approve or reject public submissions, and a CI job that rebuilds `catalog.json` from approved agents | Codex (pipeline), Claude (UI) | P1-2, P2-5, P2-6 | An approved agent appears on the live site within one pipeline run. An unapproved one never does | open |
 | P2-8 | Stars: provision `agents/{id}` on approval and add the star button | Codex | P2-2, P2-7 | Starring persists, is one per user, and shows in the catalog after the next rebuild | open |
 | P2-9 | "My agents" and "Shared with me" views | Claude | P2-5 | A user sees their own private, friends, and pending agents, and agents friends shared with them | open |
-| P2-10 | Remote connector per [7.6](#76-remote-connector): a hosted MCP endpoint on Cloudflare Workers, deployed by CI, plus an "Add as a connector" option on the install tab | Codex (service), Claude (install tab) | P2-1, owner creates a Cloudflare account and adds two repository secrets | The connector URL, added in Claude's connector settings, lets Claude on desktop, web, and phone search and load public agents with nothing installed | open. Install tab blocked until `MCP_CONNECTOR_URL` is exported from `src/lib/mcpConfig.ts` |
+| P2-10 | Remote connector per [7.6](#76-remote-connector): a hosted MCP endpoint on Cloudflare Workers, deployed by CI, plus a copyable connector link on the home page and the install tab | Claude | P2-1, owner's Cloudflare account and two repository secrets | The connector URL, added in Claude's connector settings, lets Claude on desktop, web, and phone search and load public agents with nothing installed | built and verified in the local Workers runtime. Live check runs in CI after each deploy. Owner test in a real AI app pending |
 
 ### Phase 3: Runtime and reach
 

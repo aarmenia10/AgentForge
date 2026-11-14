@@ -1,10 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import {
-  validateCatalog,
-  agentIdSchema,
-  versionSchema,
-} from '../../../src/lib/validateManifest'
+import { validateCatalog } from '../../../src/lib/validateManifest'
 import type { AgentManifest } from '../../../src/types/agent'
 
 export const DEFAULT_CATALOG_URL =
@@ -41,20 +37,4 @@ export async function loadCatalog(source?: string): Promise<AgentManifest[]> {
   }
 }
 
-export function selectAgent(
-  catalog: AgentManifest[],
-  selector: string,
-): AgentManifest {
-  const parts = selector.split('@')
-  if (parts.length > 2) throw new Error('Expected <id> or <id>@<version>')
-  const id = agentIdSchema.parse(parts[0])
-  const version = parts.length === 2 ? versionSchema.parse(parts[1]) : undefined
-  const agent = catalog.find(
-    (a) => a.id === id && (!version || a.version === version),
-  )
-  if (!agent)
-    throw new Error(
-      `Agent/version not found: ${selector}; no version substitution was made`,
-    )
-  return agent
-}
+export { selectAgent } from './shared'

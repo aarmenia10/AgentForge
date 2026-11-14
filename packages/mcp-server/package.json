@@ -1,6 +1,6 @@
 {
   "name": "agentforge-registry",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Local MCP registry: discover and load AgentForge prompt blueprints",
   "type": "module",
   "license": "MIT",

@@ -1,0 +1,22 @@
+{
+  "name": "agentforge-connector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AgentForge remote connector: the public registry as a stateless MCP server on Cloudflare Workers",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "bundle": "wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5",
+    "typescript": "^7.0.2",
+    "wrangler": "^4"
+  }
+}

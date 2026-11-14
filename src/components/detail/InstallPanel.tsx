@@ -2,6 +2,7 @@ import { TerminalSquare } from 'lucide-react'
 import { useState } from 'react'
 import { buildInstallSnippet, MCP_CLIENTS, MCP_SERVER_PACKAGE, type McpClient } from '@/lib/mcpConfig'
 import type { AgentManifest } from '@/types/agent'
+import { ConnectorCard } from '../ConnectorCard'
 import { cn, CodeBlock } from '../ui'
 
 /** Tab 4: generates the exact config for the chosen MCP client. */
@@ -13,6 +14,12 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
 
   return (
     <div className="space-y-5">
+      <ConnectorCard compact />
+
+      <p className="text-sm font-medium text-slate-900 dark:text-white">
+        Or install just this agent on a computer
+      </p>
+
       <div
         role="radiogroup"
         aria-label="MCP client"
