@@ -2,6 +2,63 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function verifiedEmail() { return signedIn() && request.auth.token.email_verified == true; }
+    function bounded() { return request.query.limit != null && request.query.limit > 0 && request.query.limit <= 50; }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function handlePath(handle) { return /databases/$(database)/documents/handles/$(handle); }
+    function relationshipPath(uid, other) { return /databases/$(database)/documents/users/$(uid)/relationships/$(other); }
+    function validHandle(handle) {
+      return handle is string && handle.matches('^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$')
+        && !(handle in ['agentforge', 'admin', 'support']);
+    }
+    function validProfile(uid) {
+      let data = request.resource.data;
+      return data.keys().hasAll(['handle', 'display_name', 'avatar_url', 'created_at'])
+        && data.keys().hasOnly(['handle', 'display_name', 'avatar_url', 'created_at'])
+        && validHandle(data.handle)
+        && data.display_name is string && data.display_name.size() > 0 && data.display_name.size() <= 100
+        && data.display_name.matches('.*[^ ].*')
+        && (data.avatar_url == null || (data.avatar_url is string && data.avatar_url.size() <= 2048 && data.avatar_url.matches('https://.+')))
+        && getAfter(handlePath(data.handle)).data.uid == uid;
+    }
+    match /users/{uid} {
+      allow get: if signedIn();
+      allow list: if signedIn() && bounded();
+      allow create: if signedIn() && request.auth.uid == uid && validProfile(uid)
+        && request.resource.data.created_at == request.time;
+      allow update: if signedIn() && request.auth.uid == uid && validProfile(uid)
+        && request.resource.data.created_at == resource.data.created_at
+        && (request.resource.data.handle == resource.data.handle || !existsAfter(handlePath(resource.data.handle)));
+      match /relationships/{other} {
+        function participant() { return signedIn() && request.auth.uid in [uid, other] && uid != other; }
+        function mirrored() { return getAfter(relationshipPath(other, uid)).data == request.resource.data; }
+        allow get: if signedIn() && request.auth.uid == uid;
+        allow list: if signedIn() && request.auth.uid == uid && bounded();
+        allow create: if participant() && verifiedEmail()
+          && exists(userPath(uid)) && exists(userPath(other))
+          && request.resource.data.keys().hasAll(['sender_uid', 'status', 'created_at'])
+          && request.resource.data.keys().hasOnly(['sender_uid', 'status', 'created_at'])
+          && request.resource.data.sender_uid == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && request.resource.data.created_at == request.time
+          && !exists(relationshipPath(other, uid)) && mirrored();
+        allow update: if participant() && resource.data.status == 'pending'
+          && resource.data.sender_uid != request.auth.uid
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && mirrored();
+        allow delete: if participant() && !existsAfter(relationshipPath(other, uid));
+      }
+    }
+    match /handles/{handle} {
+      allow get: if signedIn();
+      allow create: if signedIn() && validHandle(handle)
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && getAfter(userPath(request.auth.uid)).data.handle == handle;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid
+        && getAfter(userPath(request.auth.uid)).data.handle != handle;
+    }
     function agentPath(agentId) { return /databases/$(database)/documents/agents/$(agentId); }
     function starPath(agentId) { return /databases/$(database)/documents/agents/$(agentId)/stars/$(request.auth.uid); }
     function validStarDelta(agentId) {

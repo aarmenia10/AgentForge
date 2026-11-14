@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore'
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import { toggleStarInFirestore } from '../src/services/firestore'
+import './profiles.emulator'
 
 test('real Firestore transactions and rules enforce atomic stars and per-user ownership', async () => {
   const env = await initializeTestEnvironment({
