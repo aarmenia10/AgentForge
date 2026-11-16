@@ -69,7 +69,8 @@ test('private, friends, pending, rejected, invalid and squatted records are excl
       [],
       (n) => notices.push(n),
     ),
-    [],
+    // The squatter's record is dropped; the source seed is still published.
+    [SEED_AGENTS[0]],
   )
   assert.ok(JSON.stringify(notices).includes('seed-id squatter'))
   assert.throws(
