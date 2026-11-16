@@ -139,6 +139,8 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 | Date | Decision |
 | --- | --- |
+| 2026-11-16 | Local practice mode: `npm run emulators` with `npm run dev:emulator` or `build:emulator` runs the site against the Auth and Firestore emulators (`docs/LOCAL_TESTING.md`). `src/lib/firebaseAuthInstance.ts` owns the one Auth instance and imports no Firestore code. `useAuth()` exposes `sendVerificationEmail()` |
+| 2026-11-16 | P3-5 version history is pulled into Phase 2 as P2-17. Without it, an approved edit breaks every install pinned to the previous version, because the catalog holds only the newest one and an unavailable pin fails closed |
 | 2026-11-16 | Orchestrator review of the wave 3 data merge, three corrections. (1) A live document that squats on a seed id is ignored, and the seed is still published from source; it no longer removes the seed. (2) `updateAgent` requires a higher version only when the live agent is public and approved. Drafts, private, friends, and not-yet-approved agents save without a version bump. (3) An hourly CI run queues behind a deploy in flight instead of cancelling it |
 | 2026-11-16 | P2-7 versioned edits: approved public content stays in `agents/{id}`; owner proposals live in `agent_edits/{id}`. `updateAgent` requires a higher semver and returns `{ staged }`. Admin approval atomically copies the exact proposal, carries over live stars, views and author verification, and deletes it. Visibility changes remain immediate and remove stale proposals. This supersedes in-place public edits |
 | 2026-11-16 | P2-7 self-approval: trusted `config/review { allow_self_approval: boolean }` has no client write access. Missing or true permits admin self-approval; false denies it for both submissions and versioned edits, enforced in rules |
@@ -262,6 +264,7 @@ Goal: people sign in, publish their own agents, and choose who sees them.
 | P2-14 | Welcome step and connector placement: after a first sign-up, show a welcome step whose first item is the connector link. **Remove the connector card from the home page.** It stays at the top of each agent's install tab (so signed-out visitors can still find it) and in Settings | Claude | P2-11, P2-13 | The home page has no connector card. A new account sees the welcome step once | open |
 | P2-15 | Friends screens: find people by handle, send, accept, and decline requests, and remove a friend | Claude | P2-11, P2-3 | Two accounts become friends and unfriend through the UI alone | open |
 | P2-16 | Hardening before public launch: restrict the Firebase web API key to the site's own addresses, add the second admin, decide whether an admin may approve their own submission, and run a two-account end-to-end verification of all of Phase 2 on the live site | Owner, Antigravity | all of the above | A written pass or fail for every Phase 2 "done when" | open |
+| P2-17 | Version history (moved up from P3-5): every approved version is kept as an immutable snapshot and published as a static file, so an install pinned to an older version keeps loading after the author updates. Local server and connector resolve old pins from those files | Codex | P2-7 | An agent is approved at 1.0.0, edited, and approved at 1.1.0; a config pinned to 1.0.0 still loads the 1.0.0 blueprint | open |
 
 #### Wave 3 order
 
@@ -269,7 +272,8 @@ Waves 1 and 2 are done (P2-1, P2-2, P2-3, P2-5, the P2-6 spec, P2-10). Wave 3 is
 
 1. **Foundations, in parallel.** Claude: P2-11 (routing). Codex: P2-6 linter code, the P2-7 pipeline with versioned edits, the P2-8 star provisioning, and the resend-verification method for P2-13.
 2. **Screens, after P2-11 merges.** Claude, in two sessions to keep each one small. First: P2-4 (Studio), P2-9 (`/me`), and the P2-7 review screen. Second: P2-12 (profile), P2-13 (settings), P2-14 (welcome step and connector placement), P2-15 (friends), and the P2-8 star button.
-3. **Verification.** P2-16, with Antigravity walking the live site using two real accounts.
+3. **Step 2 is now three parallel sessions with separate files** (2026-11-16): Claude A (P2-4, P2-9, P2-7 review screen), Claude B (P2-12 to P2-15, the P2-8 star button, the account-menu links), and Codex (P2-17). `docs/LOCAL_TESTING.md` describes the local practice mode they verify against.
+4. **Verification.** P2-16, with Claude in Chrome walking the live site using the owner's admin account and a second account.
 
 ### Phase 3: Runtime and reach
 
@@ -281,7 +285,7 @@ Not scheduled in detail. Do not start without the owner.
 | P3-2 | Companion tool resolution | Detect which required MCP tools the client lacks and return the install snippet for each |
 | P3-3 | CLI publishing | A `publish` command in `agentforge-registry`. Depends on P3-1's sign-in |
 | P3-4 | SDKs for TypeScript and Python | Unscoped package names only. `@agentforge/*` is not ours |
-| P3-5 | Version history | Keep past versions so an old pin still resolves |
+| P3-5 | Version history | Moved to Phase 2 as P2-17 |
 | P3-6 | Usage analytics | Analytics is currently off. Turning it on is an owner decision |
 
 ### Phase 4: Hosted execution and revenue
