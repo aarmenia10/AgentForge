@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import RequireAccount from '@/components/RequireAccount'
 import { PageHold, PageShell } from '@/components/PageShell'
+import { ReviewQueue } from '@/components/review/ReviewQueue'
 
 export default function ReviewPage() {
   return (
@@ -49,9 +50,10 @@ function ReviewerOnly() {
   return (
     <PageShell title="Review queue">
       <p>
-        Submissions waiting for review will be listed here. This page is not
-        built yet.
+        Read each manifest in full before you decide. The safety linter helps,
+        but you are the check that counts.
       </p>
+      <ReviewQueue />
     </PageShell>
   )
 }
