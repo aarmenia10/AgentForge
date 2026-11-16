@@ -18,6 +18,7 @@ This README is the project's single source of truth. It replaces the earlier "Ph
 4. **Branch per task.** Work on `task/<id>` (for example `task/p1-3`), and merge to `main` only when `npm run build` and `npm test` both pass.
 5. **Update this file when you finish.** Change your task's status in section 6, and add a line to the decision log if you made a choice that binds later work.
 6. **Stop and ask the owner** when a task needs a credential, a console setting, a paid plan, or a product decision that this file does not answer. Do not invent one.
+7. **Two people work here now, each with their own AIs.** Before you write any code, read the [shared board](#81-shared-board). If someone else has claimed the files you need, stop and say so. Claim your own work there first, in a small commit of its own, and remove the claim when you merge. A new idea or plan goes in the [ideas inbox](#82-ideas-inbox) before anyone builds it.
 
 ---
 
@@ -139,6 +140,7 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 | Date | Decision |
 | --- | --- |
+| 2026-11-16 | **Owner decided: the README is the shared source of truth for two people.** Tommy works through Codex; Aidan through Claude Code and Codex. Every idea goes in the ideas inbox (8.2), every piece of work in progress is claimed on the shared board (8.1), and every plan or binding choice is written here before or with the code. Work lands by pull request from a `task/<id>` branch with CI green. Protected files (listed in section 8) need Aidan's agreement |
 | 2026-11-16 | Local practice mode: `npm run emulators` with `npm run dev:emulator` or `build:emulator` runs the site against the Auth and Firestore emulators (`docs/LOCAL_TESTING.md`). `src/lib/firebaseAuthInstance.ts` owns the one Auth instance and imports no Firestore code. `useAuth()` exposes `sendVerificationEmail()` |
 | 2026-11-16 | P3-5 version history is pulled into Phase 2 as P2-17. Without it, an approved edit breaks every install pinned to the previous version, because the catalog holds only the newest one and an unavailable pin fails closed |
 | 2026-11-16 | Orchestrator review of the wave 3 data merge, three corrections. (1) A live document that squats on a seed id is ignored, and the seed is still published from source; it no longer removes the seed. (2) `updateAgent` requires a higher version only when the live agent is public and approved. Drafts, private, friends, and not-yet-approved agents save without a version bump. (3) An hourly CI run queues behind a deploy in flight instead of cancelling it |
@@ -413,9 +415,38 @@ The local server needs Node and a terminal, and cannot run on a phone or in a we
 | **Claude** (lead architect) | Schema and interface contracts, UI and design, written specifications and guides, security rule specs, review of other agents' work | Bulk data entry |
 | **Codex** | Implementing against fixed interfaces: services, security rules, exporter and pipeline work, CI, tests, seed data, npm packaging | Product or schema decisions |
 | **Antigravity** | Anything that needs a real signed-in browser: console checks, live-site walkthroughs, end-to-end verification | Changing source code outside its task |
-| **Owner** | Credentials, console settings, approvals, and every decision marked "owner" | |
+| **Owner** (Aidan) | Credentials, console settings, approvals, and every decision marked "owner" | |
+| **Tommy** (partner, second admin) | Works through Codex only. Builds tasks from section 6 and proposes new ones in the ideas inbox | Changing the protected files below without Aidan's agreement |
 
-One orchestrator at a time. Claude holds that role now. Session prompts are written against the task IDs in section 6.
+One orchestrator at a time. Claude, in Aidan's sessions, holds that role now: it turns ideas into task IDs, writes session prompts, and reviews merges. Session prompts are written against the task IDs in section 6.
+
+**How work lands, for everyone:**
+
+1. Claim it on the shared board (a commit to `main` that changes only this README).
+2. Work on a branch named `task/<id>`. Never commit code straight to `main`.
+3. Run `npm run lint`, `npm run format:check`, `npm run build`, `npm test`, `npm run test:package`, and, if you touched rules or services, `npm run test:firestore`.
+4. Open a pull request into `main`. Merge it only when CI is green. Merging deploys the live site, so a red or unfinished branch never merges.
+5. In the same pull request: update your task's status in section 6, add a decision-log row for any choice that binds later work, and remove your claim.
+
+**Protected files.** A change to any of these needs Aidan's agreement first, recorded in the decision log: `src/types/agent.ts`, `firestore.rules`, anything under `.github/`, `docs/SAFETY_LINTER.md`, `docs/AI_GUIDE.md`, and sections 3 and 4 of this README. Nobody rewrites or deletes another person's decision-log rows, task rows, or claims.
+
+### 8.1 Shared board
+
+What is being built right now. One row per claim. Add yours before you start and delete it when you merge. If a claim is more than three days old with no branch activity, ask its owner before taking the work over.
+
+| Task | Who | AI | Branch | Files or areas it touches | Claimed |
+| --- | --- | --- | --- | --- | --- |
+| P2-4, P2-9, P2-7 review screen | Aidan | Claude Code | `task/p2-screens-a` | `src/pages/StudioPage.tsx`, `MePage.tsx`, `ReviewPage.tsx`, `src/components/studio/`, `me/`, `review/` | 2026-11-16 |
+| P2-12 to P2-15, P2-8 star button, account-menu links | Aidan | Claude Code | `task/p2-screens-b` | `src/pages/ProfilePage.tsx`, `SettingsPage.tsx`, `HomePage.tsx`, `FriendsPage.tsx`, `src/components/auth/AccountMenu.tsx`, `ui.tsx`, `AgentCard.tsx`, `src/components/detail/`, `src/router/routes.ts`, `src/App.tsx` | 2026-11-16 |
+| P2-17 version history | Aidan | Codex | `task/p2-17` | `firestore.rules`, `scripts/`, `src/services/agentStore.ts`, `packages/mcp-server/`, `packages/connector/`, `public/mcp/`, `src/lib/mcpConfig.ts`, `firebase.json` | 2026-11-16 |
+
+### 8.2 Ideas inbox
+
+Anything either person wants to add, before it is planned. One row each. Nobody builds from this table directly: the orchestrator turns an accepted idea into a task ID in section 6, with an owner and a "done when", and marks the row. Add rows at the bottom.
+
+| Date | From | Idea | Status |
+| --- | --- | --- | --- |
+| | | _Nothing yet._ | |
 
 ---
 
