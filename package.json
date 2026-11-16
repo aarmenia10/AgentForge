@@ -7,6 +7,9 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-agentforge",
+    "dev:emulator": "vite --mode emulator",
+    "build:emulator": "npm run build:catalog && vite build --mode emulator",
     "build": "npm run build:catalog && tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",

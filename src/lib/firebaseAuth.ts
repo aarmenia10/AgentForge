@@ -1,7 +1,6 @@
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
-  getAuth,
   onIdTokenChanged,
   reload,
   sendEmailVerification,
@@ -12,7 +11,7 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import type { User } from 'firebase/auth'
-import { getFirebaseApp } from './firebaseApp'
+import { getAuthInstance } from './firebaseAuthInstance'
 import type { AuthRuntime, AuthUser } from './auth'
 import { sendVerificationFor } from './auth'
 
@@ -25,7 +24,7 @@ function userView(user: User): AuthUser {
     emailVerified: user.emailVerified,
   }
 }
-const auth = () => getAuth(getFirebaseApp())
+const auth = () => getAuthInstance()
 export const firebaseAuth: AuthRuntime = {
   async signInWithGoogle() {
     return userView(

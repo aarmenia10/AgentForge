@@ -15,6 +15,7 @@ packages/mcp-server/catalog.json
 .env.*
 !.env.example
 !.env.production
+!.env.emulator
 *.local
 serviceAccount*.json
 
