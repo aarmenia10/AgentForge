@@ -10,7 +10,9 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # An hourly run waits for a deploy already in flight. If it cancelled one, it
+  # would then skip its own deploy (catalog unchanged) and the push would be lost.
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 permissions:
   contents: read

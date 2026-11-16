@@ -72,7 +72,8 @@ export function buildCatalog(
     }
     seen.add(id)
     if (seedIds.has(id) && record.owner_uid !== 'agentforge') {
-      excluded.add(id)
+      // Drop the live record only. The source seed stays in the catalog, so
+      // nobody can remove a seed by claiming its id first.
       log({ id, reason: 'seed-id squatter' })
       continue
     }
@@ -246,8 +247,8 @@ async function readLiveRecords(
       }
       result.push(value)
     }
-    // Suppress source seeds whose live id belongs to someone else or is invalid.
-    for (const id of excluded) result.push({ id })
+    // Seeds whose live id is squatted or invalid are still published from
+    // source, with source counters; only the live document is ignored.
     return result
   } finally {
     await deleteApp(app)

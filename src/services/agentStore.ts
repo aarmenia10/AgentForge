@@ -65,7 +65,14 @@ export function createAgentStore(db: Firestore, uid: string) {
       if (current.owner_uid !== uid)
         throw new Error('Only the owner can edit this agent')
       const changed = change(current)
-      if (content && compareVersions(changed.version, current.version) <= 0)
+      // Only an approved public agent can be pinned by users, so only its
+      // edits need a new version. Drafts and private agents save freely.
+      if (
+        content &&
+        current.visibility === 'public' &&
+        current.review_status === 'approved' &&
+        compareVersions(changed.version, current.version) <= 0
+      )
         throw new Error('The edit version must be higher than the live version')
       const next = record(
         changed,
