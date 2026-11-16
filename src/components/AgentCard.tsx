@@ -1,7 +1,7 @@
 import { Eye, Star, Wrench } from 'lucide-react'
 import { formatCount, formatRelativeTime } from '@/lib/format'
 import type { AgentManifest } from '@/types/agent'
-import { AuthorTag, FrameworkBadge } from './ui'
+import { AuthorLink, FrameworkBadge } from './ui'
 
 interface AgentCardProps {
   agent: AgentManifest
@@ -50,7 +50,7 @@ export function AgentCard({ agent, onOpen }: AgentCardProps) {
       </ul>
 
       <footer className="mt-auto flex items-center justify-between gap-3 border-t border-slate-900/5 pt-4 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
-        <AuthorTag author={agent.author} />
+        <AuthorLink author={agent.author} />
         <div className="flex shrink-0 items-center gap-3">
           <span className="inline-flex items-center gap-1" title="Required tools">
             <Wrench className="size-3.5" />

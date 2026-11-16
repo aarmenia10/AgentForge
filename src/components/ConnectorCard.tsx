@@ -1,15 +1,27 @@
 import { Link2 } from 'lucide-react'
+import { useId } from 'react'
 import { MCP_CONNECTOR_URL } from '@/lib/mcpConfig'
 import { cn, CodeBlock } from './ui'
 
+type Variant = 'install' | 'settings' | 'welcome'
+
+const TITLES: Record<Variant, string> = {
+  install: 'Fastest: add AgentForge as a connector',
+  settings: 'Connect AgentForge to your AI',
+  welcome: 'Your connector link',
+}
+
 /**
  * The remote connector: one link, pasted into an AI app's connector settings.
- * Shown on the home page and at the top of every agent's install tab.
+ * Shown at the top of every agent's install tab, in Settings, and in the
+ * one-time welcome step. Not on the home page (P2-14).
  */
-export function ConnectorCard({ compact = false }: { compact?: boolean }) {
+export function ConnectorCard({ variant = 'settings' }: { variant?: Variant }) {
+  const headingId = useId()
+  const compact = variant !== 'settings'
   return (
     <section
-      aria-labelledby={compact ? undefined : 'connect-heading'}
+      aria-labelledby={headingId}
       className={cn('glass rounded-2xl', compact ? 'p-4' : 'p-5 sm:p-6')}
     >
       <div className="flex items-start gap-3">
@@ -18,15 +30,13 @@ export function ConnectorCard({ compact = false }: { compact?: boolean }) {
         </span>
         <div className="min-w-0 flex-1">
           <h3
-            id={compact ? undefined : 'connect-heading'}
+            id={headingId}
             className={cn(
               'font-semibold tracking-tight',
               compact ? 'text-sm' : 'text-lg',
             )}
           >
-            {compact
-              ? 'Fastest: add AgentForge as a connector'
-              : 'Connect AgentForge to your AI'}
+            {TITLES[variant]}
           </h3>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             Nothing to install. Works on phone, web, and desktop. It connects
@@ -58,7 +68,7 @@ export function ConnectorCard({ compact = false }: { compact?: boolean }) {
       <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
         Covers public agents. Custom connectors may need a paid plan in some AI
         apps.
-        {compact &&
+        {variant === 'install' &&
           ' To pin just this one agent on a computer instead, use the options below.'}
       </p>
     </section>

@@ -1,4 +1,4 @@
-import { TerminalSquare } from 'lucide-react'
+import { TerminalSquare, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { buildInstallSnippet, MCP_CLIENTS, MCP_SERVER_PACKAGE, type McpClient } from '@/lib/mcpConfig'
 import type { AgentManifest } from '@/types/agent'
@@ -14,7 +14,25 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
 
   return (
     <div className="space-y-5">
-      <ConnectorCard compact />
+      {!agent.author.verified && (
+        // README 7.5. A Verified author gets no notice here at all: the badge
+        // confirms identity and says nothing about the agent's safety.
+        <div
+          role="note"
+          className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100"
+        >
+          <p className="flex items-center gap-1.5 font-medium">
+            <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
+            Author not confirmed
+          </p>
+          <p className="mt-1 leading-relaxed">
+            The registry has not confirmed who @{agent.author.handle} is. Read
+            the blueprint on the Overview tab before you use this agent.
+          </p>
+        </div>
+      )}
+
+      <ConnectorCard variant="install" />
 
       <p className="text-sm font-medium text-slate-900 dark:text-white">
         Or install just this agent on a computer
