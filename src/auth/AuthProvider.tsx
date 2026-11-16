@@ -53,6 +53,8 @@ interface AuthContextValue {
     displayName: string,
   ) => Promise<AuthUser>
   sendPasswordReset: (email: string) => Promise<void>
+  /** Sends the verification email again. Resolves without sending when already verified. */
+  sendVerificationEmail: () => Promise<void>
   /** Reloads the user after they follow the verification link. */
   refreshUser: () => Promise<AuthUser | null>
   signOut: () => Promise<void>
@@ -141,6 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (await prepare()).signUpWithEmail(email, password, displayName),
       sendPasswordReset: async (email) =>
         (await prepare()).sendPasswordReset(email),
+      sendVerificationEmail: async () =>
+        (await prepare()).sendVerificationEmail(),
       refreshUser: async () => (await loadAuthService()).refreshUser(),
       signOut: async () => {
         await (await loadAuthService()).service.signOut()
