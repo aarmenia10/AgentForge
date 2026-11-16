@@ -6,7 +6,14 @@
 import { authorHandleSchema } from '../lib/manifestSchema'
 
 export type RouteName =
-  'home' | 'me' | 'settings' | 'studio' | 'review' | 'profile' | 'not-found'
+  | 'home'
+  | 'me'
+  | 'settings'
+  | 'friends'
+  | 'studio'
+  | 'review'
+  | 'profile'
+  | 'not-found'
 
 export interface Route {
   name: RouteName
@@ -18,6 +25,7 @@ export interface Route {
 export const SIGNED_IN_ROUTES: readonly RouteName[] = [
   'me',
   'settings',
+  'friends',
   'studio',
   'review',
 ]
@@ -27,6 +35,7 @@ const STATIC: Record<string, RouteName> = {
   '/index.html': 'home',
   '/me': 'me',
   '/settings': 'settings',
+  '/friends': 'friends',
   '/studio': 'studio',
   '/review': 'review',
 }
@@ -70,6 +79,8 @@ export function routeTitle(route: Route): string {
       return `My agents · ${SITE}`
     case 'settings':
       return `Settings · ${SITE}`
+    case 'friends':
+      return `Friends · ${SITE}`
     case 'studio':
       return `Manifest Studio · ${SITE}`
     case 'review':

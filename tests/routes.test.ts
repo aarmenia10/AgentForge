@@ -11,6 +11,8 @@ test('static pages match, with or without one trailing slash', () => {
     ['/me/', 'me'],
     ['/settings', 'settings'],
     ['/settings/', 'settings'],
+    ['/friends', 'friends'],
+    ['/friends/', 'friends'],
     ['/studio', 'studio'],
     ['/review', 'review'],
     ['/review/', 'review'],
@@ -45,7 +47,14 @@ test('profiles match valid handles only', () => {
 })
 
 test('unknown paths are not found', () => {
-  for (const path of ['/nope', '/me/extra', '/ME', '//', '/settings//']) {
+  for (const path of [
+    '/nope',
+    '/me/extra',
+    '/ME',
+    '//',
+    '/settings//',
+    '/friends/x',
+  ]) {
     assert.deepEqual(matchRoute(path), { name: 'not-found', params: {} }, path)
   }
 })
@@ -57,7 +66,9 @@ test('every route has a title and the gated set is exact', () => {
   )
   assert.equal(routeTitle(matchRoute('/u/ada')), '@ada · AgentForge')
   assert.match(routeTitle(matchRoute('/x')), /not found/)
+  assert.equal(routeTitle(matchRoute('/friends')), 'Friends · AgentForge')
   assert.deepEqual([...SIGNED_IN_ROUTES].sort(), [
+    'friends',
     'me',
     'review',
     'settings',

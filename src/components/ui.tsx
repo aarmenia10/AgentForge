@@ -1,6 +1,7 @@
 import { BadgeCheck, Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FRAMEWORK_LABELS, type AgentAuthor, type AgentFramework } from '@/types/agent'
+import { Link } from '@/router/Router'
 
 /** Joins class names, skipping falsy values. */
 export function cn(...parts: (string | false | null | undefined)[]): string {
@@ -67,9 +68,36 @@ export function AuthorTag({
     'inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400'
   return (
     <span className={className}>
-      <span className="truncate">@{author.handle}</span>
+      <span className="truncate underline-offset-2 group-hover/author:underline">
+        @{author.handle}
+      </span>
       {badge}
     </span>
+  )
+}
+
+/**
+ * The author tag as a link to the author's public profile at /u/<handle>.
+ * Raised above a card's stretched click target so it stays clickable.
+ */
+export function AuthorLink({
+  author,
+  showVerifiedLabel = false,
+  onNavigate,
+}: {
+  author: AgentAuthor
+  showVerifiedLabel?: boolean
+  onNavigate?: () => void
+}) {
+  return (
+    <Link
+      to={`/u/${author.handle}`}
+      onClick={onNavigate}
+      title={`See all public agents from @${author.handle}`}
+      className="group/author relative z-10 inline-flex min-w-0 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+    >
+      <AuthorTag author={author} showVerifiedLabel={showVerifiedLabel} />
+    </Link>
   )
 }
 

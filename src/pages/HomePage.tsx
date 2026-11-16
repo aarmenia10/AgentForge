@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AgentGrid } from '@/components/AgentGrid'
 import { AgentDetailModal } from '@/components/detail/AgentDetailModal'
 import { ExplorerToolbar } from '@/components/ExplorerToolbar'
-import { ConnectorCard } from '@/components/ConnectorCard'
 import { Hero } from '@/components/Hero'
 import { agentRepository } from '@/lib/agentRepository'
 import { queryAgents, type CatalogQuery } from '@/lib/catalog'
@@ -89,13 +88,6 @@ export function HomePage({ query, patchQuery, resetQuery }: HomePageProps) {
           onCategoryChange={(category) => patchQuery({ category })}
           agentCount={agents.length}
         />
-
-        <div
-          id="connect"
-          className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-12 sm:px-6"
-        >
-          <ConnectorCard />
-        </div>
 
         <section
           id="explore"

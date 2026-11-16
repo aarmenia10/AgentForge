@@ -11,9 +11,11 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useAuth } from '@/auth/AuthProvider'
+import { agentRepository } from '@/lib/agentRepository'
 import { formatCount, formatRelativeTime } from '@/lib/format'
 import { TOOL_TYPE_LABELS, type AgentManifest, type AgentTool } from '@/types/agent'
-import { AuthorTag, cn, CopyButton, FrameworkBadge } from '../ui'
+import { AuthorLink, cn, CopyButton, FrameworkBadge } from '../ui'
 import { InstallPanel } from './InstallPanel'
 import { SchemaViewer } from './SchemaViewer'
 
@@ -110,17 +112,17 @@ export function AgentDetailModal({ agent, onClose }: AgentDetailModalProps) {
                 {agent.name}
               </h2>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                <AuthorTag author={agent.author} showVerifiedLabel />
-                <span className="inline-flex items-center gap-1">
-                  <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                  {formatCount(agent.stats.stars)} stars
-                </span>
+                <AuthorLink author={agent.author} showVerifiedLabel />
+                <StarButton agent={agent} />
                 <span className="inline-flex items-center gap-1">
                   <Eye className="size-3.5" />
                   {formatCount(agent.stats.views)} views
                 </span>
                 <span>Updated {formatRelativeTime(agent.stats.updated_at)}</span>
               </div>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Star totals in the catalog refresh about hourly.
+              </p>
             </div>
             <button
               type="button"
@@ -200,6 +202,119 @@ export function AgentDetailModal({ agent, onClose }: AgentDetailModalProps) {
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Reads whether this user starred the agent. Loads Firestore only here, when a
+ * signed-in user opens a detail view. Null when it cannot tell, for example
+ * because the agent has no live document yet.
+ */
+async function readOwnStar(agentId: string, uid: string): Promise<boolean | null> {
+  const [{ getFirebaseServices }, { doc, getDoc }] = await Promise.all([
+    import('@/lib/firebase'),
+    import('firebase/firestore'),
+  ])
+  const { db, auth } = getFirebaseServices()
+  await auth.authStateReady()
+  if (auth.currentUser?.uid !== uid) return null
+  const star = await getDoc(doc(db, 'agents', agentId, 'stars', uid))
+  return star.exists()
+}
+
+function describeStarError(error: unknown): string {
+  const code =
+    error && typeof error === 'object' && 'code' in error
+      ? String((error as { code: unknown }).code).replace(/^firestore\//, '')
+      : null
+  if (code === 'unavailable' || code === 'deadline-exceeded')
+    return 'Could not reach the server, so your star was not saved. Try again.'
+  if (code === 'resource-exhausted')
+    return 'The site has reached its daily limit. Try again tomorrow.'
+  if (error instanceof Error && /^Agent does not exist/.test(error.message))
+    return 'Stars are not open for this agent yet.'
+  if (error instanceof Error && /^Sign in/.test(error.message))
+    return 'Your session ended. Sign in again to star agents.'
+  return 'Could not save your star. Try again.'
+}
+
+/**
+ * A star icon and the count, no pill (README 7.1). Signed out, it asks for
+ * sign-in. Signed in, it toggles at once and reverts on failure.
+ */
+function StarButton({ agent }: { agent: AgentManifest }) {
+  const { status, user, openSignIn } = useAuth()
+  const uid = status === 'signed-in' && user ? user.uid : null
+  const [count, setCount] = useState(agent.stats.stars)
+  const [starred, setStarred] = useState<boolean | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    setStarred(null)
+    if (!uid) return
+    let active = true
+    readOwnStar(agent.id, uid)
+      .then((value) => active && setStarred(value))
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [agent.id, uid])
+
+  async function onClick() {
+    if (!uid) {
+      openSignIn({ reason: 'Sign in to star this agent.' })
+      return
+    }
+    if (busy) return
+    const before = { count, starred }
+    if (starred !== null) {
+      setStarred(!starred)
+      setCount(Math.max(0, count + (starred ? -1 : 1)))
+    }
+    setBusy(true)
+    setMessage(null)
+    try {
+      const next = await agentRepository.toggleStar(agent.id, uid)
+      setCount(next)
+      if (before.starred === null)
+        setStarred(await readOwnStar(agent.id, uid).catch(() => null))
+    } catch (error) {
+      setCount(before.count)
+      setStarred(before.starred)
+      setMessage(describeStarError(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={uid && starred !== null ? starred : undefined}
+        aria-busy={busy || undefined}
+        aria-label={`${starred ? 'Starred' : 'Star this agent'}, ${formatCount(count)} stars`}
+        title={uid ? (starred ? 'Remove your star' : 'Star this agent') : 'Sign in to star this agent'}
+        className="-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 transition hover:text-amber-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500 dark:hover:text-amber-300"
+      >
+        <Star
+          aria-hidden="true"
+          className={cn(
+            'size-3.5 text-amber-500',
+            starred && 'fill-amber-400 text-amber-400',
+          )}
+        />
+        <span className="tabular-nums">{formatCount(count)}</span> stars
+      </button>
+      {message && (
+        <span role="status" className="basis-full text-rose-700 dark:text-rose-300">
+          {message}
+        </span>
+      )}
+    </>
   )
 }
 
