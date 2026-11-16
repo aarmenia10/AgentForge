@@ -5,6 +5,8 @@ on:
     branches: [main, 'task/**']
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -16,9 +18,10 @@ permissions:
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       FIREBASE_PROJECT: agentforge-b10db
+      AGENTFORGE_CATALOG_SOURCE: seed
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +35,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Check formatting
+        run: npm run format:check
+
       # The catalog is built from the seed file here. Credentials are not
       # present yet, so the exporter cannot reach Firestore by accident.
       - name: Build
@@ -42,22 +48,57 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Check standalone package and committed tarball
+        run: npm run test:package
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Test Firestore rules and transactions
+        run: npm run test:firestore
+
       # Deploy only from main, and only once the owner has added the secret.
       - name: Check for deploy credentials
         id: creds
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          CATALOG_SOURCE: ${{ vars.CATALOG_SOURCE }}
         run: |
           if [ -n "$SA" ]; then
             printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
+            if [ "$CATALOG_SOURCE" = "firestore" ]; then
+              echo "::error::Firestore catalog export requires FIREBASE_SERVICE_ACCOUNT."
+              exit 1
+            fi
             echo "::warning::FIREBASE_SERVICE_ACCOUNT is not set. Skipping deploy."
           fi
 
+      # Seed/package tests above cannot see production data. A failed Firestore
+      # export stops this job before Hosting can replace the last good snapshot.
+      - name: Rebuild catalog and site from approved Firestore agents
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          GOOGLE_CLOUD_PROJECT: ${{ env.FIREBASE_PROJECT }}
+          AGENTFORGE_CATALOG_SOURCE: firestore
+        run: npm run build
+
+      - name: Compare scheduled catalog with live snapshot
+        id: catalog
+        if: steps.creds.outputs.present == 'true' && github.event_name == 'schedule'
+        run: |
+          curl --fail --silent --show-error "https://$FIREBASE_PROJECT.web.app/catalog.json" -o "$RUNNER_TEMP/live-catalog.json"
+          if cmp -s public/catalog.json "$RUNNER_TEMP/live-catalog.json"; then
+            echo "unchanged=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy Hosting and Firestore rules
-        if: steps.creds.outputs.present == 'true'
+        if: steps.creds.outputs.present == 'true' && steps.catalog.outputs.unchanged != 'true'
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: npx firebase deploy --only hosting,firestore:rules --project "$FIREBASE_PROJECT" --non-interactive
@@ -66,7 +107,7 @@ jobs:
       # service account. Until the owner grants it, this step warns and the
       # rest of the deploy still counts as successful.
       - name: Deploy Firestore indexes
-        if: steps.creds.outputs.present == 'true'
+        if: steps.creds.outputs.present == 'true' && steps.catalog.outputs.unchanged != 'true'
         continue-on-error: true
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json

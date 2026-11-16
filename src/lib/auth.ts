@@ -16,12 +16,22 @@ export interface AuthService {
     displayName: string,
   ): Promise<AuthUser>
   sendPasswordReset(email: string): Promise<void>
+  sendVerificationEmail(): Promise<void>
   signOut(): Promise<void>
   onAuthChange(listener: (user: AuthUser | null) => void): () => void
 }
 
 export interface AuthRuntime extends AuthService {
   refreshUser(): Promise<AuthUser | null>
+}
+
+/** Shared by the SDK and local stub; keep the no-op and signed-out cases identical. */
+export async function sendVerificationFor<T extends { emailVerified: boolean }>(
+  user: T | null,
+  send: (user: T) => Promise<void>,
+): Promise<void> {
+  if (!user) throw new Error('Sign in to send a verification email')
+  if (!user.emailVerified) await send(user)
 }
 
 const sessionKey = 'agentforge.auth-session'
@@ -84,6 +94,11 @@ export function createAuthService(
     },
     async sendPasswordReset(email) {
       await (await runtime()).sendPasswordReset(email)
+    },
+    async sendVerificationEmail() {
+      if (!pending && !restore)
+        throw new Error('Sign in to send a verification email')
+      await (await runtime()).sendVerificationEmail()
     },
     async signOut() {
       if (pending || restore) await (await runtime()).signOut()

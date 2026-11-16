@@ -54,3 +54,23 @@ export async function reviewAgent(agentId: string, status: ReviewStatus) {
 export async function setAuthorVerified(agentId: string, verified: boolean) {
   return (await store()).setAuthorVerified(agentId, verified)
 }
+
+export async function getPendingEdit(id: string) {
+  return (await store()).getPendingEdit(id)
+}
+export async function withdrawPendingEdit(id: string) {
+  return (await store()).withdrawPendingEdit(id)
+}
+export async function listMyPendingEdits(pageSize = 20, afterId?: string) {
+  return (await store()).listMyPendingEdits(pageSize, afterId)
+}
+export async function listEditQueue(
+  status: 'pending' | 'rejected' = 'pending',
+  pageSize = 20,
+  afterId?: string,
+) {
+  return (await store()).listEditQueue(status, pageSize, afterId)
+}
+export async function reviewEdit(id: string, status: 'approved' | 'rejected') {
+  return (await store()).reviewEdit(id, status)
+}

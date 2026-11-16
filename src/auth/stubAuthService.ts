@@ -1,4 +1,5 @@
 import type { AuthService, AuthUser } from '@/lib/auth'
+import { sendVerificationFor } from '@/lib/auth'
 import type { LoadedAuth } from './loadAuthService'
 
 /**
@@ -91,6 +92,11 @@ function createStubAuth(): LoadedAuth {
     },
     async sendPasswordReset() {
       await pause()
+    },
+    async sendVerificationEmail() {
+      await sendVerificationFor(current, async () => {
+        await pause()
+      })
     },
     async signOut() {
       await pause()

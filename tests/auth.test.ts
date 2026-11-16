@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createAuthService } from '../src/lib/auth'
+import { createAuthService, sendVerificationFor } from '../src/lib/auth'
 import type { AuthRuntime, AuthUser } from '../src/lib/auth'
 
 const user: AuthUser = {
@@ -28,6 +28,9 @@ function fakeRuntime() {
     },
     async sendPasswordReset(...args) {
       calls.push(['reset', ...args])
+    },
+    async sendVerificationEmail() {
+      calls.push(['verification'])
     },
     async signOut() {
       calls.push(['out'])
@@ -66,6 +69,31 @@ test('signed-out observation and unsubscribe do not load Firebase', async () => 
   await service.signInWithGoogle()
   assert.equal(loads, 1)
   assert.deepEqual(seen, [null, null])
+})
+
+test('verification rejects signed-out users, skips verified users and sends for unverified users', async () => {
+  let sent = 0
+  const send = async () => {
+    sent++
+  }
+  await assert.rejects(sendVerificationFor(null, send), /Sign in/)
+  await sendVerificationFor({ ...user, emailVerified: true }, send)
+  assert.equal(sent, 0)
+  await sendVerificationFor(user, send)
+  assert.equal(sent, 1)
+  await assert.rejects(
+    sendVerificationFor(user, async () => {
+      throw new Error('rate limited')
+    }),
+    /rate limited/,
+  )
+  const fake = fakeRuntime()
+  const { service } = createAuthService(async () => fake.runtime, false)
+  await assert.rejects(service.sendVerificationEmail(), /Sign in/)
+  assert.deepEqual(fake.calls, [])
+  await service.signInWithGoogle()
+  await service.sendVerificationEmail()
+  assert.deepEqual(fake.calls, [['google'], ['verification']])
 })
 
 test('all methods forward arguments, share initialization, and expose refreshed verification', async () => {
