@@ -295,7 +295,7 @@ A separate pattern also blocks: a URL that contains a placeholder for data, such
 - C0 and C1 control characters other than tab (U+0009) and newline (U+000A); carriage return U+000D is allowed only before a newline
 - Private use area U+E000 to U+F8FF
 
-**Exception:** U+200D (zero-width joiner) and variation selectors U+FE0E and U+FE0F are allowed when both neighbors are emoji code points, so composite emoji in a description still pass. Variation selectors U+FE00 to U+FE0D and U+E0100 to U+E01EF are flagged everywhere.
+**Exception:** U+200D (zero-width joiner) is allowed when both neighbors are emoji code points (a variation selector between the joiner and an emoji is skipped when finding the neighbor), so composite emoji in a description still pass. Variation selectors U+FE0E and U+FE0F are allowed when the character immediately before them is an emoji code point; what follows does not matter, because the selector only changes how that one emoji is drawn. Variation selectors U+FE00 to U+FE0D and U+E0100 to U+E01EF are flagged everywhere.
 
 **Also warn (SL-07w):** a single word that mixes Latin letters with Cyrillic or Greek letters, such as `pаssword` with a Cyrillic `а`. These homoglyph words evade keyword rules. A warn, because legitimate multilingual text can trigger it.
 
@@ -544,7 +544,7 @@ Note on example 2: `./docs` is an argument to the server, not a package spec, so
 
 **Severity:** warn
 
-**Detects:** a property **name** in `input_schema` or `output_schema`, at any depth, matching (case-insensitive, ignoring `_` and `-`): `password`, `passwd`, `passphrase`, `secret`, `apikey`, `accesstoken`, `refreshtoken`, `privatekey`, `seedphrase`, `mnemonic`, `ssn`, `socialsecuritynumber`, `creditcard`, `cardnumber`, `cvv`, `cvc`, `iban`, `routingnumber`, `sessioncookie`, `cookie`. Also a property whose `description` asks for one of those values.
+**Detects:** a property **name** in `input_schema` or `output_schema`, at any depth, matching (case-insensitive, ignoring `_` and `-`): `password`, `passwd`, `passphrase`, `secret`, `apikey`, `accesstoken`, `refreshtoken`, `privatekey`, `seedphrase`, `mnemonic`, `ssn`, `socialsecuritynumber`, `creditcard`, `cardnumber`, `cvv`, `cvc`, `iban`, `routingnumber`, `sessioncookie`, `cookie`, `credential`, `credentials`. Also a property whose `description` asks for one of those values.
 
 Output schema matches carry more weight in the message, because an agent whose **output** contains a password field is asking the model to produce or repeat one.
 
@@ -596,6 +596,7 @@ The rules are tuned to keep false positives low enough that reviewers read every
 
 ## Changelog
 
-| Linter version | Date       | Change              |
-| -------------- | ---------- | ------------------- |
-| 1              | 2026-11-14 | First specification |
+| Linter version | Date       | Change                                                                                                                                                                                                                                               |
+| -------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1              | 2026-11-14 | First specification                                                                                                                                                                                                                                  |
+| 1              | 2026-11-16 | Corrected before first implementation, so the version stays 1. SL-07: U+FE0E and U+FE0F need an emoji before them only, matching must-not-flag example 2. SL-15: `credential` and `credentials` added to the name list, matching must-flag example 2 |
