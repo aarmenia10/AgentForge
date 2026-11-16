@@ -60,6 +60,13 @@ service cloud.firestore {
         && getAfter(userPath(request.auth.uid)).data.handle != handle;
     }
     function agentPath(agentId) { return /databases/$(database)/documents/agents/$(agentId); }
+    function editPath(agentId) { return /databases/$(database)/documents/agent_edits/$(agentId); }
+    function liveApproved(data) { return data.visibility == 'public' && data.review_status == 'approved'; }
+    function mayApprove(owner) {
+      let config = /databases/$(database)/documents/config/review;
+      return !exists(config) || get(config).data.allow_self_approval == true || request.auth.uid != owner;
+    }
+    match /config/{configId} { allow read, write: if false; }
     function isAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -117,6 +124,9 @@ service cloud.firestore {
       let before = resource.data;
       let after = request.resource.data;
       return verifiedEmail() && before.owner_uid == request.auth.uid
+        && (!liveApproved(before) || (after.visibility != 'public'
+          && after.diff(before).affectedKeys().hasOnly(['visibility', 'review_status', 'stats'])))
+        && !existsAfter(editPath(agentId))
         && after.owner_uid == before.owner_uid
         && after.author.verified == before.author.verified
         && after.review_status == 'pending'
@@ -124,13 +134,57 @@ service cloud.firestore {
         && (after.shared_with == before.shared_with || after.shared_with == [])
         && ownIdentity(after) && validAgent(after, agentId);
     }
-    function adminEdit() {
+    function adminEdit(agentId) {
       // All other fields are unchanged; only validate the two admin-editable values.
       return isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['review_status', 'author'])
         && request.resource.data.author.diff(resource.data.author).affectedKeys().hasOnly(['verified'])
         && request.resource.data.review_status in ['pending', 'approved', 'rejected']
+        && (request.resource.data.review_status == resource.data.review_status || request.resource.data.review_status != 'approved' || mayApprove(resource.data.owner_uid))
+        && (liveApproved(request.resource.data) || !existsAfter(editPath(agentId)))
         && request.resource.data.author.verified is bool;
+    }
+    function approveEdit(agentId) {
+      let live = resource.data;
+      let edit = get(editPath(agentId)).data;
+      let after = request.resource.data;
+      return isAdmin() && liveApproved(live) && mayApprove(live.owner_uid)
+        && exists(editPath(agentId)) && !existsAfter(editPath(agentId))
+        && edit.owner_uid == live.owner_uid && edit.version != live.version
+        && edit.visibility == 'public' && edit.review_status in ['pending', 'rejected']
+        && after.review_status == 'approved'
+        && after.diff(edit).affectedKeys().hasOnly(['review_status', 'author', 'stats'])
+        && after.author.diff(edit.author).affectedKeys().hasOnly(['verified'])
+        && after.author.verified == live.author.verified
+        && after.stats.updated_at == edit.stats.updated_at
+        && after.stats.stars == live.stats.stars && after.stats.views == live.stats.views
+        && validAgent(after, agentId);
+    }
+    match /agent_edits/{agentId} {
+      function ownsLive() { return verifiedEmail() && get(agentPath(agentId)).data.owner_uid == request.auth.uid; }
+      function validEdit() {
+        let live = get(agentPath(agentId)).data;
+        let edit = request.resource.data;
+        return ownsLive() && liveApproved(live) && validAgent(edit, agentId)
+          && ownIdentity(edit) && edit.visibility == 'public' && edit.review_status == 'pending'
+          && edit.version != live.version && edit.owner_uid == live.owner_uid
+          && edit.author.verified == live.author.verified
+          && edit.stats.stars == live.stats.stars && edit.stats.views == live.stats.views;
+      }
+      allow get: if (signedIn() && get(agentPath(agentId)).data.owner_uid == request.auth.uid) || isAdmin();
+      allow list: if bounded() && ((signedIn() && resource.data.owner_uid == request.auth.uid) || isAdmin());
+      allow create: if validEdit();
+      allow update: if validEdit() || (isAdmin()
+        && request.resource.data.review_status == 'rejected'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['review_status']));
+      allow delete: if ownsLive() || (isAdmin() &&
+        ((liveApproved(getAfter(agentPath(agentId)).data)
+          && mayApprove(get(agentPath(agentId)).data.owner_uid)
+          && getAfter(agentPath(agentId)).data.diff(resource.data).affectedKeys().hasOnly(['review_status', 'author', 'stats'])
+          && getAfter(agentPath(agentId)).data.author.diff(resource.data.author).affectedKeys().hasOnly(['verified'])
+          && getAfter(agentPath(agentId)).data.stats.updated_at == resource.data.stats.updated_at
+          && getAfter(agentPath(agentId)).data.version == resource.data.version)
+        || !liveApproved(getAfter(agentPath(agentId)).data)));
     }
     function starPath(agentId) { return /databases/$(database)/documents/agents/$(agentId)/stars/$(request.auth.uid); }
     function validStarDelta(agentId) {
@@ -156,7 +210,7 @@ service cloud.firestore {
       allow update: if (signedIn()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats'])
           && readableAgent(resource.data) && validStarDelta(agentId))
-        || ownerEdit(agentId) || adminEdit();
+        || ownerEdit(agentId) || adminEdit(agentId) || approveEdit(agentId);
       allow delete: if false;
       match /stars/{userId} {
         allow get: if signedIn() && request.auth.uid == userId

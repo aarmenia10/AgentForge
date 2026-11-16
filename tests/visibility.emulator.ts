@@ -315,18 +315,23 @@ test('visibility, review, admin authority, bounded views, and star rules', async
             review_status: 'pending',
           }),
         )
-        await assertSucceeds(updateDoc(path, { review_status: 'pending' }))
-        await assertFails(b.getAgentRecord('alice-public'))
-        await assertSucceeds(
-          a.updateAgent({
+        await assertFails(updateDoc(path, { review_status: 'pending' }))
+        const before = await b.getAgentRecord('alice-public')
+        assert.deepEqual(
+          await a.updateAgent({
             ...manifest('alice-public', 'public'),
+            version: '2.0.0',
             name: 'edited',
           }),
+          { staged: true },
         )
+        assert.deepEqual(await b.getAgentRecord('alice-public'), before)
+        await moderation.reviewEdit('alice-public', 'approved')
         await assertFails(
-          createAgentStore(charlie, 'alice').updateAgent(
-            manifest('alice-public', 'public'),
-          ),
+          createAgentStore(charlie, 'alice').updateAgent({
+            ...manifest('alice-public', 'public'),
+            version: '3.0.0',
+          }),
         )
         await moderation.reviewAgent('alice-public', 'approved')
         await moderation.setAuthorVerified('alice-public', true)

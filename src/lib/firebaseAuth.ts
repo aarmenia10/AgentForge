@@ -14,6 +14,7 @@ import {
 import type { User } from 'firebase/auth'
 import { getFirebaseApp } from './firebaseApp'
 import type { AuthRuntime, AuthUser } from './auth'
+import { sendVerificationFor } from './auth'
 
 function userView(user: User): AuthUser {
   return {
@@ -48,6 +49,11 @@ export const firebaseAuth: AuthRuntime = {
   },
   async sendPasswordReset(email) {
     await sendPasswordResetEmail(auth(), email)
+  },
+  async sendVerificationEmail() {
+    const instance = auth()
+    await instance.authStateReady()
+    await sendVerificationFor(instance.currentUser, sendEmailVerification)
   },
   async signOut() {
     await signOut(auth())
