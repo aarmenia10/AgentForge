@@ -243,7 +243,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 | P1-1 | Link the Firebase project: commit `.firebaserc`, fill the Project facts table, commit the public web config as `.env.production` | Claude | none | `.firebaserc` and `.env.production` are on `main` and the build passes | done |
 | P1-2 | CI and deploys. `.github/workflows/ci.yml` already builds and tests every push and deploys Hosting and rules from `main` using the `FIREBASE_SERVICE_ACCOUNT` secret. Remaining: add ESLint and Prettier and a lint step | Codex | none | A push to `main` reaches the live site with no manual step | done |
 | P1-3 | Visual style per [7.1](#71-visual-style): original look kept, pill labels replaced | Claude | none | No pill-shaped labels remain. Both themes and 375px verified | done |
-| P1-4 | MCP go-live: live catalog with bundled fallback, Codex in the install panel, standalone packaging, and release as a tarball on the site | Codex, Claude | none | The snippet from the site connects on a machine that has never seen the repo | done. Verified live for Claude Code in P1-7. Codex connection not yet tested on a real machine |
+| P1-4 | MCP go-live: live catalog with bundled fallback, Codex in the install panel, standalone packaging, and release as a tarball on the site | Codex, Claude | none | The snippet from the site connects on a machine that has never seen the repo | done. Verified live for Claude Code in P1-7 and for Codex CLI on Windows on 2026-11-17 |
 | P1-5 | AI navigation guide per [7.4](#74-ai-navigation-guide), including the server wiring in `packages/mcp-server/src/server.ts` | Claude | none | A connected AI given a vague task lists and compares candidates before choosing, and says so when nothing fits |done (not yet observed with a live model; that check belongs to P1-7) |
 | P1-6 | Seed coverage: at least two agents per category including `creative`, and at least one agent for each framework | Codex | none | Every category pill and every framework filter returns results | done |
 | P1-7 | Live verification: walk the deployed site and a real MCP connection, file what breaks | Antigravity | P1-2, P1-4 | A written pass or fail for each Phase 1 "done when" | done. Report in `docs/verification/P1-7.md`: 25 pass, 1 not tested, 1 bug (fixed). Open follow-ups below the table |
@@ -251,7 +251,7 @@ Goal: a stranger can open the site, like what they see, and connect it to Claude
 **Phase 1 is complete.** Two follow-ups from P1-7 remain open and do not block Phase 2:
 
 - **Guide behavior, unprompted.** Owner-tested on Claude Code on Windows, 2026-11-12. With "Use AgentForge to find..." Claude searched five ways, compared, and reported its choice: pass. With the plain task it also used the registry, but a previously loaded agent's tool was still visible, so a fully cold unprompted run is still unobserved. Version 0.1.1 adds the when-to-look rule. Not yet tested on Codex.
-- **Codex connection.** Check 21 was not tested because Codex was not installed on the test machine.
+- **Codex connection.** Closed 2026-11-17: registered with the site's Windows command in Codex CLI 0.169.0, and `switch_agent` loaded an agent.
 
 ### Phase 2: Accounts, publishing, and sharing
 
@@ -286,10 +286,9 @@ Waves 1 and 2 are done (P2-1, P2-2, P2-3, P2-5, the P2-6 spec, P2-10). Wave 3 is
 3. **Step 2 is now three parallel sessions with separate files** (2026-11-16): Claude A (P2-4, P2-9, P2-7 review screen), Claude B (P2-12 to P2-15, the P2-8 star button, the account-menu links), and Codex (P2-17). `docs/LOCAL_TESTING.md` describes the local practice mode they verify against.
 4. **Verification.** P2-16, with Claude in Chrome walking the live site using the owner's admin account and a second account.
 
-**Phase 2 is complete as of 2026-11-17.** The owner confirmed the welcome step on his own live sign-in, and Tommy received and used a real verification email when he signed up with an email and password. What is still unverified, none of it blocking:
+**Phase 2 is complete as of 2026-11-17.** The owner confirmed the welcome step on his own live sign-in, and Tommy received and used a real verification email when he signed up with an email and password. The local server was connected in Codex CLI on the owner's Windows computer and `switch_agent` returned `k8s-manifest-hardening@1.0.0`, which closes the Codex check left open since P1-7. What is still unverified, none of it blocking:
 
 - Three walkthrough checks whose results the tester lost: a friend's agent under "Shared with me", an old version file still loading after an edit, and unfriending removing access. All three passed in the practice database.
-- A tool call through the local server inside Codex. On 2026-11-17 the owner registered it in Codex CLI 0.169.0 on Windows with the site's Windows command, and `codex mcp list` showed it enabled. The follow-up test chat reported calling `get_agent`, which only the remote connector has (the local server's tool is `switch_agent`), so that chat most likely used the connector attached to the owner's account. Registration is proven; a local tool call is not. To close it: in a new Codex chat, ask it to call `switch_agent` from the `agentforge` server and name the server it used.
 
 ### Phase 3: Runtime and reach
 
