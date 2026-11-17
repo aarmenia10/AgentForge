@@ -94,7 +94,7 @@ There are two ways in for an AI app, and both read the same `catalog.json`:
 | Operation | Source | Firestore reads |
 | --- | --- | --- |
 | Browse, search, filter, sort public agents | `catalog.json` on Hosting, filtered in memory | 0 |
-| MCP server loads a public agent | `catalog.json` from Hosting, bundled snapshot as fallback | 0 |
+| MCP server loads a public agent | `catalog.json` and `agents/<id>/<version>.json` from Hosting; bundled catalog fallback | 0 |
 | "My agents" and "Shared with me" | Firestore, bounded queries, signed-in users only | A few per visit |
 | Remote connector answers a search | `catalog.json` from Hosting, cached briefly in the Worker | 0 |
 | Publish, star, friend | Firestore writes behind security rules | n/a |
@@ -110,13 +110,15 @@ The web app generates this entry and the server must honor it. The generator is 
   "mcpServers": {
     "agentforge-<agent-id>": {
       "command": "npx",
-      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.1.tgz", "--agent", "<agent-id>@<version>"]
+      "args": ["-y", "https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.2.tgz", "--agent", "<agent-id>@<version>"]
     }
   }
 }
 ```
 
-The version is pinned so an installed agent cannot change underneath its user.
+The version is pinned so an installed agent cannot change underneath its user. MCP 0.2.2 resolves an older pin from `/agents/<id>/<version>.json`; the agent must still be in the current catalog. Every response is validated as a public manifest with the requested id and version, including HTTP 200 responses (missing Hosting files return SPA HTML). Version files use five-minute cache headers so takedowns propagate; released tarballs remain immutable and all five releases stay hosted. Offline catalog fallback still resolves pins present in the bundled snapshot.
+
+The hourly Firestore export reads roughly **approved agents + snapshots** documents, plus two small reads per seed for provisioning. At 1,000 combined agent/snapshot documents this is about 24,000 reads/day before account traffic; add a cheaper change-detection step by then, before approaching Spark's 50,000 daily reads (about 2,000 combined documents at hourly cadence). That step is deferred. `public/export-state.json` hashes the catalog and all version files; scheduled CI compares it to the live export so history-only changes and takedowns deploy too.
 
 ---
 
@@ -140,6 +142,8 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 | Date | Decision |
 | --- | --- |
+| 2026-11-16 | P2-17 (owner-authorized): admin approvals atomically create exact records in `agent_versions/<id>@<version>`. Snapshots have no client reads, updates, or deletes. Identical re-approval retries without writing the existing snapshot; rules still require complete record equality, so reused versions with changed content fail. Seed provisioning creates only missing versions and rejects source content changes at an existing version. Both MCP servers share strict historical resolution; the Worker entry remains default-only and shared code has no Node/Ajv. MCP 0.2.2 is the fifth permanent tarball. |
+| 2026-11-16 | P2-17 (owner-authorized rules/pipeline changes): the exporter publishes linted historical manifests only for currently public approved catalog members, deletes stale generated files, preserves seed takedowns, and strips storage fields. Five-minute version caching permits withdrawal. Scheduled CI compares an export digest covering catalog plus history, rather than catalog bytes alone. Budget a cheaper change-detection step at roughly 1,000 combined approved-agent/snapshot documents; do not build it now. |
 | 2026-11-16 | P2-12 to P2-15 account screens. **Owner-approved: changing a username never renames published agents.** Each agent keeps the `author.handle` it was approved under until its owner publishes an update; Settings says so beside the username field. Usernames follow `validHandle` (3 to 30 lowercase letters, digits, or hyphens, starting and ending with a letter or digit; `agentforge`, `admin`, `support` reserved), checked live with `getProfileByHandle`. **Welcome step trigger:** a signed-in user this browser has not yet seen with a profile or a welcome gets one `getProfile` read; no profile means the welcome step (connector link first, then a username) shows once and is never shown again, skipped or not. localStorage key `agentforge.profile.<uid>` holds `{ handle, welcomed }`, so a normal visit costs no Firestore read and loads no Firestore code. The welcome dialog is portaled to `document.body`, because the nav's backdrop blur captures `position: fixed`. The public profile reads only `catalog.json`; "Add friend" reads nothing until it is pressed. The detail view reads the user's own star (`agents/{id}/stars/{uid}`) directly through a dynamic import, because `src/services` has no star-state reader yet |
 | 2026-11-16 | P2-4/P2-7/P2-9 screen patterns. Service errors reach the page only through `describeServiceError(error, action)` in `src/lib/studioErrors.ts`, which never shows SDK text. Linter findings appear beside their field as "Blocked" or "Check" with the rule id and the finding's message; with no findings the UI says the linter has nothing to flag and that this is not a safety check. No checkmark, badge, or "passed" wording anywhere. Status and visibility labels use `StatusText` from `src/components/studio/parts.tsx` (monospace capitals, no background). Review status is shown only for public agents; private and friends agents read "No review needed" |
 | 2026-11-16 | **Owner decided: the README is the shared source of truth for two people.** Tommy works through Codex; Aidan through Claude Code and Codex. Every idea goes in the ideas inbox (8.2), every piece of work in progress is claimed on the shared board (8.1), and every plan or binding choice is written here before or with the code. Work lands by pull request from a `task/<id>` branch with CI green. Protected files (listed in section 8) need Aidan's agreement |
@@ -211,7 +215,7 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 ### Firestore documents
 
-`AgentRecord` extends `AgentManifest` with `owner_uid: string`, `review_status: 'pending' | 'approved' | 'rejected'`, and `shared_with: string[]` (at most 100 uids). These three fields never appear in `catalog.json`. The exporter validates documents even when they will be excluded, and suppresses an existing seed when its live record becomes non-public or loses approval. Source-controlled seeds are maintainer-approved public manifests.
+`AgentRecord` extends `AgentManifest` with `owner_uid: string`, `review_status: 'pending' | 'approved' | 'rejected'`, and `shared_with: string[]` (at most 100 uids). These three fields never appear in `catalog.json`. The exporter validates documents even when they will be excluded, and suppresses an existing seed when its live record becomes non-public or loses approval. Source-controlled seeds are maintainer-approved public manifests. Every approved version is stored as the exact `AgentRecord` in immutable `agent_versions/{id}@{version}`. Admin approval and snapshot creation are atomic; a previously used version can be approved again only with identical record content. Live counters and author verification can change independently without rewriting historical snapshots. The exporter strips storage fields from each snapshot and applies the same manifest validation, safety linter, and exact allowances as the catalog. Only agents currently public and approved publish `/agents/<id>/<version>.json`; private, friends, pending, rejected, taken-down, invalid, or blocked current agents publish none. `catalog.json` keeps only the newest version.
 
 ### Version 1 compatibility
 
@@ -268,7 +272,7 @@ Goal: people sign in, publish their own agents, and choose who sees them.
 | P2-14 | Welcome step and connector placement: after a first sign-up, show a welcome step whose first item is the connector link. **Remove the connector card from the home page.** It stays at the top of each agent's install tab (so signed-out visitors can still find it) and in Settings | Claude | P2-11, P2-13 | The home page has no connector card. A new account sees the welcome step once | done. Shown once to any signed-in user without a profile (existing Google accounts included), never over the sign-in dialog or on Settings; skippable; remembered per user in localStorage (decision log). Verified in local practice mode with two accounts at desktop and 375px |
 | P2-15 | Friends screens: find people by handle, send, accept, and decline requests, and remove a friend | Claude | P2-11, P2-3 | Two accounts become friends and unfriend through the UI alone | done. `/friends`: search by username prefix, send, accept, decline, cancel, and remove (confirmed); requests to you, requests you sent, friends. Says plainly when a confirmed email or a username is missing. Two emulator accounts became friends and unfriended through the UI alone; live walkthrough remains |
 | P2-16 | Hardening before public launch: restrict the Firebase web API key to the site's own addresses, add the second admin, decide whether an admin may approve their own submission, and run a two-account end-to-end verification of all of Phase 2 on the live site | Owner, Antigravity | all of the above | A written pass or fail for every Phase 2 "done when" | open |
-| P2-17 | Version history (moved up from P3-5): every approved version is kept as an immutable snapshot and published as a static file, so an install pinned to an older version keeps loading after the author updates. Local server and connector resolve old pins from those files | Codex | P2-7 | An agent is approved at 1.0.0, edited, and approved at 1.1.0; a config pinned to 1.0.0 still loads the 1.0.0 blueprint | open |
+| P2-17 | Version history (moved up from P3-5): every approved version is kept as an immutable snapshot and published as a static file, so an install pinned to an older version keeps loading after the author updates. Local server and connector resolve old pins from those files | Codex | P2-7 | An agent is approved at 1.0.0, edited, and approved at 1.1.0; a config pinned to 1.0.0 still loads the 1.0.0 blueprint | done. Immutable approvals, filtered version export, shared old-pin resolution, MCP 0.2.2, and emulator/server/package coverage. All six required local checks pass |
 
 #### Wave 3 order
 
@@ -403,9 +407,9 @@ The local server needs Node and a terminal, and cannot run on a phone or in a we
 
 - **Where it runs.** Cloudflare Workers, free plan. Code lives in `packages/connector/`. CI deploys it with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets.
 - **What it is.** An MCP server over Streamable HTTP at `/mcp`. Public, read-only, no sign-in.
-- **Stateless.** A shared web service cannot remember which agent one user loaded. So it has no `switch_agent` and no per-agent tool. It offers `search_registry`, `compare_agents`, and `get_agent`, which returns the full blueprint in one call. It serves the same guide, with the same rules, through its instructions and the `registry_guide` resource and prompt.
+- **Stateless.** A shared web service cannot remember which agent one user loaded. So it has no `switch_agent` and no per-agent tool. It offers `search_registry`, `compare_agents`, and `get_agent({ agent_id, version? })`, which returns the full blueprint in one call. `agent_id` also accepts `id@version`; conflicting selectors fail closed. It serves the same guide, with the same rules, through its instructions and the `registry_guide` resource and prompt.
 - **One source of logic.** Search, comparison, validation, and the guide text are shared with `packages/mcp-server`, not copied. The two must not drift, and a test enforces it.
-- **Data.** It reads `catalog.json` from Firebase Hosting, caches it for a few minutes, and falls back to a bundled snapshot. It stores nothing and logs no user content.
+- **Data.** It reads `catalog.json` from Firebase Hosting, caches it for a few minutes, and falls back to a bundled snapshot. An older requested pin is fetched from `/agents/<id>/<version>.json` only while the id remains in that catalog. It validates the public manifest and exact id/version, rejecting missing-file SPA HTML even with HTTP 200. It stores nothing and logs no user content.
 - **Limits.** When the free plan's daily request limit is reached, the connector stops answering until the next day. The site and the local server are unaffected. No setting may be enabled that converts overage into charges.
 - **Not in scope yet.** Private and friends agents need sign-in on the connection itself (OAuth). That is Phase 3, with P3-1.
 - **Listing.** Adding the URL as a custom connector works as soon as the service is live. Appearing in an AI vendor's built-in connector directory requires that vendor's review and is a later, separate step.
@@ -438,7 +442,6 @@ What is being built right now. One row per claim. Add yours before you start and
 
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
-| P2-17 version history | Aidan | Codex | `task/p2-17` | `firestore.rules`, `scripts/`, `src/services/agentStore.ts`, `packages/mcp-server/`, `packages/connector/`, `public/mcp/`, `src/lib/mcpConfig.ts`, `firebase.json` | 2026-11-16 |
 
 ### 8.2 Ideas inbox
 

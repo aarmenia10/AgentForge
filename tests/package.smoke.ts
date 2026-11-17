@@ -113,17 +113,27 @@ test(
       for (const mode of [
         'explicit bundled catalog',
         'offline default fallback',
+        'historical version file',
       ] as const) {
+        const historical = `data:text/javascript,${encodeURIComponent(
+          [
+            "import { readFileSync } from 'node:fs'",
+            `const catalog = JSON.parse(readFileSync(${JSON.stringify(catalog)}, 'utf8'))`,
+            "globalThis.fetch = async (url) => url.endsWith('/catalog.json') ? Response.json(catalog.map(a => ({ ...a, version: '9.0.0' }))) : url.endsWith('/agents/postgres-index-tuner/1.0.0.json') ? Response.json(catalog.find(a => a.id === 'postgres-index-tuner')) : new Response('<html>Missing file</html>')",
+          ].join('\n'),
+        )}`
         const args =
           mode === 'explicit bundled catalog'
             ? [executable, '--agent', pin, '--catalog', catalog]
-            : [
-                '--import',
-                `data:text/javascript,${encodeURIComponent("globalThis.fetch = async () => { throw new Error('offline') }")}`,
-                executable,
-                '--agent',
-                pin,
-              ]
+            : mode === 'historical version file'
+              ? ['--import', historical, executable, '--agent', pin]
+              : [
+                  '--import',
+                  `data:text/javascript,${encodeURIComponent("globalThis.fetch = async () => { throw new Error('offline') }")}`,
+                  executable,
+                  '--agent',
+                  pin,
+                ]
         const transport = new StdioClientTransport({
           command: process.execPath,
           args,
@@ -176,11 +186,11 @@ test(
   },
 )
 
-for (const version of ['0.1.0', '0.1.1']) {
+for (const version of ['0.1.0', '0.1.1', '0.2.0', '0.2.1']) {
   test(
     'committed ' +
       version +
-      ' tarball rejects version 2 and serves its bundled snapshot',
+      ' tarball still initializes and serves its compatible catalog',
     { timeout: 180_000 },
     async (t) => {
       const npmCli = process.env.npm_execpath
@@ -271,13 +281,15 @@ for (const version of ['0.1.0', '0.1.1']) {
             (manifest.contents[0] as { text: string }).text,
           )
           assert.equal(active.id, 'postgres-index-tuner')
-          assert.equal(
-            active.schema_version,
-            undefined,
-            'Must use the bundled v1 manifest',
-          )
-          assert.equal(active.author.handle, undefined)
-          assert.equal(typeof active.author.github, 'string')
+          if (version.startsWith('0.1.')) {
+            assert.equal(
+              active.schema_version,
+              undefined,
+              'Must use the bundled v1 manifest',
+            )
+            assert.equal(active.author.handle, undefined)
+            assert.equal(typeof active.author.github, 'string')
+          } else assert.equal(active.schema_version, 2)
           const search = await client.callTool({
             name: 'search_registry',
             arguments: { query: 'postgres' },
@@ -294,7 +306,7 @@ for (const version of ['0.1.0', '0.1.1']) {
           assert.match(stderr, /legacy default fetched version 2 catalog/)
           t.diagnostic(
             version +
-              ': fetched v2 catalog; initialized; bundled v1 manifest confirmed; search_registry("postgres") returned postgres-index-tuner',
+              ': fetched v2 catalog; initialized; compatible manifest confirmed; search_registry("postgres") returned postgres-index-tuner',
           )
         } finally {
           await client.close()

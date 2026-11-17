@@ -1,7 +1,8 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
+import { createHash } from 'node:crypto'
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import {
   validateCatalog,
@@ -124,8 +125,9 @@ export function seedRecord(
 ): AgentRecord {
   return {
     ...seed,
+    visibility: current?.visibility ?? seed.visibility,
     owner_uid: 'agentforge',
-    review_status: 'approved',
+    review_status: current?.review_status ?? 'approved',
     shared_with: [],
     stats: {
       ...seed.stats,
@@ -165,10 +167,62 @@ export function mergeCatalog(
   )
 }
 
+export function buildVersionFiles(
+  catalog: readonly AgentManifest[],
+  snapshots: unknown[],
+  seeds: readonly AgentManifest[] = [],
+  allow: readonly LinterAllowance[] = [],
+  log: (notice: ExportNotice) => void = () => {},
+): Map<string, AgentManifest> {
+  const eligible = new Map(catalog.map((agent) => [agent.id, agent]))
+  const files = new Map<string, AgentManifest>()
+  const versions = new Set<string>()
+  for (const value of snapshots) {
+    let snapshot: AgentRecord
+    try {
+      snapshot = validateAgentRecord(value)
+    } catch {
+      log({ id: '(snapshot)', reason: 'invalid' })
+      continue
+    }
+    const key = `${snapshot.id}/${snapshot.version}.json`
+    versions.add(key)
+    const current = eligible.get(snapshot.id)
+    if (!current || current.author.uid !== snapshot.owner_uid) continue
+    const [manifest] = buildCatalog([], [snapshot], allow, log)
+    if (manifest) files.set(key, manifest)
+  }
+  // Credential-free builds have source-approved seed snapshots too.
+  for (const seed of seeds) {
+    const key = `${seed.id}/${seed.version}.json`
+    if (eligible.has(seed.id) && !versions.has(key)) {
+      const [manifest] = buildCatalog([seed], [], allow, log)
+      if (manifest) files.set(key, manifest)
+    }
+  }
+  return files
+}
+
+export async function writeVersionFiles(
+  directory: string,
+  files: ReadonlyMap<string, AgentManifest>,
+) {
+  // Regenerate only the dedicated output directory so removed agents and
+  // blocked snapshots cannot survive from an earlier build.
+  await rm(directory, { recursive: true, force: true })
+  await mkdir(directory, { recursive: true })
+  for (const [path, manifest] of files) {
+    const output = resolve(directory, path)
+    await mkdir(resolve(output, '..'), { recursive: true })
+    await writeFile(output, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  }
+}
+
 async function readLiveRecords(
   log: (notice: ExportNotice) => void,
-): Promise<unknown[]> {
-  if (process.env.AGENTFORGE_CATALOG_SOURCE === 'seed') return []
+): Promise<{ live: unknown[]; snapshots: unknown[] }> {
+  if (process.env.AGENTFORGE_CATALOG_SOURCE === 'seed')
+    return { live: [], snapshots: [] }
   const { applicationDefault, initializeApp, deleteApp } =
     await import('firebase-admin/app')
   const { getFirestore } = await import('firebase-admin/firestore')
@@ -190,7 +244,7 @@ async function readLiveRecords(
       console.error(
         'No Application Default Credentials found; exporting approved public seeds only.',
       )
-      return []
+      return { live: [], snapshots: [] }
     }
   }
   const app = initializeApp(
@@ -203,6 +257,7 @@ async function readLiveRecords(
   try {
     const db = getFirestore(app)
     const excluded = new Set<string>()
+    const seedStates = new Map<string, AgentRecord>()
     for (const seed of SEED_AGENTS) {
       await db.runTransaction(async (tx) => {
         const ref = db.collection('agents').doc(seed.id)
@@ -224,6 +279,34 @@ async function readLiveRecords(
           }
         }
         const next = seedRecord(seed, previous)
+        const versionRef = db
+          .collection('agent_versions')
+          .doc(`${seed.id}@${seed.version}`)
+        const version = await tx.get(versionRef)
+        if (version.exists) {
+          // Counters change independently of approved content.
+          const content = (record: AgentRecord) => ({
+            ...record,
+            stats: { ...record.stats, stars: 0, views: 0 },
+            visibility: 'public',
+            review_status: 'approved',
+          })
+          if (
+            !isDeepStrictEqual(
+              content(validateAgentRecord(version.data())),
+              content(next),
+            )
+          )
+            throw new Error(
+              `Seed version content changed: ${seed.id}@${seed.version}`,
+            )
+        } else
+          tx.create(versionRef, {
+            ...next,
+            visibility: 'public',
+            review_status: 'approved',
+          })
+        seedStates.set(seed.id, next)
         if (!current) tx.set(ref, next)
         else if (!isDeepStrictEqual(current, next)) {
           const { stats, ...content } = next
@@ -236,7 +319,7 @@ async function readLiveRecords(
       .where('visibility', '==', 'public')
       .where('review_status', '==', 'approved')
       .get()
-    const result: unknown[] = []
+    const result = new Map<string, unknown>(seedStates)
     for (const doc of snapshot.docs) {
       if (excluded.has(doc.id)) continue
       const value = doc.data()
@@ -245,11 +328,21 @@ async function readLiveRecords(
         log({ id: doc.id, reason: 'document id mismatch' })
         continue
       }
-      result.push(value)
+      result.set(doc.id, value)
     }
     // Seeds whose live id is squatted or invalid are still published from
     // source, with source counters; only the live document is ignored.
-    return result
+    const versions = await db.collection('agent_versions').get()
+    const snapshots: unknown[] = []
+    for (const doc of versions.docs) {
+      const value = doc.data()
+      if (doc.id !== `${value.id}@${value.version}`) {
+        log({ id: doc.id, reason: 'snapshot document id mismatch' })
+        continue
+      }
+      snapshots.push(value)
+    }
+    return { live: [...result.values()], snapshots }
   } finally {
     await deleteApp(app)
   }
@@ -267,14 +360,21 @@ export async function exportCatalog() {
   const log = (notice: ExportNotice) => console.error(JSON.stringify(notice))
   // Fail on bad source seeds before making any Firestore writes.
   buildCatalog(SEED_AGENTS, [], allow, log)
-  const catalog = buildCatalog(
-    SEED_AGENTS,
-    await readLiveRecords(log),
-    allow,
-    log,
-  )
+  const { live, snapshots } = await readLiveRecords(log)
+  const catalog = buildCatalog(SEED_AGENTS, live, allow, log)
   const publicDir = fileURLToPath(new URL('../public/', import.meta.url))
   await mkdir(publicDir, { recursive: true })
+  const files = buildVersionFiles(catalog, snapshots, SEED_AGENTS, allow, log)
+  await writeVersionFiles(resolve(publicDir, 'agents'), files)
+  const digest = createHash('sha256').update(JSON.stringify(catalog))
+  for (const [path, manifest] of [...files].sort(([a], [b]) =>
+    a.localeCompare(b, 'en'),
+  ))
+    digest.update(path).update(JSON.stringify(manifest))
+  await writeFile(
+    resolve(publicDir, 'export-state.json'),
+    JSON.stringify({ sha256: digest.digest('hex') }) + '\n',
+  )
   const output = resolve(publicDir, 'catalog.json')
   const temporary = `${output}.${process.pid}.tmp`
   await writeFile(temporary, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8')

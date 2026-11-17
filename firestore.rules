@@ -61,6 +61,16 @@ service cloud.firestore {
     }
     function agentPath(agentId) { return /databases/$(database)/documents/agents/$(agentId); }
     function editPath(agentId) { return /databases/$(database)/documents/agent_edits/$(agentId); }
+    function versionPath(data) { return /databases/$(database)/documents/agent_versions/$(data.id + '@' + data.version); }
+    function snapshotted(data) { return getAfter(versionPath(data)).data == data; }
+    match /agent_versions/{versionId} {
+      allow read, update, delete: if false;
+      allow create: if isAdmin()
+        && versionId == request.resource.data.id + '@' + request.resource.data.version
+        && liveApproved(request.resource.data)
+        && mayApprove(request.resource.data.owner_uid)
+        && getAfter(agentPath(request.resource.data.id)).data == request.resource.data;
+    }
     function liveApproved(data) { return data.visibility == 'public' && data.review_status == 'approved'; }
     function mayApprove(owner) {
       let config = /databases/$(database)/documents/config/review;
@@ -142,6 +152,10 @@ service cloud.firestore {
         && request.resource.data.review_status in ['pending', 'approved', 'rejected']
         && (request.resource.data.review_status == resource.data.review_status || request.resource.data.review_status != 'approved' || mayApprove(resource.data.owner_uid))
         && (liveApproved(request.resource.data) || !existsAfter(editPath(agentId)))
+        && (request.resource.data.review_status != 'approved'
+          || (resource.data.review_status == 'approved'
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['author']))
+          || snapshotted(request.resource.data))
         && request.resource.data.author.verified is bool;
     }
     function approveEdit(agentId) {
@@ -158,6 +172,7 @@ service cloud.firestore {
         && after.author.verified == live.author.verified
         && after.stats.updated_at == edit.stats.updated_at
         && after.stats.stars == live.stats.stars && after.stats.views == live.stats.views
+        && snapshotted(after)
         && validAgent(after, agentId);
     }
     match /agent_edits/{agentId} {

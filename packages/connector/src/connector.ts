@@ -13,6 +13,7 @@ import { parsePublicCatalog } from '../../../src/lib/manifestSchema'
 import type { AgentManifest } from '../../../src/types/agent'
 import bundledCatalog from '../../../public/catalog.json'
 import { createConnectorServer } from './server'
+import { resolveAgent, versionUrl } from '../../mcp-server/src/versions'
 
 export const CATALOG_URL = 'https://agentforge-b10db.web.app/catalog.json'
 export const SITE_URL = 'https://agentforge-b10db.web.app'
@@ -97,7 +98,16 @@ export function createConnector(options: ConnectorOptions = {}) {
           ),
         )
       const { agents } = await loadCatalog()
-      const server = createConnectorServer(agents)
+      const server = createConnectorServer(agents, (selector) =>
+        resolveAgent(agents, selector, async (id, version) => {
+          const response = await fetchCatalog(
+            versionUrl(CATALOG_URL, id, version),
+          )
+          if (!response.ok)
+            throw new Error(`Version request failed: HTTP ${response.status}`)
+          return response.json()
+        }),
+      )
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,

@@ -32,10 +32,12 @@ const uri = 'agentforge://active/manifest'
 export function createRegistryServer(
   catalog: AgentManifest[],
   selector?: string,
+  resolve: (selector: string) => Promise<AgentManifest> = async (value) => selectAgent(catalog, value),
+  initial?: AgentManifest,
 ) {
-  let active = selector ? selectAgent(catalog, selector) : undefined
+  let active = initial ?? (selector ? selectAgent(catalog, selector) : undefined)
   const server = new Server(
-    { name: 'agentforge-registry', version: '0.2.1' },
+    { name: 'agentforge-registry', version: '0.2.2' },
     {
       capabilities: {
         tools: { listChanged: true },
@@ -95,7 +97,7 @@ export function createRegistryServer(
       const discovery = runDiscoveryTool(catalog, name, args, LOAD_TOOL)
       if (discovery) return discovery
       if (name === 'switch_agent') {
-        const next = selectAgent(catalog, switchArgs.parse(args).agent_id)
+        const next = await resolve(switchArgs.parse(args).agent_id)
         active = next
         await Promise.all([
           server.notification({ method: 'notifications/tools/list_changed' }),
