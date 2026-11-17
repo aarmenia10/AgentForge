@@ -1,9 +1,9 @@
 # agentforge-registry
 
-Version 0.2.1. Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
+Version 0.2.2. Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
 
 ```sh
-npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.1.tgz --agent postgres-index-tuner@1.0.0
+npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.2.tgz --agent postgres-index-tuner@1.0.0
 ```
 
 The server is distributed as a tarball on the AgentForge site, not through the npm
@@ -18,12 +18,12 @@ The 0.2.x server validates schema version 2 manifests: author is `{ uid, name, h
 
 The default never reads a catalog from the working directory. An explicit source
 fails closed on any error, even when it names the default URL. An unavailable pinned
-version always fails closed; it never silently substitutes another version.
+version always fails closed; it never silently substitutes another version. When the pin differs from the catalog version, it reads `agents/<id>/<version>.json` beside that catalog (HTTP or filesystem). The body must be a public manifest with the exact requested id and version; HTML 200 SPA fallbacks are rejected. The agent must still appear in the current catalog. Offline fallback continues to support pins present in the bundled catalog.
 
 For OpenAI Codex, install the pinned agent using the documented stdio command:
 
 ```sh
-codex mcp add agentforge-postgres-index-tuner -- npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.1.tgz --agent postgres-index-tuner@1.0.0
+codex mcp add agentforge-postgres-index-tuner -- npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.2.tgz --agent postgres-index-tuner@1.0.0
 ```
 
 See [OpenAI's MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
@@ -68,6 +68,4 @@ checked at build time and erased. Only declared npm packages remain as runtime i
 From the repository root, `npm run test:package` packs the release, checks its file
 list, installs it into an empty temporary consumer outside the repository, and
 verifies stdio MCP with both an explicit bundled catalog and offline default fallback.
-It also installs the committed 0.1.0 and 0.1.1 tarballs unchanged, returns the version 2
-catalog to their default fetch, and proves both start, fall back to their bundled
-version 1 manifests, and answer a search.
+It also installs all four earlier tarballs unchanged, returns the version 2 catalog to their default fetch, and verifies initialization, manifest loading, and search (0.1.x fall back to their bundled version 1 catalogs).

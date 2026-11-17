@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
-import { validateCatalog } from '../../../src/lib/validateManifest'
+import { dirname, resolve } from 'node:path'
+import {
+  validateCatalog,
+  validateManifest,
+} from '../../../src/lib/validateManifest'
+import { resolveAgent, versionUrl } from './versions'
 import type { AgentManifest } from '../../../src/types/agent'
 
 export const DEFAULT_CATALOG_URL =
@@ -38,3 +42,28 @@ export async function loadCatalog(source?: string): Promise<AgentManifest[]> {
 }
 
 export { selectAgent } from './shared'
+
+export function agentResolver(
+  catalog: AgentManifest[],
+  source = DEFAULT_CATALOG_URL,
+) {
+  return async (selector: string) =>
+    validateManifest(
+      await resolveAgent(catalog, selector, async (id, version) => {
+        if (/^https?:\/\//.test(source)) {
+          const response = await fetch(versionUrl(source, id, version), {
+            signal: AbortSignal.timeout(10_000),
+          })
+          if (!response.ok)
+            throw new Error(`Version request failed: HTTP ${response.status}`)
+          return response.json()
+        }
+        return JSON.parse(
+          await readFile(
+            resolve(dirname(resolve(source)), 'agents', id, `${version}.json`),
+            'utf8',
+          ),
+        )
+      }),
+    )
+}

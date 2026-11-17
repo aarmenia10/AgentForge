@@ -106,7 +106,9 @@ test('the startup import graph contains no Firebase module', () => {
  */
 test('no signed-in page module is statically reachable from the entry', () => {
   const { seen } = walkStartupGraph()
-  const rel = [...seen].map((file) => file.slice(ROOT.length + 1))
+  const rel = [...seen].map((file) =>
+    file.slice(ROOT.length + 1).replaceAll('\\', '/'),
+  )
   assert.ok(rel.includes('src/pages/HomePage.tsx'), 'walker reached HomePage')
   assert.ok(rel.includes('src/router/Router.tsx'), 'walker reached the router')
   const pages = rel.filter(

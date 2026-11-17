@@ -5,6 +5,8 @@ node_modules/
 dist/
 dist-ssr/
 packages/mcp-server/catalog.json
+public/agents/
+public/export-state.json
 *.tgz
 !public/mcp/*.tgz
 *.tsbuildinfo

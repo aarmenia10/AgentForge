@@ -90,12 +90,12 @@ jobs:
           AGENTFORGE_CATALOG_SOURCE: firestore
         run: npm run build
 
-      - name: Compare scheduled catalog with live snapshot
+      - name: Compare scheduled catalog and versions with live export
         id: catalog
         if: steps.creds.outputs.present == 'true' && github.event_name == 'schedule'
         run: |
-          curl --fail --silent --show-error "https://$FIREBASE_PROJECT.web.app/catalog.json" -o "$RUNNER_TEMP/live-catalog.json"
-          if cmp -s public/catalog.json "$RUNNER_TEMP/live-catalog.json"; then
+          curl --fail --silent --show-error "https://$FIREBASE_PROJECT.web.app/export-state.json" -o "$RUNNER_TEMP/live-export-state.json"
+          if cmp -s public/export-state.json "$RUNNER_TEMP/live-export-state.json"; then
             echo "unchanged=true" >> "$GITHUB_OUTPUT"
           fi
 

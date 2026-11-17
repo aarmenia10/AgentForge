@@ -13,7 +13,11 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import type { Firestore, QueryConstraint } from 'firebase/firestore'
+import type {
+  Firestore,
+  QueryConstraint,
+  Transaction,
+} from 'firebase/firestore'
 import type { AgentManifest, AgentRecord } from '../types/agent'
 import { agentIdSchema, validateAgentRecord } from '../lib/validateManifest'
 import type { Page } from './profiles'
@@ -26,6 +30,29 @@ export function createAgentStore(db: Firestore, uid: string) {
   const editRef = (id: string) =>
     doc(db, 'agent_edits', agentIdSchema.parse(id))
   const profile = doc(db, 'users', uid)
+  // Snapshots have no client read/update access. First try an atomic create;
+  // on an existing snapshot retry without writing it. Rules permit that retry
+  // only when the complete approved record equals the immutable snapshot.
+  async function approval(
+    write: (tx: Transaction, snapshot: boolean) => Promise<void>,
+  ) {
+    try {
+      await runTransaction(db, (tx) => write(tx, true))
+    } catch (error) {
+      if (!(
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'permission-denied'
+      ))
+        throw error
+      await runTransaction(db, (tx) => write(tx, false))
+    }
+  }
+  function snapshot(tx: Transaction, next: AgentRecord, create: boolean) {
+    if (create)
+      tx.set(doc(db, 'agent_versions', `${next.id}@${next.version}`), next)
+  }
   function record(
     manifest: AgentManifest,
     identity: { handle: string; display_name: string },
@@ -193,11 +220,17 @@ export function createAgentStore(db: Firestore, uid: string) {
       )
     },
     async reviewAgent(id: string, status: ReviewStatus): Promise<void> {
-      await runTransaction(db, async (tx) => {
-        const snapshot = await tx.get(ref(id))
-        if (!snapshot.exists()) throw new Error('Agent does not exist')
+      await approval(async (tx, create) => {
+        const live = await tx.get(ref(id))
+        if (!live.exists()) throw new Error('Agent does not exist')
+        if (status === 'approved')
+          snapshot(
+            tx,
+            { ...live.data(), review_status: status } as AgentRecord,
+            create,
+          )
         tx.update(ref(id), { review_status: status })
-        if (snapshot.data().visibility !== 'public' || status !== 'approved')
+        if (live.data().visibility !== 'public' || status !== 'approved')
           tx.delete(editRef(id))
       })
     },
@@ -240,7 +273,7 @@ export function createAgentStore(db: Firestore, uid: string) {
         return
       }
       if (status !== 'approved') throw new Error('Invalid review status')
-      await runTransaction(db, async (tx) => {
+      await approval(async (tx, create) => {
         const [live, edit] = await Promise.all([
           tx.get(ref(id)),
           tx.get(editRef(id)),
@@ -249,7 +282,7 @@ export function createAgentStore(db: Firestore, uid: string) {
           throw new Error('Agent or edit does not exist')
         const current = live.data() as AgentRecord
         const proposed = edit.data() as AgentRecord
-        tx.set(ref(id), {
+        const next: AgentRecord = {
           ...proposed,
           review_status: 'approved',
           author: { ...proposed.author, verified: current.author.verified },
@@ -258,7 +291,9 @@ export function createAgentStore(db: Firestore, uid: string) {
             stars: current.stats.stars,
             views: current.stats.views,
           },
-        })
+        }
+        snapshot(tx, next, create)
+        tx.set(ref(id), next)
         tx.delete(editRef(id))
       })
     },

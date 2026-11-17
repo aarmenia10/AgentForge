@@ -6,7 +6,6 @@ import {
   serverTimestamp,
 } from 'firebase/firestore'
 import type { Firestore } from 'firebase/firestore'
-import { getFirebaseServices } from '../lib/firebase'
 import { agentIdSchema } from '../lib/validateManifest'
 
 /** Exported separately so the real transaction can also run against the emulator. */
@@ -74,6 +73,7 @@ export async function toggleStarAgent(
   agentId: string,
   userId: string,
 ): Promise<number> {
+  const { getFirebaseServices } = await import('../lib/firebase')
   const { db, auth } = getFirebaseServices()
   await auth.authStateReady()
   if (!auth.currentUser || auth.currentUser.uid !== userId)

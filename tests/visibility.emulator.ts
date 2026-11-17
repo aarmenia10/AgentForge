@@ -326,6 +326,7 @@ test('visibility, review, admin authority, bounded views, and star rules', async
           { staged: true },
         )
         assert.deepEqual(await b.getAgentRecord('alice-public'), before)
+        await moderation.setAuthorVerified('alice-public', true)
         await moderation.reviewEdit('alice-public', 'approved')
         await assertFails(
           createAgentStore(charlie, 'alice').updateAgent({

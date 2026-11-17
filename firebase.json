@@ -14,6 +14,14 @@
     ],
     "headers": [
       {
+        "source": "/agents/**",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
+      },
+      {
+        "source": "/export-state.json",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
+      },
+      {
         "source": "/mcp/**",
         "headers": [
           {

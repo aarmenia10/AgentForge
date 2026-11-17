@@ -16,6 +16,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import type { AgentManifest } from '../../../src/types/agent'
+import { versionSchema } from '../../../src/lib/manifestSchema'
 import {
   CONNECTOR_CONDENSED_GUIDE,
   CONNECTOR_GUIDE_PREFACE,
@@ -35,12 +36,19 @@ import {
 export const CONNECTOR_NAME = 'agentforge-connector'
 export const CONNECTOR_VERSION = '0.1.0'
 const LOAD_TOOL = 'get_agent'
-const getArgs = z.strictObject({ agent_id: z.string().min(1) })
+const getArgs = z.strictObject({
+  agent_id: z.string().min(1),
+  version: versionSchema.optional(),
+})
 const guideText = CONNECTOR_GUIDE_PREFACE + '\n' + REGISTRY_GUIDE
 const guideDescription =
   'How the AgentForge registry is laid out and how to choose an agent: search several ways, compare candidates, prefer the narrowest full fit, and use no agent when nothing fits.'
 
-export function createConnectorServer(catalog: readonly AgentManifest[]) {
+export function createConnectorServer(
+  catalog: readonly AgentManifest[],
+  resolve: (selector: string) => Promise<AgentManifest> = async (value) =>
+    selectAgent(catalog, value),
+) {
   const server = new Server(
     { name: CONNECTOR_NAME, version: CONNECTOR_VERSION },
     {
@@ -63,6 +71,11 @@ export function createConnectorServer(catalog: readonly AgentManifest[]) {
               type: 'string',
               description: 'An id or exact id@version from search_registry.',
             },
+            version: {
+              type: 'string',
+              description:
+                'Optional exact version. Must agree with any id@version selector.',
+            },
           },
           required: ['agent_id'],
           additionalProperties: false,
@@ -78,7 +91,18 @@ export function createConnectorServer(catalog: readonly AgentManifest[]) {
       const discovery = runDiscoveryTool(catalog, name, args, LOAD_TOOL)
       if (discovery) return discovery
       if (name === LOAD_TOOL) {
-        const agent = selectAgent(catalog, getArgs.parse(args).agent_id)
+        const { agent_id, version } = getArgs.parse(args)
+        if (
+          version &&
+          agent_id.includes('@') &&
+          !agent_id.endsWith(`@${version}`)
+        )
+          throw new Error('Conflicting version selectors')
+        const agent = await resolve(
+          version && !agent_id.includes('@')
+            ? `${agent_id}@${version}`
+            : agent_id,
+        )
         return jsonResult({
           notice: BLUEPRINT_NOTICE,
           agent,
