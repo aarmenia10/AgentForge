@@ -286,11 +286,10 @@ Waves 1 and 2 are done (P2-1, P2-2, P2-3, P2-5, the P2-6 spec, P2-10). Wave 3 is
 3. **Step 2 is now three parallel sessions with separate files** (2026-11-16): Claude A (P2-4, P2-9, P2-7 review screen), Claude B (P2-12 to P2-15, the P2-8 star button, the account-menu links), and Codex (P2-17). `docs/LOCAL_TESTING.md` describes the local practice mode they verify against.
 4. **Verification.** P2-16, with Claude in Chrome walking the live site using the owner's admin account and a second account.
 
-**Phase 2 is complete as of 2026-11-17.** The owner confirmed the welcome step on his own live sign-in. What is still unverified, none of it blocking:
+**Phase 2 is complete as of 2026-11-17.** The owner confirmed the welcome step on his own live sign-in, and Tommy received and used a real verification email when he signed up with an email and password. What is still unverified, none of it blocking:
 
 - Three walkthrough checks whose results the tester lost: a friend's agent under "Shared with me", an old version file still loading after an edit, and unfriending removing access. All three passed in the practice database.
-- A real verification email arriving for an email-and-password sign-up. Both test accounts used Google.
-- The local server connected in Codex on a real computer (open since P1-7).
+- A tool call through the local server inside Codex. On 2026-11-17 the owner registered it in Codex CLI 0.169.0 on Windows with the site's Windows command, and `codex mcp list` showed it enabled. The follow-up test chat reported calling `get_agent`, which only the remote connector has (the local server's tool is `switch_agent`), so that chat most likely used the connector attached to the owner's account. Registration is proven; a local tool call is not. To close it: in a new Codex chat, ask it to call `switch_agent` from the `agentforge` server and name the server it used.
 
 ### Phase 3: Runtime and reach
 
