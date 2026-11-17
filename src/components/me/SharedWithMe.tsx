@@ -99,7 +99,13 @@ export function SharedWithMe() {
           Show more friends
         </button>
       )}
-      {open && <AgentDetailModal agent={open} onClose={() => setOpen(null)} />}
+      {open && (
+        <AgentDetailModal
+          agent={open}
+          onClose={() => setOpen(null)}
+          installable={false}
+        />
+      )}
     </div>
   )
 }

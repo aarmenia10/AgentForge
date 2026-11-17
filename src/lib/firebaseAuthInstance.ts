@@ -7,7 +7,8 @@ import { getFirebaseApp } from './firebaseApp'
  * time; it is set only by `.env.emulator`, never by `.env.production`, and
  * tests/local-emulator.test.ts fails if that changes.
  */
-export const useEmulators = import.meta.env.VITE_FIREBASE_EMULATOR === '1'
+// Optional chaining: tests run this file under tsx, where import.meta.env is absent.
+export const useEmulators = import.meta.env?.VITE_FIREBASE_EMULATOR === '1'
 let instance: Auth | undefined
 
 /** The one Auth instance. Imports no Firestore code, so sign-in stays small. */

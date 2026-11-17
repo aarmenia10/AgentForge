@@ -31,10 +31,21 @@ const TABS: readonly { id: TabId; label: string; icon: LucideIcon }[] = [
 interface AgentDetailModalProps {
   agent: AgentManifest
   onClose: () => void
+  /**
+   * False for an agent that is not in the public catalog (private, friends,
+   * or still waiting for review). AI apps cannot load those, so the install
+   * tab would hand out a command that does not work.
+   */
+  installable?: boolean
 }
 
-export function AgentDetailModal({ agent, onClose }: AgentDetailModalProps) {
+export function AgentDetailModal({
+  agent,
+  onClose,
+  installable = true,
+}: AgentDetailModalProps) {
   const [tab, setTab] = useState<TabId>('overview')
+  const tabs = installable ? TABS : TABS.filter((t) => t.id !== 'install')
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const baseId = useId()
@@ -76,7 +87,7 @@ export function AgentDetailModal({ agent, onClose }: AgentDetailModalProps) {
   }
 
   function onTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const index = TABS.findIndex((t) => t.id === tab)
+    const index = tabs.findIndex((t) => t.id === tab)
     const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
     if (delta === 0) return
     event.preventDefault()
@@ -140,7 +151,7 @@ export function AgentDetailModal({ agent, onClose }: AgentDetailModalProps) {
             onKeyDown={onTabKeyDown}
             className="-mx-1 mt-5 flex gap-1 overflow-x-auto border-b border-slate-900/10 px-1 dark:border-white/10"
           >
-            {TABS.map(({ id, label, icon: Icon }) => {
+            {tabs.map(({ id, label, icon: Icon }) => {
               const selected = tab === id
               return (
                 <button
@@ -188,7 +199,13 @@ export function AgentDetailModal({ agent, onClose }: AgentDetailModalProps) {
           {tab === 'install' && <InstallPanel agent={agent} />}
         </div>
 
-        {tab !== 'install' && (
+        {!installable && (
+          <footer className="border-t border-slate-900/10 px-5 py-4 text-sm text-slate-600 sm:px-7 dark:border-white/10 dark:text-slate-300">
+            This agent is not in the public catalog, so it cannot be added to
+            an AI app yet. Copy what you need from the tabs above.
+          </footer>
+        )}
+        {installable && tab !== 'install' && (
           <footer className="border-t border-slate-900/10 px-5 py-4 sm:px-7 dark:border-white/10">
             <button
               type="button"
