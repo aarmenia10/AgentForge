@@ -131,7 +131,15 @@ export function MyAgents() {
         Agents cannot be deleted. To take one out of circulation, make it
         private.
       </p>
-      {open && <AgentDetailModal agent={open} onClose={() => setOpen(null)} />}
+      {open && (
+        <AgentDetailModal
+          agent={open}
+          onClose={() => setOpen(null)}
+          installable={
+            open.visibility === 'public' && open.review_status === 'approved'
+          }
+        />
+      )}
     </div>
   )
 }
