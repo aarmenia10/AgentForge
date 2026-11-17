@@ -286,9 +286,8 @@ Waves 1 and 2 are done (P2-1, P2-2, P2-3, P2-5, the P2-6 spec, P2-10). Wave 3 is
 3. **Step 2 is now three parallel sessions with separate files** (2026-11-16): Claude A (P2-4, P2-9, P2-7 review screen), Claude B (P2-12 to P2-15, the P2-8 star button, the account-menu links), and Codex (P2-17). `docs/LOCAL_TESTING.md` describes the local practice mode they verify against.
 4. **Verification.** P2-16, with Claude in Chrome walking the live site using the owner's admin account and a second account.
 
-**Phase 2 is complete as of 2026-11-17.** What is still unverified, none of it blocking:
+**Phase 2 is complete as of 2026-11-17.** The owner confirmed the welcome step on his own live sign-in. What is still unverified, none of it blocking:
 
-- The welcome step on a live account. Both test accounts were already set up when the tester started. It passed in the practice database.
 - Three walkthrough checks whose results the tester lost: a friend's agent under "Shared with me", an old version file still loading after an edit, and unfriending removing access. All three passed in the practice database.
 - A real verification email arriving for an email-and-password sign-up. Both test accounts used Google.
 - The local server connected in Codex on a real computer (open since P1-7).
@@ -462,6 +461,34 @@ Anything either person wants to add, before it is planned. One row each. Nobody 
 | 2026-11-17 | Aidan | **Skills, not only agents.** Upload a skill (for example a Claude skill folder with its `SKILL.md`) to your AgentForge page with a description, share it with the same public, friends, and private choices, and let any AI app load it through the connector, including apps with no skill feature of their own | Accepted. Orchestrator is planning it; needs a schema decision (protected file) and a rule for bundled scripts |
 | 2026-11-17 | Aidan | **Publish from inside a chat.** In any connected AI: "turn this chat into a formal agent and post it to my AgentForge", or "send this skill to AgentForge". It lands on the user's own page and is then usable from their other AI apps | Accepted. Orchestrator is planning it; needs sign-in on the connector, which changes invariant 2 and section 7.6 and so needs Aidan's written sign-off |
 | 2026-11-17 | Aidan | **The end goal, for judging every later idea:** build something once in one AI subscription and use it in all the others with no extra steps | Guiding principle, not a task |
+
+### 8.3 Orchestrator notes for wave 3
+
+Written 2026-11-17 by the outgoing orchestrator session. **The owner has not reviewed any of this.** Wave 3 opens by walking him through the inbox ideas one at a time; these notes are starting points for that conversation, not decisions.
+
+**Skills as a second kind of item**
+
+- A skill is a folder: an instruction file (`SKILL.md` with a name and description) plus optional reference files and scripts. The instructions are text, like a blueprint, so the safety linter already applies.
+- Any AI can use a skill as plain instructions fetched through the connector, including apps with no skill feature of their own. That is what makes it cross-subscription.
+- Proposed first version: text only. Scripts are stored and shown as text, flagged, and never presented as safe to run. Running strangers' code is a different class of risk from reading their text.
+- Keep skills out of `catalog.json`. Released local servers validate that file strictly and fall back to their bundled snapshot when it changes shape. Use a separate file (for example `skills.json`) and separate version files.
+- It is a schema change, so `src/types/agent.ts` (protected) changes with the owner's agreement. Options: a `kind` field in a new schema version, or a sibling contract for skills.
+- Size: one Firestore document holds about 1 MiB, and Cloud Storage is not assumed available on the free plan. Cap skill size in version one and say so in the upload screen.
+- Reading public skills needs no sign-in, so this part can be built before the connector work below.
+
+**Sign-in on the connector, then publishing from a chat**
+
+- Today the connector is public, read-only, stateless, and holds no user data (invariant 2, section 7.6). Reading a user's private or friends items, or posting to their page, requires the connector to know who the user is. That means amending invariant 2 and 7.6 with the owner's written sign-off.
+- Sketch to evaluate, not yet designed: the Worker acts as the OAuth front for MCP clients, signs the user in with Firebase Auth, and calls Firestore with the user's own token, so the existing security rules keep deciding what is allowed and the Worker needs no admin power. Token storage and refresh on a free plan is the open question. Do a short design pass before promising it.
+- Anything an AI posts should land as **private**. Making it public stays a deliberate step on the site and still goes through human review (invariant 4). A verified email is still required.
+- This overlaps P3-1 (private and friends agents over MCP) and replaces most of P3-3 (command-line publishing).
+
+**Two decisions to put to the owner first**
+
+1. May the connector sign users in and act for them? If yes, record the invariant change under his name.
+2. Skills, version one: text only, scripts displayed but flagged. Agree, or say what instead.
+
+**Suggested order:** skills on the site and readable through the connector, then connector sign-in, then publish-from-chat. P3-2 (missing-tool help) is small and independent and suits Tommy's Codex.
 
 ---
 
