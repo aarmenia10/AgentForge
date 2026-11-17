@@ -451,7 +451,9 @@ Anything either person wants to add, before it is planned. One row each. Nobody 
 
 | Date | From | Idea | Status |
 | --- | --- | --- | --- |
-| | | _Nothing yet._ | |
+| 2026-11-17 | Aidan | **Skills, not only agents.** Upload a skill (for example a Claude skill folder with its `SKILL.md`) to your AgentForge page with a description, share it with the same public, friends, and private choices, and let any AI app load it through the connector, including apps with no skill feature of their own | Accepted. Orchestrator is planning it; needs a schema decision (protected file) and a rule for bundled scripts |
+| 2026-11-17 | Aidan | **Publish from inside a chat.** In any connected AI: "turn this chat into a formal agent and post it to my AgentForge", or "send this skill to AgentForge". It lands on the user's own page and is then usable from their other AI apps | Accepted. Orchestrator is planning it; needs sign-in on the connector, which changes invariant 2 and section 7.6 and so needs Aidan's written sign-off |
+| 2026-11-17 | Aidan | **The end goal, for judging every later idea:** build something once in one AI subscription and use it in all the others with no extra steps | Guiding principle, not a task |
 
 ---
 
