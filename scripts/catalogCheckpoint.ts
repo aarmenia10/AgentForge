@@ -1,5 +1,10 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { manifestSchema, parsePublicCatalog } from '../src/lib/manifestSchema'
+import {
+  parsePublicSkillIndex,
+  parsePublicSkillVersion,
+  skillVersionPath,
+} from '../src/lib/skillSchema'
 import { exportDigest } from './export-catalog'
 import type { PublicExport } from './export-catalog'
 
@@ -13,7 +18,9 @@ export async function saveCheckpoint(path: string, result: PublicExport) {
   await writeFile(
     path,
     JSON.stringify({
-      format: 1,
+      format: 2,
+      skillIndex: result.skillIndex,
+      skillVersions: [...result.skillFiles.values()],
       scope: scope(),
       day: runDay,
       catalog: result.catalog,
@@ -34,7 +41,7 @@ export async function readCheckpoint(
     ])
     const data = JSON.parse(stored)
     if (
-      data.format !== 1 ||
+      data.format !== 2 ||
       data.scope !== scope() ||
       data.day !== runDay ||
       !Array.isArray(data.versions)
@@ -54,7 +61,28 @@ export async function readCheckpoint(
         throw new Error('Invalid version inventory')
       files.set(key, manifest)
     }
-    const result = { catalog, files }
+    const skillIndex = parsePublicSkillIndex(data.skillIndex)
+    const skillOwners = new Map(
+      skillIndex.skills.map((entry) => [entry.id, entry.author.uid]),
+    )
+    const skillFiles: PublicExport['skillFiles'] = new Map()
+    for (const value of data.skillVersions) {
+      const skill = parsePublicSkillVersion(value, value.id, value.version)
+      const path = skillVersionPath(skill.id, skill.version)
+      if (
+        skillOwners.get(skill.id) !== skill.author.uid ||
+        skillFiles.has(path)
+      )
+        throw new Error('Invalid skill version inventory')
+      skillFiles.set(path, skill)
+    }
+    if (
+      skillIndex.skills.some(
+        (entry) => !skillFiles.has(skillVersionPath(entry.id, entry.version)),
+      )
+    )
+      throw new Error('Missing current skill version')
+    const result = { catalog, files, skillIndex, skillFiles }
     if (live !== JSON.stringify({ sha256: exportDigest(result) }) + '\n')
       throw new Error('Hosting digest mismatch')
     return result

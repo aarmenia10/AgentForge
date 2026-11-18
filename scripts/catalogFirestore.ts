@@ -5,6 +5,7 @@ import { validateAgentRecord, versionSchema } from '../src/lib/validateManifest'
 import { buildCatalog, buildVersionFiles, seedRecord } from './export-catalog'
 import type { ExportNotice, PublicExport } from './export-catalog'
 import type { LinterAllowance } from './catalogSafety'
+import { readSkillExport } from './skillExport'
 import { pendingChanges } from './catalogChanges'
 
 type Log = (notice: ExportNotice) => void
@@ -93,11 +94,21 @@ export async function readFirestoreExport(
 ) {
   // Capture receipts BEFORE reading data. Writes during a run are either
   // reflected here or remain queued for the next successful publication.
-  const [agents, versions] = await Promise.all([
+  const [agents, versions, skills, skillVersions] = await Promise.all([
     pendingChanges(db, 'agents'),
     pendingChanges(db, 'agent_versions'),
+    pendingChanges(db, 'skills'),
+    pendingChanges(db, 'skill_versions'),
   ])
-  const receipts = [...agents, ...versions]
+  const receipts = [...agents, ...versions, ...skills, ...skillVersions]
+  const skillExport = await readSkillExport(
+    db,
+    skills,
+    skillVersions,
+    allow,
+    log,
+    previous,
+  )
   if (!previous) {
     const live = new Map<string, unknown>()
     const excluded = new Set<string>()
@@ -123,6 +134,7 @@ export async function readFirestoreExport(
     return {
       catalog,
       files: buildVersionFiles(catalog, snapshots, seeds, allow, log),
+      ...skillExport,
       receipts,
     }
   }
@@ -215,6 +227,7 @@ export async function readFirestoreExport(
       a.id.localeCompare(b.id, 'en'),
     ),
     files,
+    ...skillExport,
     receipts,
   }
 }

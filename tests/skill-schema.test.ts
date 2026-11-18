@@ -27,43 +27,11 @@ import {
 import type {
   SkillFile,
   SkillIndexEntry,
-  SkillManifest,
   SkillRecord,
   SkillVisibility,
 } from '../src/types/skill'
 
-const SKILL_MD = `---
-name: pdf-forms
-description: Fill in PDF forms from structured data.
----
-
-# PDF forms
-
-Read references/fields.md before filling a form.
-`
-
-function skill(overrides: Partial<SkillManifest> = {}): SkillManifest {
-  return {
-    skill_schema_version: 1,
-    visibility: 'public',
-    id: 'pdf-forms',
-    version: '1.0.0',
-    name: 'pdf-forms',
-    description: 'Fill in PDF forms from structured data.',
-    author: { uid: 'u1', name: 'Ada', handle: 'ada', verified: false },
-    tags: ['documents'],
-    files: [
-      { path: 'SKILL.md', kind: 'instructions', content: SKILL_MD },
-      {
-        path: 'references/fields.md',
-        kind: 'reference',
-        content: '# Fields\n',
-      },
-    ],
-    stats: { updated_at: '2026-11-18T00:00:00Z' },
-    ...overrides,
-  }
-}
+import { skill, SKILL_MD } from './skillFixture'
 
 const withFiles = (extra: SkillFile[], base = skill()) => ({
   ...base,
@@ -470,6 +438,13 @@ test('public index reader ignores unknown fields but enforces public, unique, no
     /scripts/,
   )
   const huge = indexEntry()
+  const mislabeled = indexEntry()
+  mislabeled.files.push({ path: 'helper.py', kind: 'reference', bytes: 4 })
+  assert.throws(
+    () =>
+      parsePublicSkillIndex({ skill_schema_version: 1, skills: [mislabeled] }),
+    /file kind mismatch/,
+  )
   huge.files = [
     ...huge.files,
     { path: 'big.txt', kind: 'reference', bytes: SKILL_MAX_TOTAL_BYTES },

@@ -366,7 +366,7 @@ The owner likes the original look and it stays. An earlier version of this secti
 
 - Frosted glass surfaces (`glass` and `glass-strong` in `src/index.css`) over the soft teal and navy page glow.
 - The headline with gradient text on the emphasized words.
-- The gradient logo tile beside the "AgentForge" wordmark.
+- The gradient logo tile beside the "AgentLemon" wordmark (renamed 2026-11-18; "Lemon" keeps the teal half).
 - Hover feedback: cards and category pills lift slightly and light up.
 - Rounded cards and inputs, and the rounded category pills in the hero.
 - The slate, navy, and teal palette, in light and dark themes.

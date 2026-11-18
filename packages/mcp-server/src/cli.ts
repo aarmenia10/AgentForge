@@ -1,6 +1,11 @@
 import { parseArgs } from 'node:util'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { DEFAULT_CATALOG_URL, loadCatalog, agentResolver } from './catalog'
+import {
+  DEFAULT_CATALOG_URL,
+  loadCatalog,
+  agentResolver,
+  localSkillReader,
+} from './catalog'
 import { createRegistryServer } from './server'
 
 try {
@@ -25,7 +30,13 @@ try {
     const catalog = await loadCatalog(source)
     const resolve = agentResolver(catalog, source)
     const active = values.agent ? await resolve(values.agent) : undefined
-    const server = createRegistryServer(catalog, values.agent, resolve, active)
+    const server = createRegistryServer(
+      catalog,
+      values.agent,
+      resolve,
+      active,
+      localSkillReader(source),
+    )
     const shutdown = () => {
       void server.close().finally(() => process.exit(0))
     }
