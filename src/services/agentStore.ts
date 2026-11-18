@@ -12,6 +12,7 @@ import {
   startAfter,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore'
 import type {
   Firestore,
@@ -23,6 +24,7 @@ import { agentIdSchema, validateAgentRecord } from '../lib/validateManifest'
 import type { Page } from './profiles'
 import type { ReviewStatus } from './agents'
 import { compareVersions } from '../lib/semver'
+import { markExportChange } from './firestore'
 
 export function createAgentStore(db: Firestore, uid: string) {
   if (!uid || uid.includes('/')) throw new Error('Invalid user id')
@@ -50,8 +52,10 @@ export function createAgentStore(db: Firestore, uid: string) {
     }
   }
   function snapshot(tx: Transaction, next: AgentRecord, create: boolean) {
-    if (create)
+    if (create) {
       tx.set(doc(db, 'agent_versions', `${next.id}@${next.version}`), next)
+      markExportChange(tx, db, 'agent_versions', `${next.id}@${next.version}`)
+    }
   }
   function record(
     manifest: AgentManifest,
@@ -125,6 +129,11 @@ export function createAgentStore(db: Firestore, uid: string) {
               },
         )
         tx.delete(editRef(id))
+        if (
+          current.visibility === 'public' &&
+          current.review_status === 'approved'
+        )
+          markExportChange(tx, db, 'agents', id)
       }
       return { staged }
     })
@@ -230,12 +239,20 @@ export function createAgentStore(db: Firestore, uid: string) {
             create,
           )
         tx.update(ref(id), { review_status: status })
+        if (
+          live.get('visibility') === 'public' &&
+          (live.get('review_status') === 'approved' || status === 'approved')
+        )
+          markExportChange(tx, db, 'agents', id)
         if (live.data().visibility !== 'public' || status !== 'approved')
           tx.delete(editRef(id))
       })
     },
     async setAuthorVerified(id: string, verified: boolean): Promise<void> {
-      await updateDoc(ref(id), { 'author.verified': verified })
+      const batch = writeBatch(db)
+      batch.update(ref(id), { 'author.verified': verified })
+      markExportChange(batch, db, 'agents', id)
+      await batch.commit()
     },
     async getPendingEdit(id: string): Promise<AgentRecord | null> {
       const snapshot = await getDocFromServer(editRef(id))
@@ -294,6 +311,7 @@ export function createAgentStore(db: Firestore, uid: string) {
         }
         snapshot(tx, next, create)
         tx.set(ref(id), next)
+        markExportChange(tx, db, 'agents', id)
         tx.delete(editRef(id))
       })
     },
