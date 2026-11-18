@@ -63,9 +63,27 @@ service cloud.firestore {
     function editPath(agentId) { return /databases/$(database)/documents/agent_edits/$(agentId); }
     function versionPath(data) { return /databases/$(database)/documents/agent_versions/$(data.id + '@' + data.version); }
     function snapshotted(data) { return getAfter(versionPath(data)).data == data; }
+    function exportMarked(source, id) {
+      let path = /databases/$(database)/documents/export_sources/$(source)/changes/$(id);
+      return existsAfter(path) && (!exists(path) || getAfter(path).data.revision != get(path).data.revision);
+    }
+    match /export_sources/{source}/changes/{id} {
+      // Coalesce commits for one document. The exporter alone reads these.
+      function validChange() {
+        return signedIn() && request.resource.data.keys().hasOnly(['revision'])
+        && request.resource.data.revision is string && request.resource.data.revision.size() == 36
+        && ((source == 'agents' && exists(agentPath(id))
+              && (getAfter(agentPath(id)).data != get(agentPath(id)).data || isAdmin()))
+          || (source == 'agent_versions' && isAdmin()
+              && !exists(/databases/$(database)/documents/agent_versions/$(id))
+              && existsAfter(/databases/$(database)/documents/agent_versions/$(id))));
+      }
+      allow create, update: if validChange();
+    }
     match /agent_versions/{versionId} {
       allow read, update, delete: if false;
       allow create: if isAdmin()
+        && exportMarked('agent_versions', versionId)
         && versionId == request.resource.data.id + '@' + request.resource.data.version
         && liveApproved(request.resource.data)
         && mayApprove(request.resource.data.owner_uid)
@@ -222,10 +240,12 @@ service cloud.firestore {
         && request.resource.data.stats.stars == 0 && request.resource.data.stats.views == 0
         && request.resource.data.shared_with == []
         && validAgent(request.resource.data, agentId);
-      allow update: if (signedIn()
+      allow update: if ((!liveApproved(resource.data) && !liveApproved(request.resource.data))
+          || exportMarked('agents', agentId))
+        && ((signedIn()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats'])
           && readableAgent(resource.data) && validStarDelta(agentId))
-        || ownerEdit(agentId) || adminEdit(agentId) || approveEdit(agentId);
+        || ownerEdit(agentId) || adminEdit(agentId) || approveEdit(agentId));
       allow delete: if false;
       match /stars/{userId} {
         allow get: if signedIn() && request.auth.uid == userId

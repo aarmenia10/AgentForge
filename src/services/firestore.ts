@@ -5,8 +5,19 @@ import {
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore'
-import type { Firestore } from 'firebase/firestore'
+import type { DocumentReference, Firestore } from 'firebase/firestore'
 import { agentIdSchema } from '../lib/validateManifest'
+
+export function markExportChange(
+  write: { set(ref: DocumentReference, value: { revision: string }): unknown },
+  db: Firestore,
+  source: 'agents' | 'agent_versions',
+  id: string,
+) {
+  write.set(doc(db, 'export_sources', source, 'changes', id), {
+    revision: crypto.randomUUID(),
+  })
+}
 
 /** Exported separately so the real transaction can also run against the emulator. */
 export async function toggleStarInFirestore(
@@ -44,6 +55,11 @@ export async function toggleStarInFirestore(
             created_at: serverTimestamp(),
           })
         transaction.update(agentRef, { 'stats.stars': increment(delta) })
+        if (
+          agent.get('visibility') === 'public' &&
+          agent.get('review_status') === 'approved'
+        )
+          markExportChange(transaction, db, 'agents', agentId)
         return current + delta
       })
     } catch (error) {

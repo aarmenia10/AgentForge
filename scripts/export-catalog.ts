@@ -1,7 +1,10 @@
 import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
-import { isDeepStrictEqual } from 'node:util'
+import type { Firestore } from 'firebase-admin/firestore'
+import { readCheckpoint, saveCheckpoint } from './catalogCheckpoint'
+import { readFirestoreExport } from './catalogFirestore'
+import { acknowledge } from './catalogChanges'
 import { createHash } from 'node:crypto'
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import {
@@ -218,11 +221,24 @@ export async function writeVersionFiles(
   }
 }
 
-async function readLiveRecords(
-  log: (notice: ExportNotice) => void,
-): Promise<{ live: unknown[]; snapshots: unknown[] }> {
-  if (process.env.AGENTFORGE_CATALOG_SOURCE === 'seed')
-    return { live: [], snapshots: [] }
+export interface PublicExport {
+  catalog: AgentManifest[]
+  files: Map<string, AgentManifest>
+}
+
+export function exportDigest({ catalog, files }: PublicExport) {
+  const digest = createHash('sha256').update(JSON.stringify(catalog))
+  for (const [path, manifest] of [...files].sort(([a], [b]) =>
+    a.localeCompare(b, 'en'),
+  ))
+    digest.update(path).update(JSON.stringify(manifest))
+  return digest.digest('hex')
+}
+
+async function withFirestore<T>(
+  run: (db: Firestore) => Promise<T>,
+): Promise<T | undefined> {
+  if (process.env.AGENTFORGE_CATALOG_SOURCE === 'seed') return undefined
   const { applicationDefault, initializeApp, deleteApp } =
     await import('firebase-admin/app')
   const { getFirestore } = await import('firebase-admin/firestore')
@@ -244,7 +260,7 @@ async function readLiveRecords(
       console.error(
         'No Application Default Credentials found; exporting approved public seeds only.',
       )
-      return { live: [], snapshots: [] }
+      return undefined
     }
   }
   const app = initializeApp(
@@ -255,94 +271,7 @@ async function readLiveRecords(
     'catalog-export',
   )
   try {
-    const db = getFirestore(app)
-    const excluded = new Set<string>()
-    const seedStates = new Map<string, AgentRecord>()
-    for (const seed of SEED_AGENTS) {
-      await db.runTransaction(async (tx) => {
-        const ref = db.collection('agents').doc(seed.id)
-        const snapshot = await tx.get(ref)
-        const current = snapshot.data()
-        if (current && current.owner_uid !== 'agentforge') {
-          excluded.add(seed.id)
-          log({ id: seed.id, reason: 'seed-id squatter' })
-          return
-        }
-        let previous: AgentRecord | undefined
-        if (current) {
-          try {
-            previous = validateAgentRecord(current)
-          } catch {
-            excluded.add(seed.id)
-            log({ id: seed.id, reason: 'invalid seed live record' })
-            return
-          }
-        }
-        const next = seedRecord(seed, previous)
-        const versionRef = db
-          .collection('agent_versions')
-          .doc(`${seed.id}@${seed.version}`)
-        const version = await tx.get(versionRef)
-        if (version.exists) {
-          // Counters change independently of approved content.
-          const content = (record: AgentRecord) => ({
-            ...record,
-            stats: { ...record.stats, stars: 0, views: 0 },
-            visibility: 'public',
-            review_status: 'approved',
-          })
-          if (
-            !isDeepStrictEqual(
-              content(validateAgentRecord(version.data())),
-              content(next),
-            )
-          )
-            throw new Error(
-              `Seed version content changed: ${seed.id}@${seed.version}`,
-            )
-        } else
-          tx.create(versionRef, {
-            ...next,
-            visibility: 'public',
-            review_status: 'approved',
-          })
-        seedStates.set(seed.id, next)
-        if (!current) tx.set(ref, next)
-        else if (!isDeepStrictEqual(current, next)) {
-          const { stats, ...content } = next
-          tx.update(ref, { ...content, 'stats.updated_at': stats.updated_at })
-        }
-      })
-    }
-    const snapshot = await db
-      .collection('agents')
-      .where('visibility', '==', 'public')
-      .where('review_status', '==', 'approved')
-      .get()
-    const result = new Map<string, unknown>(seedStates)
-    for (const doc of snapshot.docs) {
-      if (excluded.has(doc.id)) continue
-      const value = doc.data()
-      if (value.id !== doc.id) {
-        excluded.add(doc.id)
-        log({ id: doc.id, reason: 'document id mismatch' })
-        continue
-      }
-      result.set(doc.id, value)
-    }
-    // Seeds whose live id is squatted or invalid are still published from
-    // source, with source counters; only the live document is ignored.
-    const versions = await db.collection('agent_versions').get()
-    const snapshots: unknown[] = []
-    for (const doc of versions.docs) {
-      const value = doc.data()
-      if (doc.id !== `${value.id}@${value.version}`) {
-        log({ id: doc.id, reason: 'snapshot document id mismatch' })
-        continue
-      }
-      snapshots.push(value)
-    }
-    return { live: [...result.values()], snapshots }
+    return await run(getFirestore(app))
   } finally {
     await deleteApp(app)
   }
@@ -359,28 +288,48 @@ export async function exportCatalog() {
   )
   const log = (notice: ExportNotice) => console.error(JSON.stringify(notice))
   // Fail on bad source seeds before making any Firestore writes.
-  buildCatalog(SEED_AGENTS, [], allow, log)
-  const { live, snapshots } = await readLiveRecords(log)
-  const catalog = buildCatalog(SEED_AGENTS, live, allow, log)
+  const seeds = buildCatalog(SEED_AGENTS, [], allow, log)
+  const result = await withFirestore(async (db) => {
+    const path = process.env.CATALOG_CHECKPOINT
+    const previous = path
+      ? await readCheckpoint(path, process.env.CATALOG_LIVE_STATE)
+      : undefined
+    const result = await readFirestoreExport(
+      db,
+      SEED_AGENTS,
+      allow,
+      log,
+      previous,
+    )
+    if (path) await saveCheckpoint(path, result)
+    if (process.env.CATALOG_RECEIPTS)
+      await writeFile(
+        process.env.CATALOG_RECEIPTS,
+        JSON.stringify(result.receipts),
+      )
+    return result
+  })
+  const output = result ?? {
+    catalog: seeds,
+    files: buildVersionFiles(seeds, [], SEED_AGENTS, allow, log),
+  }
   const publicDir = fileURLToPath(new URL('../public/', import.meta.url))
   await mkdir(publicDir, { recursive: true })
-  const files = buildVersionFiles(catalog, snapshots, SEED_AGENTS, allow, log)
-  await writeVersionFiles(resolve(publicDir, 'agents'), files)
-  const digest = createHash('sha256').update(JSON.stringify(catalog))
-  for (const [path, manifest] of [...files].sort(([a], [b]) =>
-    a.localeCompare(b, 'en'),
-  ))
-    digest.update(path).update(JSON.stringify(manifest))
+  await writeVersionFiles(resolve(publicDir, 'agents'), output.files)
   await writeFile(
     resolve(publicDir, 'export-state.json'),
-    JSON.stringify({ sha256: digest.digest('hex') }) + '\n',
+    JSON.stringify({ sha256: exportDigest(output) }) + '\n',
   )
-  const output = resolve(publicDir, 'catalog.json')
-  const temporary = `${output}.${process.pid}.tmp`
-  await writeFile(temporary, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8')
-  await rename(temporary, output)
+  const catalogPath = resolve(publicDir, 'catalog.json')
+  const temporary = `${catalogPath}.${process.pid}.tmp`
+  await writeFile(
+    temporary,
+    `${JSON.stringify(output.catalog, null, 2)}\n`,
+    'utf8',
+  )
+  await rename(temporary, catalogPath)
   console.error(
-    `Exported ${catalog.length} approved public agents to public/catalog.json`,
+    `Exported ${output.catalog.length} approved public agents to public/catalog.json`,
   )
 }
 
@@ -388,7 +337,16 @@ if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  exportCatalog().catch((error) => {
+  const run =
+    process.argv[2] === '--acknowledge'
+      ? withFirestore(async (db) =>
+          acknowledge(
+            db,
+            JSON.parse(await readFile(process.env.CATALOG_RECEIPTS!, 'utf8')),
+          ),
+        )
+      : exportCatalog()
+  run.catch((error) => {
     console.error(
       error instanceof Error ? error.message : 'Catalog export failed',
     )

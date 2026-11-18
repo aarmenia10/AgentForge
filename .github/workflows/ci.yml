@@ -82,19 +82,49 @@ jobs:
 
       # Seed/package tests above cannot see production data. A failed Firestore
       # export stops this job before Hosting can replace the last good snapshot.
+      - name: Read deployed export state
+        if: steps.creds.outputs.present == 'true' && github.event_name == 'schedule'
+        run: |
+          status=$(curl --silent --show-error --retry 3 -w '%{http_code}' "https://$FIREBASE_PROJECT.web.app/export-state.json?run=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -o "$RUNNER_TEMP/live-export-state.json")
+          case "$status" in
+            200|404) ;;
+            *) echo "::error::Hosting returned HTTP $status"; exit 1 ;;
+          esac
+
+      - name: Restore public export checkpoint
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && github.event_name == 'schedule'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/catalog-checkpoint.gpg
+          key: export-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: export-v1-${{ github.sha }}-
+
+      # Fork PRs can restore main's Actions caches. Keep withdrawn manifests
+      # out of those readers' reach, even in an older cache. Key rotation or
+      # cache damage simply causes a full rebuild.
+      - name: Open export checkpoint
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && github.event_name == 'schedule'
+        working-directory: ${{ runner.temp }}
+        run: |
+          if test -f catalog-checkpoint.gpg && sha256sum < sa.json | gpg --batch --pinentry-mode loopback --passphrase-fd 0 --output checkpoint.tmp --decrypt catalog-checkpoint.gpg; then
+            mv checkpoint.tmp catalog-checkpoint.json
+          fi
+
       - name: Rebuild catalog and site from approved Firestore agents
         if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore'
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
           GOOGLE_CLOUD_PROJECT: ${{ env.FIREBASE_PROJECT }}
           AGENTFORGE_CATALOG_SOURCE: firestore
+          CATALOG_CHECKPOINT: ${{ github.event_name == 'schedule' && format('{0}/catalog-checkpoint.json', runner.temp) || '' }}
+          CATALOG_LIVE_STATE: ${{ runner.temp }}/live-export-state.json
+          CATALOG_RECEIPTS: ${{ runner.temp }}/export-receipts.json
         run: npm run build
 
       - name: Compare scheduled catalog and versions with live export
         id: catalog
         if: steps.creds.outputs.present == 'true' && github.event_name == 'schedule'
         run: |
-          curl --fail --silent --show-error "https://$FIREBASE_PROJECT.web.app/export-state.json" -o "$RUNNER_TEMP/live-export-state.json"
           if cmp -s public/export-state.json "$RUNNER_TEMP/live-export-state.json"; then
             echo "unchanged=true" >> "$GITHUB_OUTPUT"
           fi
@@ -116,6 +146,29 @@ jobs:
         run: |
           npx firebase deploy --only firestore:indexes --project "$FIREBASE_PROJECT" --non-interactive \
             || { echo "::warning::Firestore indexes were not deployed. Grant the deploy service account the Cloud Datastore Index Admin role."; exit 1; }
+
+      # Only acknowledge the exact marker revisions seen by this export, after
+      # Hosting succeeded or the complete live digest compared equal.
+      - name: Acknowledge published export changes
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          GOOGLE_CLOUD_PROJECT: ${{ env.FIREBASE_PROJECT }}
+          AGENTFORGE_CATALOG_SOURCE: firestore
+          CATALOG_RECEIPTS: ${{ runner.temp }}/export-receipts.json
+        run: npm run build:catalog -- --acknowledge
+
+      - name: Encrypt published export checkpoint
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && github.event_name == 'schedule'
+        working-directory: ${{ runner.temp }}
+        run: sha256sum < sa.json | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --cipher-algo AES256 --output catalog-checkpoint.gpg --symmetric catalog-checkpoint.json
+
+      - name: Save published export checkpoint
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && github.event_name == 'schedule'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/catalog-checkpoint.gpg
+          key: export-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Remove credentials
         if: always()
