@@ -594,9 +594,80 @@ The rules are tuned to keep false positives low enough that reviewers read every
 1. **Private agents with block findings.** This spec lets an author save a private agent that has block findings, since only they can load it. The alternative is to block every visibility. Recommendation: allow private, because it only affects the author, and the block still stops sharing and public review.
 2. **Who edits `safety-linter-allow.json`.** This spec says the owner approves each entry by pull request. If reviewers are added later (README section 12, question 2), decide whether they get that power.
 
+## 7. Skills (P3-8)
+
+Added 2026-11-18 with the owner's agreement. The skill contract is `docs/SKILLS.md`. A skill's `SKILL.md` and reference files are instructions that strangers load into their own AI, exactly like a blueprint, so the same rules apply to them. Sections 1 to 6 hold for skills except where this section says otherwise. Nothing here changes how agents are linted.
+
+### 7.1 Where it runs
+
+`lintSkill(skill: SkillManifest): LintResult` lives in `src/lib/safetyLinter.ts` beside `lintManifest`, with the same output shape and the same `LINTER_VERSION`. It runs in the same three places as for agents: the upload screen (P3-10), the review queue, and the exporter, which is the check that counts. A `block` finding has the effect section 1 describes: a private save is allowed with the finding shown, sharing with friends and public review are not, and the exporter leaves the skill and all its versions out of the public files.
+
+### 7.2 What gets scanned
+
+**Prompt text** for a skill is:
+
+- `name`, `description`, every `tags[]` entry
+- The full `content` of the `instructions` file (`SKILL.md`, frontmatter included)
+- The full `content` of every `reference` file, scanned as plain text whatever its format. JSON, YAML, CSV, and XML are not parsed first
+
+Every text rule (SL-01 to SL-11, with the normalization and decoding of section 2) runs on that text. SL-12 to SL-14 do not apply, because skills have no tool endpoints. SL-15 does not apply, because skills have no input or output schemas.
+
+**Not scanned by the text rules:**
+
+- **Script content.** Code legitimately contains shell commands, URLs, and secret-handling, so SL-05, SL-06, and SL-11 would fire on most scripts and bury the findings that matter. Scripts are handled by SK-01 instead.
+- **Paths.** The skill path rule (`docs/SKILLS.md` 3.2) already limits names to letters, digits, spaces, `.`, `_`, and `-`, so no invisible, markup, or encoded characters can appear in one.
+- `id`, `version`, `author`, `visibility`, and `stats`, as for agents.
+
+**Finding paths** name files by their path, not their position, so an allowlist entry survives files being added or reordered: `name`, `description`, `tags[2]`, `files["SKILL.md"].content`, `files["references/api.md"].content`, `files["scripts/fill.py"]`. The path inside the brackets is JSON-quoted.
+
+### SK-01 Script file
+
+**Severity:** block
+
+**Detects:** every file whose kind is `script` (`docs/SKILLS.md` 3.1: a `#!` first line, an extension not on the reference allowlist, or an extensionless name not on the plain-text list). One finding per script, with path `files["<path>"]` and the file's first line as the excerpt.
+
+**Why it matters:** a script is code an AI app may be asked to run on the user's machine. Reading a stranger's text is one class of risk; running a stranger's code is a different one, and nobody on the review side reads code yet (owner's decision of 2026-11-18). A block lets the author keep scripts in a private skill, which only they can load, and stops the skill from reaching anyone else.
+
+This is one of three independent checks of the script rule. The skill validator rejects a friends or public skill with a script (`script_not_allowed`), and the rules and exporter refuse one too (`docs/SKILLS.md` 5). An allowlist entry cannot clear SK-01: the validator would still reject the skill.
+
+**Must flag:**
+
+1. A file at `scripts/fill.py`
+2. A file at `notes.txt` whose content starts with `#!/bin/sh`
+3. A file at `templates/form.html`
+4. A file at `Makefile`
+
+**Must not flag:**
+
+1. A file at `references/api.md`
+2. A file at `LICENSE`
+3. A file at `data/fields.csv`
+4. A file at `docs/SKILL.md` (a reference file that happens to share the name)
+
+### 7.3 Allowlist entries for skills
+
+A `safety-linter-allow.json` entry for a skill adds `"kind": "skill"`; an entry without `kind` means an agent, so existing entries keep working. The other fields are as in section 1: the skill id, the exact version, the rule id, the field path in the form of 7.2, and the SHA-256 of that field's text (for a file, its whole `content`). Changing the file, its path, or the version voids the entry.
+
+### 7.4 What a clean result does not mean, for skills
+
+Everything in section 4 applies, and three things more:
+
+- **Instructions that point at work outside the skill.** A public skill has no scripts, but its SKILL.md can still tell the AI to run commands the linter does not consider dangerous, fetch a page, or install a package. SL-11 catches only the commands it lists.
+- **Length.** A skill can hold 200 KB of reference text, far more than a reviewer reads closely. An instruction buried in the middle of a long data file is as effective as one at the top.
+- **Private scripts.** SK-01 flags them and nothing else looks inside them. No one reviews a private skill. That is acceptable only because no one but its author can load it.
+
+### 7.5 Implementation notes for P3-9
+
+- Add `lintSkill` to the same module, with no new imports beyond the skill types. Reuse the agent rule functions on the scanned strings; do not copy them.
+- Turn every SK-01 example into a test named `SK-01 must flag n` and `SK-01 must not flag n`. The current spec-driven test reads only `### SL-` sections, so extend it rather than letting SK-01 go untested.
+- Add a test that a skill whose reference file contains an SL-01 example produces that finding at `files["<path>"].content`.
+- The 100 KB linear-time test applies per file; add one with a 100 KB adversarial reference file.
+- Bump `LINTER_VERSION` to `2` when `lintSkill` lands, and update the assertion in `tests/safety-linter.test.ts`. Agent findings do not change.
+
 ## Changelog
 
 | Linter version | Date       | Change                                                                                                                                                                                                                                               |
 | -------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1              | 2026-11-14 | First specification                                                                                                                                                                                                                                  |
 | 1              | 2026-11-16 | Corrected before first implementation, so the version stays 1. SL-07: U+FE0E and U+FE0F need an emoji before them only, matching must-not-flag example 2. SL-15: `credential` and `credentials` added to the name list, matching must-flag example 2 |
+| 2              | 2026-11-18 | Specified, not yet implemented: section 7, skills (`lintSkill`, scanned fields, file-path finding paths, SK-01, allowlist `kind`). P3-9 bumps `LINTER_VERSION` to 2 when the code lands. Agent rules unchanged                                       |
