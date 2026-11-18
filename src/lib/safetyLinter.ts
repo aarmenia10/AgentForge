@@ -860,3 +860,24 @@ const publicSuffixes = new Set(
     ' ',
   ),
 )
+
+/**
+ * Skills (docs/SAFETY_LINTER.md section 7). INTERIM: only SK-01 is applied.
+ * P3-9 adds the text rules over name, description, tags, instructions, and
+ * reference files, and bumps LINTER_VERSION to 2. The signature is stable.
+ */
+export function lintSkill(skill: {
+  files: readonly { path: string; kind: string; content: string }[]
+}): LintResult {
+  const findings: LintFinding[] = skill.files
+    .filter((file) => file.kind === 'script')
+    .map((file) => ({
+      rule: 'SK-01',
+      severity: 'block' as const,
+      path: `files[${JSON.stringify(file.path)}]`,
+      excerpt: (file.content.split('\n', 1)[0] ?? '').slice(0, 120),
+      message:
+        'A script is code an AI app may be asked to run. Scripts may stay in a private skill; remove them to share it with friends or submit it for public review.',
+    }))
+  return { linter_version: LINTER_VERSION, findings }
+}
