@@ -73,6 +73,10 @@ const KNOWN: [RegExp, string][] = [
   [/^Agent does not exist$/, 'That agent no longer exists.'],
   [/^Skill does not exist$/, 'That skill no longer exists.'],
   [
+    /^Blocked skill can only be saved privately$/,
+    'This skill has a blocked finding, so it can only be saved as private.',
+  ],
+  [
     /^(Agent|Skill) or edit does not exist$/,
     'That edit is no longer waiting. Someone may have handled it already.',
   ],

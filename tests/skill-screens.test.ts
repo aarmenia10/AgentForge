@@ -41,7 +41,6 @@ import {
   DEFAULT_SKILL_QUERY,
 } from '../src/lib/skillRepository'
 import { describeServiceError } from '../src/lib/studioErrors'
-import { createSkillStore } from '../src/services/skillStore'
 import type {
   SkillFile,
   SkillIndexEntry,
@@ -490,9 +489,19 @@ function fakeApi(overrides: Partial<SkillsApi> = {}): SkillsApi & {
   }
 }
 
-const unavailable = () => createSkillStore(null as never, 'u1')
+// The real store replaced the P3-9 stub; keep proving the message still maps.
+const unavailable = () => {
+  const pending = () =>
+    Promise.reject(new Error('Skills are not available yet (P3-9)'))
+  return {
+    createSkill: pending,
+    listSharedSkills: pending,
+    setSkillVisibility: pending,
+    getSkillRecord: pending,
+  }
+}
 
-test('until P3-9 merges, every screen shows the stub error as a plain sentence', async () => {
+test('a service-unavailable error reaches every screen as a plain sentence', async () => {
   const stub = unavailable()
   const api = fakeApi({
     createSkill: stub.createSkill,
