@@ -4,7 +4,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { AuthorTag } from '../src/components/ui'
 
-test('author tag displays the AgentForge handle and preserves the Verified author badge', () => {
+test('author tag displays the AgentLemon handle and preserves the Verified author badge', () => {
   const author = {
     uid: 'person',
     name: 'Display name',

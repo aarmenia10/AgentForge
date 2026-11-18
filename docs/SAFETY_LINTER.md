@@ -481,7 +481,7 @@ Rejected outright: `http://`, `ws://`, `ftp://`, `file:`, `data:`, `javascript:`
 1. `https://api.github.com` (rest_api)
 2. `npx -y @modelcontextprotocol/server-filesystem@2025.1.14 ./docs` (pinned runner with a plain argument)
 3. `uvx mcp-server-fetch==2025.4.7`
-4. `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.0.tgz --agent postgres-index-tuner@1.0.0`
+4. `npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.0.tgz --agent postgres-index-tuner@1.0.0`
 
 Note on example 2: `./docs` is an argument to the server, not a package spec, so the local-path rejection does not apply to it. Arguments are checked by SL-13.
 

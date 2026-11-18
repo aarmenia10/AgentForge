@@ -8,7 +8,7 @@ interface ThemeContextValue {
   toggleTheme: () => void
 }
 
-const STORAGE_KEY = 'agentforge:theme'
+const STORAGE_KEY = 'agentlemon:theme'
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function readInitialTheme(): Theme {

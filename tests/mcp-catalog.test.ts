@@ -11,7 +11,7 @@ import {
 test('default catalog uses the live URL and validates the response', async (t) => {
   const remote = [{ ...SEED_AGENTS[0], name: 'Live catalog revision' }]
   const request = t.mock.method(globalThis, 'fetch', async (url, options) => {
-    assert.equal(url, 'https://agentforge-b10db.web.app/catalog.json')
+    assert.equal(url, 'https://agentlemon.web.app/catalog.json')
     assert.ok(options.signal instanceof AbortSignal)
     return new Response(JSON.stringify(remote))
   })

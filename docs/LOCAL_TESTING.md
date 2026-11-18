@@ -22,7 +22,7 @@ sent.
 **Verify an email.** The emulator keeps the link instead of sending it:
 
 ```bash
-curl -s http://127.0.0.1:9099/emulator/v1/projects/demo-agentforge/oobCodes
+curl -s http://127.0.0.1:9099/emulator/v1/projects/demo-agentlemon/oobCodes
 ```
 
 Open the `oobLink` of the newest `VERIFY_EMAIL` entry, then use "I have confirmed
@@ -36,7 +36,7 @@ emulator accepts the owner token, which bypasses the rules:
 
 ```bash
 curl -s -X PATCH -H 'Authorization: Bearer owner' -H 'Content-Type: application/json' \
-  'http://127.0.0.1:8080/v1/projects/demo-agentforge/databases/(default)/documents/admins/<UID>' \
+  'http://127.0.0.1:8080/v1/projects/demo-agentlemon/databases/(default)/documents/admins/<UID>' \
   -d '{"fields":{"role":{"stringValue":"admin"}}}'
 ```
 
@@ -48,9 +48,9 @@ off.
 
 ```bash
 curl -s -X POST -H 'Authorization: Bearer owner' -H 'Content-Type: application/json' \
-  'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/projects/demo-agentforge/accounts:query' -d '{}'
+  'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/projects/demo-agentlemon/accounts:query' -d '{}'
 ```
 
 **The public catalog** in this mode is still `public/catalog.json` built from
 seeds. To see approved agents flow into it, run the exporter against the
-emulator: `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GOOGLE_CLOUD_PROJECT=demo-agentforge npm run build:catalog`.
+emulator: `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GOOGLE_CLOUD_PROJECT=demo-agentlemon npm run build:catalog`.

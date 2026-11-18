@@ -40,7 +40,7 @@ test('connector speaks MCP statelessly: tools, guide, and get_agent', async () =
     createConnector({ fetchCatalog: async () => liveCatalog() }),
   )
   try {
-    assert.equal(client.getServerVersion()?.name, 'agentforge-connector')
+    assert.equal(client.getServerVersion()?.name, 'agentlemon-connector')
     assert.equal(client.getInstructions(), CONNECTOR_CONDENSED_GUIDE)
 
     const tools = (await client.listTools()).tools
@@ -80,7 +80,7 @@ test('connector speaks MCP statelessly: tools, guide, and get_agent', async () =
       assert.equal(missing.isError, true, `${agent_id} must fail closed`)
     }
 
-    const guide = await client.readResource({ uri: 'agentforge://guide' })
+    const guide = await client.readResource({ uri: 'agentlemon://guide' })
     const text = (guide.contents[0] as { text: string }).text
     assert.ok(
       text.endsWith(REGISTRY_GUIDE),
@@ -252,7 +252,7 @@ test('connector HTTP surface: info page, CORS, and method handling', async () =>
   const home = await handle(new Request(`${ORIGIN}/`))
   assert.equal(home.status, 200)
   const body = await home.text()
-  assert.match(body, /AgentForge remote connector/)
+  assert.match(body, /AgentLemon remote connector/)
   assert.ok(body.includes(`${ORIGIN}/mcp`))
 
   const preflight = await handle(
@@ -283,5 +283,5 @@ test('connector stays free and stateless by construction', async () => {
     settings,
     /durable_objects|kv_namespaces|d1_databases|r2_buckets|queues|\[\[|usage_model|limits/,
   )
-  assert.match(settings, /^name = "agentforge-connector"$/m)
+  assert.match(settings, /^name = "agentlemon-connector"$/m)
 })

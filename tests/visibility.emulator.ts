@@ -29,7 +29,7 @@ import { toggleStarInFirestore } from '../src/services/firestore'
 
 test('visibility, review, admin authority, bounded views, and star rules', async (t) => {
   const env = await initializeTestEnvironment({
-    projectId: 'demo-agentforge',
+    projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
   })
   await env.clearFirestore()

@@ -25,7 +25,7 @@ import type { AgentRecord } from '../src/types/agent'
 
 test('versioned edits and self-approval enforce atomic, exact promotion', async (t) => {
   const env = await initializeTestEnvironment({
-    projectId: 'demo-agentforge',
+    projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
   })
   const db = (uid: string, verified = true) =>

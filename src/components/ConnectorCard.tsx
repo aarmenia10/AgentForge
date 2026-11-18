@@ -6,8 +6,8 @@ import { cn, CodeBlock } from './ui'
 type Variant = 'install' | 'settings' | 'welcome'
 
 const TITLES: Record<Variant, string> = {
-  install: 'Fastest: add AgentForge as a connector',
-  settings: 'Connect AgentForge to your AI',
+  install: 'Fastest: add AgentLemon as a connector',
+  settings: 'Connect AgentLemon to your AI',
   welcome: 'Your connector link',
 }
 
@@ -60,7 +60,7 @@ export function ConnectorCard({ variant = 'settings' }: { variant?: Variant }) {
         <li>
           3. Then say:{' '}
           <span className="font-mono text-[13px] text-slate-800 dark:text-slate-100">
-            Use AgentForge to find an agent for &lt;your task&gt;.
+            Use AgentLemon to find an agent for &lt;your task&gt;.
           </span>
         </li>
       </ol>

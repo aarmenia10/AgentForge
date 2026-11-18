@@ -92,8 +92,8 @@ test('the shipped guide is an exact copy of docs/AI_GUIDE.md and covers every re
 
 test('llms.txt points at the live catalog and carries the same rules', async () => {
   const llms = await readFile('public/llms.txt', 'utf8')
-  assert.match(llms, /^# AgentForge\r?\n/)
-  assert.ok(llms.includes('https://agentforge-b10db.web.app/catalog.json'))
+  assert.match(llms, /^# AgentLemon\r?\n/)
+  assert.ok(llms.includes('https://agentlemon.web.app/catalog.json'))
   for (const field of [
     'tools_required',
     'input_schema',
@@ -117,8 +117,8 @@ test('the guide is served at initialization, as a resource, and as a prompt, wit
       assert.ok(client.getInstructions()!.startsWith(CONDENSED_GUIDE))
 
       const resources = (await client.listResources()).resources
-      assert.ok(resources.some((r) => r.name === 'registry_guide' && r.uri === 'agentforge://guide'))
-      const resource = await client.readResource({ uri: 'agentforge://guide' })
+      assert.ok(resources.some((r) => r.name === 'registry_guide' && r.uri === 'agentlemon://guide'))
+      const resource = await client.readResource({ uri: 'agentlemon://guide' })
       assert.equal(resource.contents[0].text, REGISTRY_GUIDE)
       assert.equal(resource.contents[0].mimeType, 'text/markdown')
 

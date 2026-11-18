@@ -111,7 +111,7 @@ test('MCP session supports search, prompts, schemas, resources, switching and in
     assert.ok(!tools.some((t) => t.name === 'agent_python_regex_deobfuscator'))
     assert.match(
       JSON.stringify(
-        await client.readResource({ uri: 'agentforge://active/manifest' }),
+        await client.readResource({ uri: 'agentlemon://active/manifest' }),
       ),
       /postgres-index-tuner/,
     )
@@ -146,7 +146,7 @@ test('MCP session supports search, prompts, schemas, resources, switching and in
 test('built Node executable speaks real stdio MCP and loads its bundled catalog outside the repo', async () => {
   const executable = resolve('packages/mcp-server/dist/cli.js')
   assert.match(await readFile(executable, 'utf8'), /^#!\/usr\/bin\/env node/)
-  const cwd = await mkdtemp(join(tmpdir(), 'agentforge-stdio-'))
+  const cwd = await mkdtemp(join(tmpdir(), 'agentlemon-stdio-'))
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [
@@ -169,8 +169,8 @@ test('built Node executable speaks real stdio MCP and loads its bundled catalog 
     )
     // The bundled executable carries the guide without reading docs/ at runtime.
     assert.match(client.getInstructions()!, /compare_agents/)
-    const guide = await client.readResource({ uri: 'agentforge://guide' })
-    assert.match(JSON.stringify(guide), /AgentForge registry guide for AI clients/)
+    const guide = await client.readResource({ uri: 'agentlemon://guide' })
+    assert.match(JSON.stringify(guide), /AgentLemon registry guide for AI clients/)
   } finally {
     await client.close()
     await rm(cwd, { recursive: true, force: true })
@@ -178,7 +178,7 @@ test('built Node executable speaks real stdio MCP and loads its bundled catalog 
 })
 
 test('invalid CLI catalog exits unsuccessfully without protocol pollution', async () => {
-  const cwd = await mkdtemp(join(tmpdir(), 'agentforge-invalid-'))
+  const cwd = await mkdtemp(join(tmpdir(), 'agentlemon-invalid-'))
   const file = join(cwd, 'invalid.json')
   await writeFile(file, '{}')
   const transport = new StdioClientTransport({

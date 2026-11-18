@@ -19,7 +19,7 @@ import { cn } from '../ui'
 type View = SignInMode | 'verify-sent' | 'reset-sent'
 
 const TITLES: Record<View, string> = {
-  'sign-in': 'Sign in to AgentForge',
+  'sign-in': 'Sign in to AgentLemon',
   'sign-up': 'Create your account',
   reset: 'Reset your password',
   'verify-sent': 'Check your email',
@@ -409,7 +409,7 @@ export default function SignInDialog() {
         <div className="mt-5 text-center text-sm text-slate-600 dark:text-slate-300">
           {view === 'sign-in' && (
             <p>
-              New to AgentForge?{' '}
+              New to AgentLemon?{' '}
               <TextButton onClick={() => go('sign-up')}>
                 Create an account
               </TextButton>

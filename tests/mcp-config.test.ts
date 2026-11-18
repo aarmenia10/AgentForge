@@ -22,11 +22,11 @@ test('Codex is offered as a CLI install using the documented stdio command', () 
       locations: [],
     },
   )
-  assert.equal(MCP_SERVER_PACKAGE, 'agentforge-registry')
+  assert.equal(MCP_SERVER_PACKAGE, 'agentlemon-registry')
   for (const agent of SEED_AGENTS) {
     assert.equal(
       buildInstallSnippet(agent, 'codex'),
-      `codex mcp add agentforge-${agent.id} -- npx -y ${MCP_SERVER_SPEC} --agent ${agent.id}@${agent.version}`,
+      `codex mcp add agentlemon-${agent.id} -- npx -y ${MCP_SERVER_SPEC} --agent ${agent.id}@${agent.version}`,
     )
   }
   assert.match(
@@ -41,7 +41,7 @@ test('Codex is offered as a CLI install using the documented stdio command', () 
 test('all clients preserve the same package, server key, and exact version pin', () => {
   const agent = SEED_AGENTS[0]
   assert.deepEqual(buildMcpConfig(agent), {
-    mcpServers: { [`agentforge-${agent.id}`]: buildServerEntry(agent) },
+    mcpServers: { [`agentlemon-${agent.id}`]: buildServerEntry(agent) },
   })
   for (const client of ['claude_desktop', 'cursor'] as const) {
     assert.deepEqual(
@@ -51,7 +51,7 @@ test('all clients preserve the same package, server key, and exact version pin',
   }
   assert.equal(
     buildInstallSnippet(agent, 'claude_code'),
-    `claude mcp add agentforge-${agent.id} -- npx -y ${MCP_SERVER_SPEC} --agent ${agent.id}@${agent.version}`,
+    `claude mcp add agentlemon-${agent.id} -- npx -y ${MCP_SERVER_SPEC} --agent ${agent.id}@${agent.version}`,
   )
 })
 
@@ -64,10 +64,10 @@ test('install spec points at a released tarball that is committed to the site', 
   assert.equal(pkg.version, MCP_SERVER_VERSION)
   assert.equal(
     MCP_SERVER_SPEC,
-    `https://agentforge-b10db.web.app/mcp/agentforge-registry-${pkg.version}.tgz`,
+    `https://agentlemon.web.app/mcp/agentlemon-registry-${pkg.version}.tgz`,
   )
   assert.ok(
-    existsSync(`public/mcp/agentforge-registry-${pkg.version}.tgz`),
+    existsSync(`public/mcp/agentlemon-registry-${pkg.version}.tgz`),
     'Run `npm run release:mcp` and commit the tarball before bumping the version.',
   )
 })
@@ -83,7 +83,7 @@ test('command-line clients get a Windows-safe form that survives PowerShell', ()
     const windows = buildInstallSnippet(agent, client, 'windows')
     assert.equal(
       posix,
-      `${binary} mcp add agentforge-${agent.id} -- npx -y ${MCP_SERVER_SPEC} --agent ${spec}`,
+      `${binary} mcp add agentlemon-${agent.id} -- npx -y ${MCP_SERVER_SPEC} --agent ${spec}`,
     )
     // PowerShell strips a bare `--`, so the Windows form must hand the whole
     // line to cmd, and the line must contain no quote that would end it early.
@@ -103,5 +103,5 @@ test('connector link is an https URL ending in /mcp', () => {
   const url = new URL(MCP_CONNECTOR_URL)
   assert.equal(url.protocol, 'https:')
   assert.equal(url.pathname, '/mcp')
-  assert.equal(url.hostname, 'agentforge-connector.lesslimit.workers.dev')
+  assert.equal(url.hostname, 'agentlemon-connector.lesslimit.workers.dev')
 })

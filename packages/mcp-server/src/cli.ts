@@ -15,10 +15,13 @@ try {
   })
   if (values.help) {
     console.log(
-      `Usage: agentforge-registry [--agent <id>@<version>] [--catalog <file-or-URL>]\nCatalog: --catalog, AGENTFORGE_CATALOG_URL, then ${DEFAULT_CATALOG_URL} with bundled snapshot fallback. Explicit sources fail closed.`,
+      `Usage: agentlemon-registry [--agent <id>@<version>] [--catalog <file-or-URL>]\nCatalog: --catalog, AGENTLEMON_CATALOG_URL, then ${DEFAULT_CATALOG_URL} with bundled snapshot fallback. Explicit sources fail closed.`,
     )
   } else {
-    const source = values.catalog ?? process.env.AGENTFORGE_CATALOG_URL
+    const source =
+      values.catalog ??
+      process.env.AGENTLEMON_CATALOG_URL ??
+      process.env.AGENTFORGE_CATALOG_URL
     const catalog = await loadCatalog(source)
     const resolve = agentResolver(catalog, source)
     const active = values.agent ? await resolve(values.agent) : undefined
@@ -32,7 +35,7 @@ try {
   }
 } catch (error) {
   console.error(
-    `agentforge-registry: ${error instanceof Error ? error.message : String(error)}`,
+    `agentlemon-registry: ${error instanceof Error ? error.message : String(error)}`,
   )
   process.exitCode = 1
 }

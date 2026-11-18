@@ -60,7 +60,7 @@ async function measure<T>(run: () => Promise<T>) {
 }
 
 test('hourly export reads only dirty documents and acknowledges only published revisions', async () => {
-  const projectId = 'demo-agentforge'
+  const projectId = 'demo-agentlemon'
   const env = await initializeTestEnvironment({
     projectId,
     firestore: { rules: await readFile('firestore.rules', 'utf8') },

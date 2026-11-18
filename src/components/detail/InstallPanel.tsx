@@ -130,7 +130,7 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
           pick the best fit for a task, say:
         </p>
         <p className="mt-2 rounded-lg bg-slate-900/5 px-3 py-2 font-mono text-[13px] text-slate-800 dark:bg-white/5 dark:text-slate-100">
-          Use AgentForge to find an agent for &lt;your task&gt;.
+          Use AgentLemon to find an agent for &lt;your task&gt;.
         </p>
       </div>
 
@@ -144,7 +144,7 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
 
       <p className="text-xs text-slate-400">
         Requires Node.js 22 or newer. <code className="font-mono">{MCP_SERVER_PACKAGE}</code> fetches
-        the manifest pinned at v{agent.version}; your prompts never pass through AgentForge.
+        the manifest pinned at v{agent.version}; your prompts never pass through AgentLemon.
       </p>
     </div>
   )
