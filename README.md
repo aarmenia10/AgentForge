@@ -32,7 +32,7 @@ Verified by the orchestrator on 2026-11-17 at the P2-17 merge: `npm run lint`, `
 | Static catalog | Built. `scripts/export-catalog.ts` validates version 2 records, exports only public and approved agents, strips Firestore metadata, and writes `public/catalog.json`. The site reads only that file |
 | Seed agents | 14 validated schema version 2 public manifests with the AgentForge author identity. At least two in every category, including `creative`, and all five frameworks represented |
 | Validation | Built. Strict version 2 manifest and Firestore record validation in `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
-| MCP server | Released. `agentforge-registry` 0.2.1 is served from the site at `/mcp/agentforge-registry-0.2.1.tgz` (0.1.0, 0.1.1, and 0.2.0 stay available) and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
+| MCP server | Released. `agentforge-registry` 0.2.2 is served from the site at `/mcp/agentforge-registry-0.2.2.tgz` (0.1.0, 0.1.1, 0.2.0, and 0.2.1 stay available) and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
 | Firestore rules | Profiles, unique handles, mutual friends, visibility, owner submissions, admin review/verification, and atomic per-user stars. Private/friends reads use current ownership/friendship |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentforge-b10db.web.app, deployed automatically from `main` by CI |
@@ -57,7 +57,7 @@ Verified by the orchestrator on 2026-11-17 at the P2-17 merge: `npm run lint`, `
 | Auth domain | `agentforge-b10db.firebaseapp.com` |
 | Plan | Spark (no cost) |
 | Firestore | Database `(default)`, location `nam5`, currently empty |
-| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.1.tgz`. Not on the npm registry, by decision |
+| MCP server install | `npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.2.tgz`. Not on the npm registry, by decision |
 | Remote connector | https://agentforge-connector.lesslimit.workers.dev/mcp (Cloudflare Workers, free plan, account subdomain `lesslimit`) |
 | Repository | `aarmenia10/AgentForge`, default branch `main` |
 
@@ -129,7 +129,7 @@ The hourly Firestore export reads roughly **approved agents + snapshots** docume
 These hold through Phase 3. Breaking one requires the owner's explicit sign-off, recorded in the decision log.
 
 1. **No server-side inference.** AgentForge never calls a model and never proxies a model call.
-2. **No paid infrastructure.** Firebase stays on Spark, which means no Cloud Functions. One free-tier hosted service is permitted: the remote connector on Cloudflare Workers ([section 7.6](#76-remote-connector)). It must stay stateless, hold no user data, and run on a plan that pauses at its limit instead of billing.
+2. **No paid infrastructure.** Firebase stays on Spark, which means no Cloud Functions. One free-tier hosted service is permitted: the remote connector on Cloudflare Workers ([section 7.6](#76-remote-connector)). It must run on a plan that pauses at its limit instead of billing, and it stores nothing: no database, no key-value store, no logs of user content. It may sign a user in and act with that user's own Firebase permissions, so the security rules still decide what it can read and write; it never holds admin power. Any credential it needs between calls is encrypted and held by the user's AI app, not by us (amended 2026-11-18, P3-1).
 3. **Public browsing costs zero Firestore reads.** It is served from `catalog.json`.
 4. **No client can make an agent public by itself.** A manifest reaches `catalog.json` only through the review path in `P2-7`.
 5. **Installed agents are version-pinned.** A manifest never mutates under a user.
@@ -144,6 +144,16 @@ Binding. Newest first. Add to it, do not rewrite history.
 
 | Date | Decision |
 | --- | --- |
+| 2026-11-18 | **Owner decided: Phase 3 plan approved** as written in section 6 (P3-0 to P3-15). Merges: code lands by pull request from `task/<id>` with CI green; the orchestrator may merge README-only changes straight to `main` after all six checks pass locally. The username rule of 2026-11-16 is confirmed |
+| 2026-11-18 | **Owner decided: rename to AgentLemon (P3-0).** The product name, page titles, guide text, MCP package (`agentlemon-registry`, starting at 0.3.0), MCP config keys, connector Worker (`agentlemon-connector`), and the site address all change. The Firebase project id `agentforge-b10db` cannot change, so the new address is a second Hosting site in the same project (`agentlemon.web.app` if available). The old address keeps serving `catalog.json`, `/agents/**`, and every tarball in `/mcp/` permanently, because installed configs point there; page visits to it redirect to the new address. The old connector Worker is left running, untouched, until nobody uses it. The 14 seed agents keep author `@agentforge` until launch, because changing their author changes their content and their versions are frozen; `agentlemon` joins the reserved usernames. Internal stored identifiers (seed `owner_uid: 'agentforge'`) do not change. The GitHub repository is renamed last. No custom domain for now |
+| 2026-11-18 | **Owner signed off: invariant 2 amended (P3-1).** The connector may sign users in and act for them, as long as it stays free and stores nothing. Sign-in happens on our own site; the connector receives an encrypted credential that the user's AI app holds; every Firestore call uses the user's own token, so the rules decide. Design in `docs/CONNECTOR_AUTH.md` before any code |
+| 2026-11-18 | **Owner decided: skills (P3-8 to P3-10).** A skill is a second kind of item beside agents, with the same public, friends, and private choices and the same review for public. **Private skills may include scripts; friends and public skills are text only** until a reviewer who reads code joins. Skills live in their own public file, never in `catalog.json`, so released servers keep working. Size cap about 200 KB per skill |
+| 2026-11-18 | **Owner decided: save from chat (P3-11).** Anything an AI saves through the connector lands as private on the user's page. Making it public is a deliberate step on the site and goes through review. A confirmed email is still required. The site's own forms stay |
+| 2026-11-18 | **Owner decided: councils (P3-14).** Spelled "council". A council bundles agents and skills, each pinned to a version, with the instructions for how they work together. "Export the council" from a chat saves any missing member as private, then the council. Visitors can take the whole council or single members. A public council may contain only public, approved members, and goes through review |
+| 2026-11-18 | **Owner decided: thumbs and comments replace stars (P3-13).** Thumbs up or down, one vote per user, changeable. Existing stars become thumbs up. Comments are public; admins can delete any comment and authors can delete their own. **A comment containing a word on the blocked-words list cannot be posted**, enforced in the browser and again in the rules or pipeline. Counts and comments reach the site through the hourly static export (an hour's delay is accepted), so invariant 3 holds |
+| 2026-11-18 | **Owner decided: sign-up questions and suggestions (P3-12).** Three or four multiple-choice questions, each with an "Other" option, presented as a quick step and skippable; answers are editable in Settings. Suggestions are computed in the browser from the catalog's tags and categories. No model is called (invariant 1). Built now even though the catalog is small |
+| 2026-11-18 | **Owner decided: the cheaper hourly export (P3-7) is done first,** before skills, votes, or comments add documents for the pipeline to re-read |
+| 2026-11-18 | Owner approved the planned-but-unaddressed items: P3-1 is now connector sign-in (the local `npx` server stays public-only); P3-2 stays and suits Tommy; P3-3 is retired, replaced by P3-11; P3-4 is dropped for now; P3-6 analytics stays off. Protected-file changes these tasks need (`src/types/`, `firestore.rules`, `.github/`, `docs/AI_GUIDE.md`, `docs/SAFETY_LINTER.md`) are agreed in scope; each still gets its own decision-log row when it lands |
 | 2026-11-16 | P2-17 (owner-authorized): admin approvals atomically create exact records in `agent_versions/<id>@<version>`. Snapshots have no client reads, updates, or deletes. Identical re-approval retries without writing the existing snapshot; rules still require complete record equality, so reused versions with changed content fail. Seed provisioning creates only missing versions and rejects source content changes at an existing version. Both MCP servers share strict historical resolution; the Worker entry remains default-only and shared code has no Node/Ajv. MCP 0.2.2 is the fifth permanent tarball. |
 | 2026-11-16 | P2-17 (owner-authorized rules/pipeline changes): the exporter publishes linted historical manifests only for currently public approved catalog members, deletes stale generated files, preserves seed takedowns, and strips storage fields. Five-minute version caching permits withdrawal. Scheduled CI compares an export digest covering catalog plus history, rather than catalog bytes alone. Budget a cheaper change-detection step at roughly 1,000 combined approved-agent/snapshot documents; do not build it now. |
 | 2026-11-16 | P2-12 to P2-15 account screens. **Owner-approved: changing a username never renames published agents.** Each agent keeps the `author.handle` it was approved under until its owner publishes an update; Settings says so beside the username field. Usernames follow `validHandle` (3 to 30 lowercase letters, digits, or hyphens, starting and ending with a letter or digit; `agentforge`, `admin`, `support` reserved), checked live with `getProfileByHandle`. **Welcome step trigger:** a signed-in user this browser has not yet seen with a profile or a welcome gets one `getProfile` read; no profile means the welcome step (connector link first, then a username) shows once and is never shown again, skipped or not. localStorage key `agentforge.profile.<uid>` holds `{ handle, welcomed }`, so a normal visit costs no Firestore read and loads no Firestore code. The welcome dialog is portaled to `document.body`, because the nav's backdrop blur captures `position: fixed`. The public profile reads only `catalog.json`; "Add friend" reads nothing until it is pressed. The detail view reads the user's own star (`agents/{id}/stars/{uid}`) directly through a dynamic import, because `src/services` has no star-state reader yet |
@@ -290,18 +300,30 @@ Waves 1 and 2 are done (P2-1, P2-2, P2-3, P2-5, the P2-6 spec, P2-10). Wave 3 is
 
 - Three walkthrough checks whose results the tester lost: a friend's agent under "Shared with me", an old version file still loading after an edit, and unfriending removing access. All three passed in the practice database.
 
-### Phase 3: Runtime and reach
+### Phase 3: Your items everywhere
 
-Not scheduled in detail. Do not start without the owner.
+Goal: build something once in one AI app and use it in all the others, with no extra steps. Approved by the owner on 2026-11-18. Database work runs one task at a time because it shares `firestore.rules`; screens and design documents run alongside it.
 
-| ID | Task | Note |
-| --- | --- | --- |
-| P3-1 | Private and friends agents over MCP | The local server needs to sign in as the user. Needs a design for token handling first |
-| P3-2 | Companion tool resolution | Detect which required MCP tools the client lacks and return the install snippet for each |
-| P3-3 | CLI publishing | A `publish` command in `agentforge-registry`. Depends on P3-1's sign-in |
-| P3-4 | SDKs for TypeScript and Python | Unscoped package names only. `@agentforge/*` is not ours |
-| P3-5 | Version history | Moved to Phase 2 as P2-17 |
-| P3-6 | Usage analytics | Analytics is currently off. Turning it on is an owner decision |
+| ID | Task | Owner | Depends on | Done when | Status |
+| --- | --- | --- | --- | --- | --- |
+| P3-0 | Rename to AgentLemon (decision 2026-11-18): new Hosting site, product name everywhere, `agentlemon-registry` 0.3.0, `agentlemon-connector` Worker, old address kept serving files and redirecting pages, repository renamed last | Orchestrator (code), owner with Claude in Chrome (console) | none | The site, connector, and a fresh install snippet all work on the new names; an install made with 0.2.2 still loads | in progress |
+| P3-7 | Cheaper hourly export: an hourly run with nothing changed costs a handful of Firestore reads; a run with changes reads only what changed, with a periodic full rebuild as a safety net. Must extend to the collections Phase 3 adds | Codex | none | Tests show an unchanged run reads no agent documents, a changed run reads only changed ones, and takedowns and visibility changes still remove items | in progress |
+| P3-8 | Skills contract: data shape, size cap, script rule, public file layout, linter coverage, and a reference format councils can reuse | Claude Code | none | `docs/SKILLS.md`, types, a Node-free validator, and tests merged; the orchestrator has folded the README text into section 5 | in progress |
+| P3-9 | Skills build: Firestore records and rules, review, export to a separate public file and version files, connector and local server read tools | Codex | P3-0, P3-7, P3-8 | A public skill is approved and readable through the connector; private and friends skills never reach a public file; a script blocks sharing | open |
+| P3-10 | Skills screens: upload, My items, skill detail view, review queue | Claude Code | P3-8 (runs alongside P3-9) | A signed-in user uploads a skill without writing JSON and sees it on their page | open |
+| P3-1 | Connector sign-in: design first (`docs/CONNECTOR_AUTH.md`), then build. OAuth for MCP clients, sign-in on our site, an encrypted credential held by the AI app, Firestore with the user's own token, a way to disconnect all apps | Claude Code (design), Codex (build), owner (second web key and Worker secrets) | P3-0 for the build | In the Claude app, connecting signs the user in once, and the connector then lists that user's private and friends items and nobody else's | design in progress |
+| P3-11 | Save from chat: connector tools to save an agent or skill to the signed-in user's page as private, and to list and fetch their own items | Codex (tools), Claude Code (site labels) | P3-1, P3-9 | "Save this as an agent to my AgentLemon" in a connected app creates a private agent that appears on `/me` | open |
+| P3-12 | Sign-up questions and suggestions: three or four multiple-choice questions with "Other", shown as a quick step after the username, skippable, editable in Settings; a suggestions page built in the browser from catalog tags | Claude Code (UI), Codex (profile fields and rules) | P3-0 | A new account answers the questions and sees suggestions; changing answers in Settings changes them | open |
+| P3-13 | Thumbs and comments: votes and comments with rules, blocked-words check, admin and author deletion, report, static hourly export, stars converted to thumbs up, then the screens | Codex, then Claude Code | P3-7 | A vote and a comment appear on the live site within an hour; a comment with a blocked word cannot be posted; an admin can delete any comment | open |
+| P3-14 | Councils: contract, data and rules, screens, and the "export the council" connector tool | Claude Code (contract, screens), Codex (data, tool) | P3-9, P3-11 | A council exported from a chat appears on the user's page with every member, and a visitor can take the whole council or one member | open |
+| P3-2 | Missing-tool help: detect which required MCP tools the client lacks and return the install snippet for each | Codex (suits Tommy) | P3-0 | A connected AI loading an agent is told which declared tools it lacks and how to add them | open |
+| P3-15 | Phase 3 live verification on the real site and in real AI apps | Owner with Antigravity or Claude in Chrome | all of the above | A written pass or fail for every Phase 3 "done when" | open |
+| P3-3 | Command-line publishing | | | | retired 2026-11-18, replaced by P3-11 |
+| P3-4 | SDKs for TypeScript and Python | | | | dropped for now, 2026-11-18 |
+| P3-5 | Version history | | | | moved to Phase 2 as P2-17 |
+| P3-6 | Usage analytics | | | | stays off, 2026-11-18 |
+
+**Order.** P3-0 and P3-7 first, with the P3-8 contract and the P3-1 design written alongside. Then P3-9 with P3-10, then the P3-1 build, P3-11, P3-12, P3-13, P3-14, and P3-15. P3-2 can go to Tommy once P3-0 merges.
 
 ### Phase 4: Hosted execution and revenue
 
@@ -449,6 +471,10 @@ What is being built right now. One row per claim. Add yours before you start and
 
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
+| P3-0 rename | Aidan | Claude Code (orchestrator) | `task/p3-0-rename` | Name strings and URLs across the repo, `firebase.json`, `.env.production`, `index.html`, `packages/mcp-server` (new 0.3.0 tarball), `packages/connector/wrangler.toml`, `.github/workflows/*` (URL lines only), README | 2026-11-18 |
+| P3-7 export | Aidan | Codex | `task/p3-7-export` | `scripts/export-catalog.ts` and new modules beside it, `firestore.rules`, `tests/*emulator*`, export tests, `.github/workflows/ci.yml` (export steps only) | 2026-11-18 |
+| P3-8 skills contract | Aidan | Claude Code | `task/p3-8-skills-contract` | New: `docs/SKILLS.md`, `src/types/skill.ts`, `src/lib/skillSchema.ts`, `tests/skill-schema.test.ts`; `docs/SAFETY_LINTER.md` (a skills section) | 2026-11-18 |
+| P3-1 design | Aidan | Claude Code | `task/p3-1-design` | New: `docs/CONNECTOR_AUTH.md` only | 2026-11-18 |
 
 ### 8.2 Ideas inbox
 
@@ -456,13 +482,17 @@ Anything either person wants to add, before it is planned. One row each. Nobody 
 
 | Date | From | Idea | Status |
 | --- | --- | --- | --- |
-| 2026-11-17 | Aidan | **Skills, not only agents.** Upload a skill (for example a Claude skill folder with its `SKILL.md`) to your AgentForge page with a description, share it with the same public, friends, and private choices, and let any AI app load it through the connector, including apps with no skill feature of their own | Accepted. Orchestrator is planning it; needs a schema decision (protected file) and a rule for bundled scripts |
-| 2026-11-17 | Aidan | **Publish from inside a chat.** In any connected AI: "turn this chat into a formal agent and post it to my AgentForge", or "send this skill to AgentForge". It lands on the user's own page and is then usable from their other AI apps | Accepted. Orchestrator is planning it; needs sign-in on the connector, which changes invariant 2 and section 7.6 and so needs Aidan's written sign-off |
+| 2026-11-17 | Aidan | **Skills, not only agents.** Upload a skill (for example a Claude skill folder with its `SKILL.md`) to your AgentForge page with a description, share it with the same public, friends, and private choices, and let any AI app load it through the connector, including apps with no skill feature of their own | Planned as P3-8 to P3-10 (2026-11-18) |
+| 2026-11-17 | Aidan | **Publish from inside a chat.** In any connected AI: "turn this chat into a formal agent and post it to my AgentForge", or "send this skill to AgentForge". It lands on the user's own page and is then usable from their other AI apps | Planned as P3-1 and P3-11; invariant 2 amended (2026-11-18) |
 | 2026-11-17 | Aidan | **The end goal, for judging every later idea:** build something once in one AI subscription and use it in all the others with no extra steps | Guiding principle, not a task |
+| 2026-11-18 | Aidan | **Sign-up questions and suggestions.** A quick multiple-choice step at sign-up about work and goals, then suggested agents and skills | Planned as P3-12 |
+| 2026-11-18 | Aidan | **Thumbs and comments instead of stars,** with blocked words | Planned as P3-13 |
+| 2026-11-18 | Aidan | **Councils.** Export several agents and skills working together from a chat as one bundle; visitors take all or part | Planned as P3-14 |
+| 2026-11-18 | Aidan | **Rename to AgentLemon,** including the MCP server and the web address | Planned as P3-0 |
 
 ### 8.3 Orchestrator notes for wave 3
 
-Written 2026-11-17 by the outgoing orchestrator session. **The owner has not reviewed any of this.** Wave 3 opens by walking him through the inbox ideas one at a time; these notes are starting points for that conversation, not decisions.
+Written 2026-11-17. **Superseded on 2026-11-18** by the approved Phase 3 plan (section 6) and its decision-log rows, which win wherever these notes differ (scripts, for example). Kept as background for the P3-1 design.
 
 **Skills as a second kind of item**
 
@@ -617,7 +647,7 @@ AgentForge/
 
 ## 12. Open questions for the owner
 
-1. The name. At least three unrelated projects already ship as "AgentForge" on npm, one of them an MCP server. Renaming is cheap now and expensive after launch.
+1. The name. Decided 2026-11-18: AgentLemon (P3-0).
 2. Who reviews public submissions once there are more than the owner can handle.
 
 ## License
