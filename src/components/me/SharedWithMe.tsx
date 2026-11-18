@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { AgentDetailModal } from '@/components/detail/AgentDetailModal'
 import { Notice, smallButton } from '@/components/studio/parts'
 import { describeServiceError } from '@/lib/studioErrors'
@@ -15,7 +15,10 @@ import type { AgentRecord } from '@/types/agent'
 const FRIENDS_PAGE = 20
 const AGENTS_PAGE = 20
 
-export function SharedWithMe() {
+/** Renders more of a friend's items under their agents (P3-10: skills). */
+type FriendExtra = (uid: string, name: string) => ReactNode
+
+export function SharedWithMe({ friendExtra }: { friendExtra?: FriendExtra }) {
   const [friends, setFriends] = useState<Relationship[]>([])
   const [profiles, setProfiles] = useState<Map<string, UserProfile | null>>(
     new Map(),
@@ -61,8 +64,9 @@ export function SharedWithMe() {
       <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-white/15">
         <p>No friends yet.</p>
         <p className="mt-2">
-          Once you and someone else accept each other as friends, the agents
-          they share with friends appear here.
+          Once you and someone else accept each other as friends, the{' '}
+          {friendExtra ? 'agents and skills' : 'agents'} they share with friends
+          appear here.
         </p>
       </div>
     )
@@ -81,6 +85,7 @@ export function SharedWithMe() {
             uid={friend.uid}
             profile={profiles.get(friend.uid) ?? null}
             onOpen={setOpen}
+            extra={friendExtra}
           />
         ))}
       </ul>
@@ -114,10 +119,12 @@ function FriendRow({
   uid,
   profile,
   onOpen,
+  extra,
 }: {
   uid: string
   profile: UserProfile | null
   onOpen: (agent: AgentRecord) => void
+  extra?: FriendExtra
 }) {
   const [expanded, setExpanded] = useState(false)
   const [agents, setAgents] = useState<AgentRecord[] | null>(null)
@@ -179,6 +186,11 @@ function FriendRow({
       </h3>
       {expanded && (
         <div id={panelId} className="space-y-2 px-4 pb-4">
+          {extra && (
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Agents
+            </h4>
+          )}
           {error && (
             <Notice tone="error" role="alert">
               {error}
@@ -228,6 +240,7 @@ function FriendRow({
               Show more
             </button>
           )}
+          {extra && <div className="pt-2">{extra(uid, name)}</div>}
         </div>
       )}
     </li>

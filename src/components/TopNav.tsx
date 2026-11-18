@@ -1,7 +1,7 @@
 import { Anvil, Moon, Search, Sun } from 'lucide-react'
 import { useTheme } from '@/theme/ThemeProvider'
 import { AGENT_CATEGORIES, type AgentCategoryTag } from '@/types/agent'
-import { Link } from '@/router/Router'
+import { Link, useRoute } from '@/router/Router'
 import { AccountMenu } from './auth/AccountMenu'
 import { cn } from './ui'
 
@@ -19,6 +19,8 @@ interface TopNavProps {
 
 export function TopNav({ search }: TopNavProps) {
   const { theme, toggleTheme } = useTheme()
+  const { route } = useRoute()
+  const onSkills = route.name === 'skills' || route.name === 'skill'
 
   return (
     <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
@@ -34,7 +36,19 @@ export function TopNav({ search }: TopNavProps) {
 
         {search && <SearchAndCategories {...search} />}
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          <Link
+            to="/skills"
+            aria-current={onSkills ? 'page' : undefined}
+            className={cn(
+              'inline-flex h-10 items-center rounded-xl px-2 text-sm font-medium transition sm:px-3',
+              onSkills
+                ? 'text-teal-600 dark:text-teal-300'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
+            )}
+          >
+            Skills
+          </Link>
           <button
             type="button"
             onClick={toggleTheme}

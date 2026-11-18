@@ -3,7 +3,7 @@
  * directly. Static files (`/catalog.json`, `/llms.txt`, `/mcp/*`) are served by
  * Hosting before the SPA rewrite and never reach this table.
  */
-import { authorHandleSchema } from '../lib/manifestSchema'
+import { agentIdSchema, authorHandleSchema } from '../lib/manifestSchema'
 
 export type RouteName =
   | 'home'
@@ -13,11 +13,14 @@ export type RouteName =
   | 'studio'
   | 'review'
   | 'profile'
+  | 'skills'
+  | 'skill-upload'
+  | 'skill'
   | 'not-found'
 
 export interface Route {
   name: RouteName
-  /** `handle` for `profile`. Empty for every other route. */
+  /** `handle` for `profile`, `id` for `skill`. Empty for every other route. */
   params: Record<string, string>
 }
 
@@ -28,6 +31,7 @@ export const SIGNED_IN_ROUTES: readonly RouteName[] = [
   'friends',
   'studio',
   'review',
+  'skill-upload',
 ]
 
 const STATIC: Record<string, RouteName> = {
@@ -38,6 +42,9 @@ const STATIC: Record<string, RouteName> = {
   '/friends': 'friends',
   '/studio': 'studio',
   '/review': 'review',
+  '/skills': 'skills',
+  // Matched before /skills/<id>, so "new" can never be a skill's page.
+  '/skills/new': 'skill-upload',
 }
 
 export function matchRoute(pathname: string): Route {
@@ -48,6 +55,14 @@ export function matchRoute(pathname: string): Route {
 
   const name = STATIC[path]
   if (name) return { name, params: {} }
+
+  const skill = /^\/skills\/([^/]+)$/.exec(path)
+  if (skill) {
+    const id = decodeSegment(skill[1])
+    if (id !== null && agentIdSchema.safeParse(id).success)
+      return { name: 'skill', params: { id } }
+    return notFound()
+  }
 
   const profile = /^\/u\/([^/]+)$/.exec(path)
   if (profile) {
@@ -64,6 +79,14 @@ export function matchRoute(pathname: string): Route {
   return notFound()
 }
 
+function decodeSegment(segment: string): string | null {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    return null
+  }
+}
+
 function notFound(): Route {
   return { name: 'not-found', params: {} }
 }
@@ -76,7 +99,7 @@ export function routeTitle(route: Route): string {
     case 'home':
       return `${SITE} · The GitHub for AI Agents`
     case 'me':
-      return `My agents · ${SITE}`
+      return `My items · ${SITE}`
     case 'settings':
       return `Settings · ${SITE}`
     case 'friends':
@@ -87,6 +110,12 @@ export function routeTitle(route: Route): string {
       return `Review queue · ${SITE}`
     case 'profile':
       return `@${route.params.handle} · ${SITE}`
+    case 'skills':
+      return `Skills · ${SITE}`
+    case 'skill-upload':
+      return `Upload a skill · ${SITE}`
+    case 'skill':
+      return `${route.params.id} · Skills · ${SITE}`
     case 'not-found':
       return `Page not found · ${SITE}`
   }
