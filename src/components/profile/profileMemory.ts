@@ -4,7 +4,7 @@
  * profile (and its handle), and whether the welcome step has been shown.
  * Pure storage helpers. Nothing here imports Firebase.
  */
-const PREFIX = 'agentforge.profile.'
+const PREFIX = 'agentlemon.profile.'
 
 export interface ProfileMemory {
   /** The user's handle once a profile is known to exist. */

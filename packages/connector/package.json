@@ -1,8 +1,8 @@
 {
-  "name": "agentforge-connector",
+  "name": "agentlemon-connector",
   "version": "0.1.0",
   "private": true,
-  "description": "AgentForge remote connector: the public registry as a stateless MCP server on Cloudflare Workers",
+  "description": "AgentLemon remote connector: the public registry as a stateless MCP server on Cloudflare Workers",
   "type": "module",
   "license": "MIT",
   "scripts": {

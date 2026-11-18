@@ -62,11 +62,11 @@ test('unknown paths are not found', () => {
 test('every route has a title and the gated set is exact', () => {
   assert.equal(
     routeTitle(matchRoute('/')),
-    'AgentForge · The GitHub for AI Agents',
+    'AgentLemon · The GitHub for AI Agents',
   )
-  assert.equal(routeTitle(matchRoute('/u/ada')), '@ada · AgentForge')
+  assert.equal(routeTitle(matchRoute('/u/ada')), '@ada · AgentLemon')
   assert.match(routeTitle(matchRoute('/x')), /not found/)
-  assert.equal(routeTitle(matchRoute('/friends')), 'Friends · AgentForge')
+  assert.equal(routeTitle(matchRoute('/friends')), 'Friends · AgentLemon')
   assert.deepEqual([...SIGNED_IN_ROUTES].sort(), [
     'friends',
     'me',

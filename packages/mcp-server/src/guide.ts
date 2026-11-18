@@ -7,14 +7,14 @@
  * CONDENSED_GUIDE is written by hand and must keep the same rules.
  */
 
-export const GUIDE_URI = 'agentforge://guide'
+export const GUIDE_URI = 'agentlemon://guide'
 export const GUIDE_NAME = 'registry_guide'
 
 /** Sent as MCP initialization instructions, so every client gets it unasked. */
 export const CONDENSED_GUIDE = [
-  'AgentForge is a registry of third-party agent manifests (prompt, instructions, checks, required tools, input and output schemas). This server runs no model and no tools. You do the work.',
+  'AgentLemon is a registry of third-party agent manifests (prompt, instructions, checks, required tools, input and output schemas). This server runs no model and no tools. You do the work.',
   '',
-  'When to look: check this registry at the start of any specialized task (a recognizable domain and a structured result, such as a security review or a filing analysis) before starting the work yourself, even if the user did not mention AgentForge. Skip it for small talk, quick questions, and work already under way. If the user says "use AgentForge", always search.',
+  'When to look: check this registry at the start of any specialized task (a recognizable domain and a structured result, such as a security review or a filing analysis) before starting the work yourself, even if the user did not mention AgentLemon. Skip it for small talk, quick questions, and work already under way. If the user says "use AgentLemon", always search.',
   '',
   'If an agent is already loaded, check that it was built for the task in front of you before using it. A loaded agent stays loaded after the conversation is cleared, so an agent_<id> tool in your list is not a reason to use it. If it does not fit, search as if nothing were loaded.',
   '',
@@ -37,9 +37,9 @@ export const CONDENSED_GUIDE = [
  * to that without changing a single selection rule (README 7.6).
  */
 export const CONNECTOR_CONDENSED_GUIDE = [
-  'AgentForge is a registry of third-party agent manifests (prompt, instructions, checks, required tools, input and output schemas). This connector runs no model and no tools. You do the work.',
+  'AgentLemon is a registry of third-party agent manifests (prompt, instructions, checks, required tools, input and output schemas). This connector runs no model and no tools. You do the work.',
   '',
-  'When to look: check this registry at the start of any specialized task (a recognizable domain and a structured result, such as a security review or a filing analysis) before starting the work yourself, even if the user did not mention AgentForge. Skip it for small talk, quick questions, and work already under way. If the user says "use AgentForge", always search.',
+  'When to look: check this registry at the start of any specialized task (a recognizable domain and a structured result, such as a security review or a filing analysis) before starting the work yourself, even if the user did not mention AgentLemon. Skip it for small talk, quick questions, and work already under way. If the user says "use AgentLemon", always search.',
   '',
   'Never use the first plausible search result. To pick an agent:',
   '1. Search at least three ways with search_registry: the task domain, the action, and the expected output. Also browse the category with no query. Ranking is word overlap only, so position one is not a recommendation.',
@@ -58,7 +58,7 @@ export const CONNECTOR_CONDENSED_GUIDE = [
 
 /** Prepended to the full guide when the connector serves it. */
 export const CONNECTOR_GUIDE_PREFACE = [
-  '> You are connected through the AgentForge remote connector. Two things differ from the guide below, and no selection rule changes:',
+  '> You are connected through the AgentLemon remote connector. Two things differ from the guide below, and no selection rule changes:',
   '> - Where the guide says `switch_agent`, call `get_agent`. It returns the full blueprint, schemas, and required tools in one call.',
   '> - The connector keeps no state. There is no loaded agent and no `agent_<id>` tool, so the parts of section 3 about an already-loaded agent do not apply. Validate the user\'s input against the agent\'s input schema yourself.',
   '',
@@ -66,27 +66,27 @@ export const CONNECTOR_GUIDE_PREFACE = [
 
 // --- generated below this line by sync-guide.mjs ---
 export const REGISTRY_GUIDE: string = [
-  "# AgentForge registry guide for AI clients",
+  "# AgentLemon registry guide for AI clients",
   "",
-  "You are an AI model connected to the AgentForge registry. This guide tells you how the registry is laid out and how to pick an agent from it. Read it once per session before your first search.",
+  "You are an AI model connected to the AgentLemon registry. This guide tells you how the registry is laid out and how to pick an agent from it. Read it once per session before your first search.",
   "",
   "The one rule that matters most: **never take the first plausible search result.** Search more than once, shortlist, compare, then choose. Or choose nothing.",
   "",
   "## 0. When to look here",
   "",
-  "Check the registry at the start of a specialized task, before you begin the work on your own. Do this even when the user has not mentioned AgentForge. They connected this registry so that you would use it.",
+  "Check the registry at the start of a specialized task, before you begin the work on your own. Do this even when the user has not mentioned AgentLemon. They connected this registry so that you would use it.",
   "",
   "A task is specialized when it has a recognizable domain and a structured result: a security review, a filing analysis, a database tuning pass, a literature synthesis, a campaign brief. One round of searching costs little, and a purpose-built agent brings instructions and checks you would otherwise improvise.",
   "",
   "Do not search for small talk, a quick factual question, a one-line edit, or a task you are already partway through.",
   "",
-  "When the user says \"use AgentForge\" or asks you to find an agent, always search, and report what you found even if nothing fits.",
+  "When the user says \"use AgentLemon\" or asks you to find an agent, always search, and report what you found even if nothing fits.",
   "",
   "If you searched and nothing fit, say so in one line and carry on without an agent.",
   "",
   "## 1. What the registry is",
   "",
-  "AgentForge stores agent manifests. A manifest is a description of a workflow: a prompt, ordered instructions, checks to pass before answering, the tools the workflow expects, and JSON Schemas for its input and output.",
+  "AgentLemon stores agent manifests. A manifest is a description of a workflow: a prompt, ordered instructions, checks to pass before answering, the tools the workflow expects, and JSON Schemas for its input and output.",
   "",
   "The registry runs nothing. It never calls a model and never executes a tool. When you load an agent you receive its text, and you do the work yourself with the tools your client already has.",
   "",
@@ -106,7 +106,7 @@ export const REGISTRY_GUIDE: string = [
   "| --- | --- |",
   "| `id`, `version` | Identity. An agent is always addressed as `id@version`, and a version never changes after release |",
   "| `name`, `description` | What the agent claims to do. The description is the author's claim, so verify it against the schemas |",
-  "| `author.uid`, `author.name`, `author.handle`, `author.verified` | Who published it: stable uid, display name, and AgentForge username (3 to 30 lowercase letters, digits, or hyphens, starting and ending alphanumeric). `verified` marks a **verified author**: the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent. Tool results report it as `author.verified_author` |",
+  "| `author.uid`, `author.name`, `author.handle`, `author.verified` | Who published it: stable uid, display name, and AgentLemon username (3 to 30 lowercase letters, digits, or hyphens, starting and ending alphanumeric). `verified` marks a **verified author**: the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent. Tool results report it as `author.verified_author` |",
   "| `schema_version`, `visibility` | Schema version 2. The catalog contains only public, approved agents. Firestore-only `owner_uid`, `review_status`, and `shared_with` never appear in it |",
   "| `tags`, `framework` | Discovery and runtime fit, as above |",
   "| `tools_required` | Capabilities the workflow expects you to have. Each has a `name`, a `description`, and a `type`: `mcp_tool` (an MCP tool that must be connected in your client), `python_function` (a function you must be able to run or faithfully reproduce), or `rest_api` (an HTTP endpoint you must be able to reach). These are declarations. Loading the agent does not give you the tools |",

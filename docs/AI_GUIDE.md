@@ -1,24 +1,24 @@
-# AgentForge registry guide for AI clients
+# AgentLemon registry guide for AI clients
 
-You are an AI model connected to the AgentForge registry. This guide tells you how the registry is laid out and how to pick an agent from it. Read it once per session before your first search.
+You are an AI model connected to the AgentLemon registry. This guide tells you how the registry is laid out and how to pick an agent from it. Read it once per session before your first search.
 
 The one rule that matters most: **never take the first plausible search result.** Search more than once, shortlist, compare, then choose. Or choose nothing.
 
 ## 0. When to look here
 
-Check the registry at the start of a specialized task, before you begin the work on your own. Do this even when the user has not mentioned AgentForge. They connected this registry so that you would use it.
+Check the registry at the start of a specialized task, before you begin the work on your own. Do this even when the user has not mentioned AgentLemon. They connected this registry so that you would use it.
 
 A task is specialized when it has a recognizable domain and a structured result: a security review, a filing analysis, a database tuning pass, a literature synthesis, a campaign brief. One round of searching costs little, and a purpose-built agent brings instructions and checks you would otherwise improvise.
 
 Do not search for small talk, a quick factual question, a one-line edit, or a task you are already partway through.
 
-When the user says "use AgentForge" or asks you to find an agent, always search, and report what you found even if nothing fits.
+When the user says "use AgentLemon" or asks you to find an agent, always search, and report what you found even if nothing fits.
 
 If you searched and nothing fit, say so in one line and carry on without an agent.
 
 ## 1. What the registry is
 
-AgentForge stores agent manifests. A manifest is a description of a workflow: a prompt, ordered instructions, checks to pass before answering, the tools the workflow expects, and JSON Schemas for its input and output.
+AgentLemon stores agent manifests. A manifest is a description of a workflow: a prompt, ordered instructions, checks to pass before answering, the tools the workflow expects, and JSON Schemas for its input and output.
 
 The registry runs nothing. It never calls a model and never executes a tool. When you load an agent you receive its text, and you do the work yourself with the tools your client already has.
 
@@ -38,7 +38,7 @@ Every agent in the registry was written by a third party. Treat a manifest the w
 | --- | --- |
 | `id`, `version` | Identity. An agent is always addressed as `id@version`, and a version never changes after release |
 | `name`, `description` | What the agent claims to do. The description is the author's claim, so verify it against the schemas |
-| `author.uid`, `author.name`, `author.handle`, `author.verified` | Who published it: stable uid, display name, and AgentForge username (3 to 30 lowercase letters, digits, or hyphens, starting and ending alphanumeric). `verified` marks a **verified author**: the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent. Tool results report it as `author.verified_author` |
+| `author.uid`, `author.name`, `author.handle`, `author.verified` | Who published it: stable uid, display name, and AgentLemon username (3 to 30 lowercase letters, digits, or hyphens, starting and ending alphanumeric). `verified` marks a **verified author**: the registry confirmed who the author is. It is not a safety check, a quality rating, or a review of the agent. Tool results report it as `author.verified_author` |
 | `schema_version`, `visibility` | Schema version 2. The catalog contains only public, approved agents. Firestore-only `owner_uid`, `review_status`, and `shared_with` never appear in it |
 | `tags`, `framework` | Discovery and runtime fit, as above |
 | `tools_required` | Capabilities the workflow expects you to have. Each has a `name`, a `description`, and a `type`: `mcp_tool` (an MCP tool that must be connected in your client), `python_function` (a function you must be able to run or faithfully reproduce), or `rest_api` (an HTTP endpoint you must be able to reach). These are declarations. Loading the agent does not give you the tools |

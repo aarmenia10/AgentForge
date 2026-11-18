@@ -23,7 +23,7 @@ import { createProfileStore } from '../src/services/profileStore'
 
 test('profiles, handle claims, and mutual relationships enforce ownership and atomicity', async (t) => {
   const env = await initializeTestEnvironment({
-    projectId: 'demo-agentforge',
+    projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
   })
   await env.clearFirestore()
@@ -86,6 +86,7 @@ test('profiles, handle claims, and mutual relationships enforce ownership and at
         for (const handle of [
           'alice-user',
           'agentforge',
+          'agentlemon',
           'admin',
           'support',
           'UPPER',

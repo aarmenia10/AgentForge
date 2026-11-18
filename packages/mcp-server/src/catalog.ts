@@ -7,8 +7,7 @@ import {
 import { resolveAgent, versionUrl } from './versions'
 import type { AgentManifest } from '../../../src/types/agent'
 
-export const DEFAULT_CATALOG_URL =
-  'https://agentforge-b10db.web.app/catalog.json'
+export const DEFAULT_CATALOG_URL = 'https://agentlemon.web.app/catalog.json'
 
 async function readCatalog(source: string | URL): Promise<AgentManifest[]> {
   let json: string

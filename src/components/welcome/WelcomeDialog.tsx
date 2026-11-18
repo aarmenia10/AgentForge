@@ -83,7 +83,7 @@ export function WelcomeDialog({
         <header className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-7 sm:pt-7">
           <div className="min-w-0">
             <h2 id={titleId} className="text-2xl font-semibold tracking-tight">
-              Welcome to AgentForge
+              Welcome to AgentLemon
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
               Two things worth doing now. Both are optional, and you can find
@@ -103,7 +103,7 @@ export function WelcomeDialog({
         <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-5 py-6 sm:px-7">
           <section aria-labelledby={`${titleId}-1`}>
             <StepHeading id={`${titleId}-1`} n={1}>
-              Connect AgentForge to your AI
+              Connect AgentLemon to your AI
             </StepHeading>
             <ConnectorCard variant="welcome" />
           </section>

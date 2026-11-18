@@ -1,8 +1,8 @@
 /**
- * Canonical AgentForge schema contract.
+ * Canonical AgentLemon schema contract.
  *
  * This file is the single source of truth for the web app, the Firestore
- * `agents` collection, and `agentforge-registry`. Field names are snake_case
+ * `agents` collection, and `agentlemon-registry`. Field names are snake_case
  * where the manifest is serialized (JSON on disk, Firestore documents, MCP
  * payloads), so do not rename them without a schema version bump.
  */
@@ -18,7 +18,7 @@ export type JsonSchema = Record<string, any>
 export interface AgentAuthor {
   uid: string
   name: string
-  /** AgentForge username: 3 to 30 lowercase letters, digits, or hyphens; alphanumeric ends. */
+  /** AgentLemon username: 3 to 30 lowercase letters, digits, or hyphens; alphanumeric ends. */
   handle: string
   /** Verified author: the registry confirmed identity, not safety or quality. */
   verified: boolean

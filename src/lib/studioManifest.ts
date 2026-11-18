@@ -567,7 +567,7 @@ export interface StoredDraft {
 }
 
 export function draftStorageKey(editId: string | null): string {
-  return editId ? `agentforge.studio.edit.${editId}` : 'agentforge.studio.new'
+  return editId ? `agentlemon.studio.edit.${editId}` : 'agentlemon.studio.new'
 }
 
 export function readStoredDraft(key: string): StoredDraft | null {

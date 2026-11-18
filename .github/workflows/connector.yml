@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      CONNECTOR_ORIGIN: https://agentforge-connector.lesslimit.workers.dev
+      CONNECTOR_ORIGIN: https://agentlemon-connector.lesslimit.workers.dev
     steps:
       - uses: actions/checkout@v4
 

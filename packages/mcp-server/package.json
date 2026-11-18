@@ -1,14 +1,14 @@
 {
-  "name": "agentforge-registry",
-  "version": "0.2.2",
-  "description": "Local MCP registry: discover and load AgentForge prompt blueprints",
+  "name": "agentlemon-registry",
+  "version": "0.3.0",
+  "description": "Local MCP registry: discover and load AgentLemon prompt blueprints",
   "type": "module",
   "license": "MIT",
   "engines": {
     "node": ">=22"
   },
   "bin": {
-    "agentforge-registry": "dist/cli.js"
+    "agentlemon-registry": "dist/cli.js"
   },
   "files": [
     "dist",

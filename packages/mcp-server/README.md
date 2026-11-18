@@ -1,20 +1,20 @@
-# agentforge-registry
+# agentlemon-registry
 
-Version 0.2.2. Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
+Version 0.3.0. Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
 
 ```sh
-npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.2.tgz --agent postgres-index-tuner@1.0.0
+npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.0.tgz --agent postgres-index-tuner@1.0.0
 ```
 
-The server is distributed as a tarball on the AgentForge site, not through the npm
+The server is distributed as a tarball on the AgentLemon site, not through the npm
 registry. To cut a release, bump the version here and in `src/lib/mcpConfig.ts`, run
 `npm run release:mcp` from the repository root, and commit the new file in `public/mcp/`.
 Never delete an old tarball: installed configs point at it.
 
-`--catalog <path-or-https-URL>` overrides `AGENTFORGE_CATALOG_URL`. Otherwise the server
-fetches `https://agentforge-b10db.web.app/catalog.json` with a 10-second timeout and
+`--catalog <path-or-https-URL>` overrides `AGENTLEMON_CATALOG_URL`. Otherwise the server
+fetches `https://agentlemon.web.app/catalog.json` with a 10-second timeout and
 falls back to its bundled snapshot on network, HTTP, parsing, or validation failure.
-The 0.2.x server validates schema version 2 manifests: author is `{ uid, name, handle, verified }`, with `visibility` and `schema_version: 2`. The catalog contains only public, approved agents and no Firestore storage metadata. Search and comparison results keep author as `{ name, verified_author }`. "Verified author" means identity confirmed, not safety reviewed.
+The 0.2.x and 0.3.x servers validates schema version 2 manifests: author is `{ uid, name, handle, verified }`, with `visibility` and `schema_version: 2`. The catalog contains only public, approved agents and no Firestore storage metadata. Search and comparison results keep author as `{ name, verified_author }`. "Verified author" means identity confirmed, not safety reviewed.
 
 The default never reads a catalog from the working directory. An explicit source
 fails closed on any error, even when it names the default URL. An unavailable pinned
@@ -23,7 +23,7 @@ version always fails closed; it never silently substitutes another version. When
 For OpenAI Codex, install the pinned agent using the documented stdio command:
 
 ```sh
-codex mcp add agentforge-postgres-index-tuner -- npx -y https://agentforge-b10db.web.app/mcp/agentforge-registry-0.2.2.tgz --agent postgres-index-tuner@1.0.0
+codex mcp add agentlemon-postgres-index-tuner -- npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.0.tgz --agent postgres-index-tuner@1.0.0
 ```
 
 See [OpenAI's MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
@@ -36,7 +36,7 @@ five candidates. Neither loads anything.
 
 The server teaches a connected AI to compare before choosing. A condensed guide is
 sent as the initialization instructions, and the full text is served as the
-`registry_guide` resource (`agentforge://guide`) and prompt. The canonical text is
+`registry_guide` resource (`agentlemon://guide`) and prompt. The canonical text is
 `docs/AI_GUIDE.md`; after editing it run `node packages/mcp-server/sync-guide.mjs`.
 
 `switch_agent({ agent_id })` accepts an id or pinned id@version and returns its full

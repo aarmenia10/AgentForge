@@ -28,7 +28,7 @@ console.log((await home.text()).split('\n').filter(Boolean).join(' | '))
 const client = new Client({ name: 'connector-smoke', version: '1.0.0' })
 await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`)))
 check(
-  client.getServerVersion()?.name === 'agentforge-connector',
+  client.getServerVersion()?.name === 'agentlemon-connector',
   'MCP initialize',
 )
 check(
@@ -74,7 +74,7 @@ const missing = await client.callTool({
 })
 check(missing.isError === true, 'unknown agent fails closed')
 
-const guide = await client.readResource({ uri: 'agentforge://guide' })
+const guide = await client.readResource({ uri: 'agentlemon://guide' })
 check(guide.contents[0].text.length > 5000, 'registry_guide resource')
 await client.close()
 console.log(`\nConnector is live: ${base}/mcp`)
