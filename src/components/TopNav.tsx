@@ -28,7 +28,7 @@ export function TopNav({ search }: TopNavProps) {
             <Anvil className="size-5" />
           </span>
           <span className="hidden text-lg font-semibold tracking-tight sm:block">
-            Agent<span className="text-teal-500">Forge</span>
+            Agent<span className="text-teal-500">Lemon</span>
           </span>
         </Link>
 
