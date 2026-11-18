@@ -1,3 +1,6 @@
+import { skill } from './skillFixture'
+import { summarizeSkill } from '../scripts/skillExport'
+import { hostedSkillReader } from '../packages/mcp-server/src/skills'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -46,7 +49,14 @@ test('connector speaks MCP statelessly: tools, guide, and get_agent', async () =
     const tools = (await client.listTools()).tools
     assert.deepEqual(
       tools.map((tool) => tool.name),
-      ['search_registry', 'compare_agents', 'get_agent'],
+      [
+        'search_registry',
+        'compare_agents',
+        'search_skills',
+        'get_skill',
+        'get_skill_file',
+        'get_agent',
+      ],
     )
     // Stateless by decision: nothing that implies a loaded agent.
     assert.ok(!tools.some((tool) => tool.name === 'switch_agent'))
@@ -284,4 +294,106 @@ test('connector stays free and stateless by construction', async () => {
     /durable_objects|kv_namespaces|d1_databases|r2_buckets|queues|\[\[|usage_model|limits/,
   )
   assert.match(settings, /^name = "agentlemon-connector"$/m)
+})
+
+test('both MCP clients discover, read and withdraw the same pinned skills', async () => {
+  let now = 0
+  let available = true
+  let invalidVersion = false
+  const current = skill({ version: '2.0.0' }),
+    old = skill()
+  const ref = 'skill:pdf-forms@1.0.0'
+  const urls: string[] = []
+  const fetchFile = async (url: string) => {
+    urls.push(url)
+    if (url === CATALOG_URL) return liveCatalog()
+    if (url === 'https://agentlemon.web.app/skills.json')
+      return Response.json({
+        skill_schema_version: 1,
+        skills: available ? [summarizeSkill(current)] : [],
+      })
+    if (invalidVersion) return new Response('<html>Missing</html>')
+    if (url === 'https://agentlemon.web.app/skills/pdf-forms/1.0.0.json')
+      return Response.json(old)
+    if (url === 'https://agentlemon.web.app/skills/pdf-forms/2.0.0.json')
+      return Response.json(current)
+    return new Response(null, { status: 404 })
+  }
+  const connector = await connect(
+    createConnector({ fetchCatalog: fetchFile, now: () => now }),
+  )
+  const server = createRegistryServer(
+    [...SEED_AGENTS],
+    undefined,
+    undefined,
+    undefined,
+    hostedSkillReader(CATALOG_URL, fetchFile, () => now),
+  )
+  const local = new Client({ name: 'local-skill-test', version: '1' })
+  const [c, s] = InMemoryTransport.createLinkedPair()
+  await server.connect(s)
+  await local.connect(c)
+  async function both(name: string, args: Record<string, unknown>) {
+    const [a, b] = await Promise.all(
+      [local, connector].map((client) =>
+        client.callTool({ name, arguments: args }),
+      ),
+    )
+    assert.deepEqual(a, b)
+    return a
+  }
+  try {
+    const defs = async (client: Client) =>
+      (await client.listTools()).tools.filter((t) => t.name.includes('skill'))
+    assert.deepEqual(await defs(local), await defs(connector))
+    const result = parse(
+      await both('search_skills', {
+        query: 'forms',
+        tag: 'documents',
+        limit: 1,
+      }),
+    )
+    assert.equal(
+      (result.candidates as { ref: string }[])[0].ref,
+      'skill:pdf-forms@2.0.0',
+    )
+    assert.ok(!JSON.stringify(result).includes('content'))
+    const loaded = parse(
+      await both('get_skill', { skill_id: old.id, version: old.version }),
+    )
+    assert.equal(loaded.ref, ref)
+    assert.equal(loaded.instructions, old.files[0].content)
+    assert.deepEqual(loaded.files, [summarizeSkill(old).files[1]])
+    assert.match(String(loaded.notice), /third-party text/)
+    const file = parse(
+      await both('get_skill_file', { ref, path: old.files[1].path }),
+    )
+    assert.equal(file.content, old.files[1].content)
+    assert.equal(file.notice, loaded.notice)
+    assert.equal(urls.filter((url) => url.endsWith('/skills.json')).length, 2)
+    for (const [name, args] of [
+      ['get_skill', { skill_id: 'pdf-forms@1.0.0', version: '2.0.0' }],
+      ['get_skill', { skill_id: 'pdf-forms@3.0.0' }],
+      [
+        'get_skill_file',
+        { ref: ref.replace('skill:', 'agent:'), path: 'SKILL.md' },
+      ],
+      ['get_skill_file', { ref, path: '../SKILL.md' }],
+      ['get_skill_file', { ref, path: 'missing.md' }],
+    ] as const)
+      assert.equal((await both(name, args)).isError, true)
+    invalidVersion = true
+    assert.equal((await both('get_skill', { skill_id: old.id })).isError, true)
+    invalidVersion = false
+    available = false
+    now += 300001
+    const before = urls.filter((url) => url.includes('/skills/')).length
+    assert.equal(
+      (await both('get_skill_file', { ref, path: 'SKILL.md' })).isError,
+      true,
+    )
+    assert.equal(urls.filter((url) => url.includes('/skills/')).length, before)
+  } finally {
+    await Promise.all([connector.close(), local.close(), server.close()])
+  }
 })

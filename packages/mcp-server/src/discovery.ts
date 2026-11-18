@@ -95,24 +95,14 @@ export interface SearchOptions {
   loadTool?: string
 }
 
-export function searchCatalog(catalog: readonly AgentManifest[], options: SearchOptions) {
-  const {
-    query = '',
-    category,
-    framework,
-    limit = DEFAULT_SEARCH_LIMIT,
-    loadTool = 'switch_agent',
-  } = options
-  const terms = queryTerms(query)
-  const pool = catalog.filter(
-    (agent) =>
-      (!category || agent.tags.includes(category.toLowerCase())) &&
-      (!framework || agent.framework === framework.toLowerCase()),
-  )
-
-  const scored = pool
+export function rankCandidates<T extends { id: string; stats: { updated_at: string } }>(
+  pool: readonly T[],
+  terms: string[],
+  fieldsFor: (entry: T) => [string, number][],
+) {
+  return pool
     .map((agent) => {
-      const fields = weightedFields(agent)
+      const fields = fieldsFor(agent)
       const matched: string[] = []
       let score = 0
       for (const term of terms) {
@@ -132,6 +122,24 @@ export function searchCatalog(catalog: readonly AgentManifest[], options: Search
         Date.parse(b.agent.stats.updated_at) - Date.parse(a.agent.stats.updated_at) ||
         a.agent.id.localeCompare(b.agent.id),
     )
+}
+
+export function searchCatalog(catalog: readonly AgentManifest[], options: SearchOptions) {
+  const {
+    query = '',
+    category,
+    framework,
+    limit = DEFAULT_SEARCH_LIMIT,
+    loadTool = 'switch_agent',
+  } = options
+  const terms = queryTerms(query)
+  const pool = catalog.filter(
+    (agent) =>
+      (!category || agent.tags.includes(category.toLowerCase())) &&
+      (!framework || agent.framework === framework.toLowerCase()),
+  )
+
+  const scored = rankCandidates(pool, terms, weightedFields)
 
   const candidates = scored.slice(0, limit).map(({ agent, score, matched }, index) => ({
     rank: index + 1,

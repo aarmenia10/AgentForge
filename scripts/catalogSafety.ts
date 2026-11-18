@@ -1,10 +1,12 @@
 // Node-only exporter boundary. Never import this module from src/.
 import { createHash } from 'node:crypto'
-import { lintManifest } from '../src/lib/safetyLinter'
+import type { SkillManifest } from '../src/types/skill'
+import { lintManifest, lintSkill } from '../src/lib/safetyLinter'
 import type { AgentManifest } from '../src/types/agent'
 import type { LintFinding } from '../src/lib/safetyLinter'
 
 export interface LinterAllowance {
+  kind?: 'skill' | 'agent'
   agent_id: string
   version: string
   rule: string
@@ -18,7 +20,10 @@ export function parseAllowlist(value: unknown): LinterAllowance[] {
       !entry ||
       typeof entry !== 'object' ||
       Object.keys(entry).sort().join(',') !==
-        'agent_id,path,rule,sha256,version' ||
+        (entry.kind === undefined
+          ? 'agent_id,path,rule,sha256,version'
+          : 'agent_id,kind,path,rule,sha256,version') ||
+      (entry.kind !== undefined && !['agent', 'skill'].includes(entry.kind)) ||
       !['agent_id', 'version', 'rule', 'path', 'sha256'].every(
         (k) => typeof entry[k] === 'string',
       ) ||
@@ -29,7 +34,7 @@ export function parseAllowlist(value: unknown): LinterAllowance[] {
   return value
 }
 export function fieldText(
-  manifest: AgentManifest,
+  manifest: AgentManifest | SkillManifest,
   path: string,
 ): string | null {
   const tokens: string[] = []
@@ -43,6 +48,13 @@ export function fieldText(
     end = match.index! + match[0].length
   }
   if (end !== path.length) return null
+  if (
+    'files' in manifest &&
+    tokens[0] === 'files' &&
+    tokens[2] === 'content' &&
+    tokens.length === 3
+  )
+    return manifest.files.find((f) => f.path === tokens[1])?.content ?? null
   let value: unknown = manifest
   for (const token of tokens) {
     if (!value || typeof value !== 'object' || !Object.hasOwn(value, token))
@@ -57,15 +69,19 @@ export function fieldText(
       : null
 }
 export function unallowedFindings(
-  manifest: AgentManifest,
+  manifest: AgentManifest | SkillManifest,
   allow: readonly LinterAllowance[],
 ): LintFinding[] {
-  return lintManifest(manifest).findings.filter((f) => {
+  const skill = 'skill_schema_version' in manifest
+  const result = skill ? lintSkill(manifest) : lintManifest(manifest)
+  return result.findings.filter((f) => {
+    if (f.rule === 'SK-01' || !allow.length) return true
     const field = fieldText(manifest, f.path)
     if (field === null) return true
     const hash = createHash('sha256').update(field, 'utf8').digest('hex')
     return !allow.some(
       (a) =>
+        (a.kind ?? 'agent') === (skill ? 'skill' : 'agent') &&
         a.agent_id === manifest.id &&
         a.version === manifest.version &&
         a.rule === f.rule &&

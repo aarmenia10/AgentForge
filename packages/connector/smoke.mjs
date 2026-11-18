@@ -40,7 +40,8 @@ check(
 
 const tools = (await client.listTools()).tools.map((tool) => tool.name)
 check(
-  tools.join(',') === 'search_registry,compare_agents,get_agent',
+  tools.join(',') ===
+    'search_registry,compare_agents,search_skills,get_skill,get_skill_file,get_agent',
   `tools: ${tools.join(', ')}`,
 )
 

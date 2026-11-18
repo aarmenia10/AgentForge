@@ -4,6 +4,7 @@ import {
   validateCatalog,
   validateManifest,
 } from '../../../src/lib/validateManifest'
+import { createSkillReader, hostedSkillReader } from './skills'
 import { resolveAgent, versionUrl } from './versions'
 import type { AgentManifest } from '../../../src/types/agent'
 
@@ -65,4 +66,16 @@ export function agentResolver(
         )
       }),
     )
+}
+
+export function localSkillReader(source = DEFAULT_CATALOG_URL) {
+  if (/^https?:\/\//.test(source)) return hostedSkillReader(source)
+  return createSkillReader(async (path) =>
+    JSON.parse(
+      await readFile(
+        resolve(dirname(resolve(source)), decodeURIComponent(path)),
+        'utf8',
+      ),
+    ),
+  )
 }

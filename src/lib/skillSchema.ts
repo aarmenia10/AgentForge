@@ -222,7 +222,10 @@ export function decodeSkillFile(
     }
   let content: string
   try {
-    content = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+    content = new TextDecoder('utf-8', {
+      fatal: true,
+      ignoreBOM: false,
+    }).decode(bytes)
   } catch {
     return { ok: false, reason: 'File is not UTF-8 text' }
   }
@@ -632,6 +635,10 @@ export function parsePublicSkillIndex(value: unknown): SkillIndex {
       seen.add(file.path.toLowerCase())
       if (file.kind === 'script')
         throw new Error(`Skill ${entry.id}: public skills cannot list scripts`)
+      // The index omits content. Check everything the path tells us here,
+      // then check the actual content (including shebangs) in the version reader.
+      if (classifySkillFile(file.path, '') !== file.kind)
+        throw new Error(`Skill ${entry.id}: file kind mismatch at ${file.path}`)
       if (file.bytes > SKILL_MAX_FILE_BYTES)
         throw new Error(`Skill ${entry.id}: ${file.path} is too large`)
       total += file.bytes

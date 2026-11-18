@@ -85,7 +85,7 @@ jobs:
       - name: Read deployed export state
         if: steps.creds.outputs.present == 'true' && github.event_name == 'schedule'
         run: |
-          status=$(curl --silent --show-error --retry 3 -w '%{http_code}' "https://$FIREBASE_PROJECT.web.app/export-state.json?run=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -o "$RUNNER_TEMP/live-export-state.json")
+          status=$(curl --silent --show-error --retry 3 -w '%{http_code}' "https://agentlemon.web.app/export-state.json?run=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -o "$RUNNER_TEMP/live-export-state.json")
           case "$status" in
             200|404) ;;
             *) echo "::error::Hosting returned HTTP $status"; exit 1 ;;
@@ -96,8 +96,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/catalog-checkpoint.gpg
-          key: export-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: export-v1-${{ github.sha }}-
+          key: export-v2-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: export-v2-${{ github.sha }}-
 
       # Fork PRs can restore main's Actions caches. Keep withdrawn manifests
       # out of those readers' reach, even in an older cache. Key rotation or
@@ -110,7 +110,7 @@ jobs:
             mv checkpoint.tmp catalog-checkpoint.json
           fi
 
-      - name: Rebuild catalog and site from approved Firestore agents
+      - name: Rebuild catalog and site from approved Firestore agents and skills
         if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore'
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
@@ -168,7 +168,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/catalog-checkpoint.gpg
-          key: export-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: export-v2-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Remove credentials
         if: always()

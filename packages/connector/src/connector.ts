@@ -13,6 +13,7 @@ import { parsePublicCatalog } from '../../../src/lib/manifestSchema'
 import type { AgentManifest } from '../../../src/types/agent'
 import bundledCatalog from '../../../public/catalog.json'
 import { createConnectorServer } from './server'
+import { hostedSkillReader } from '../../mcp-server/src/skills'
 import { resolveAgent, versionUrl } from '../../mcp-server/src/versions'
 
 export const CATALOG_URL = 'https://agentlemon.web.app/catalog.json'
@@ -43,6 +44,7 @@ export function createConnector(options: ConnectorOptions = {}) {
       fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }))
   const now = options.now ?? Date.now
   // The snapshot bundled at deploy time is the fallback of last resort.
+  const readSkill = hostedSkillReader(CATALOG_URL, fetchCatalog, now)
   const snapshot = parsePublicCatalog(bundledCatalog)
   let cached:
     | { agents: AgentManifest[]; at: number; source: 'live' | 'snapshot' }
@@ -98,15 +100,18 @@ export function createConnector(options: ConnectorOptions = {}) {
           ),
         )
       const { agents } = await loadCatalog()
-      const server = createConnectorServer(agents, (selector) =>
-        resolveAgent(agents, selector, async (id, version) => {
-          const response = await fetchCatalog(
-            versionUrl(CATALOG_URL, id, version),
-          )
-          if (!response.ok)
-            throw new Error(`Version request failed: HTTP ${response.status}`)
-          return response.json()
-        }),
+      const server = createConnectorServer(
+        agents,
+        (selector) =>
+          resolveAgent(agents, selector, async (id, version) => {
+            const response = await fetchCatalog(
+              versionUrl(CATALOG_URL, id, version),
+            )
+            if (!response.ok)
+              throw new Error(`Version request failed: HTTP ${response.status}`)
+            return response.json()
+          }),
+        readSkill,
       )
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,

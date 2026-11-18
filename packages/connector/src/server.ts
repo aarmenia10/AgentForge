@@ -3,6 +3,7 @@
  * built per request and holds nothing afterwards, so there is no loaded
  * agent, no per-agent tool, and no list-changed notification.
  */
+import { skillTools, hostedSkillReader } from '../../mcp-server/src/skills'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import {
   CallToolRequestSchema,
@@ -48,6 +49,7 @@ export function createConnectorServer(
   catalog: readonly AgentManifest[],
   resolve: (selector: string) => Promise<AgentManifest> = async (value) =>
     selectAgent(catalog, value),
+  readSkill = hostedSkillReader(),
 ) {
   const server = new Server(
     { name: CONNECTOR_NAME, version: CONNECTOR_VERSION },
@@ -60,6 +62,7 @@ export function createConnectorServer(
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
       ...discoveryTools(LOAD_TOOL),
+      ...skillTools,
       {
         name: LOAD_TOOL,
         description:
@@ -90,6 +93,8 @@ export function createConnectorServer(
       const { name, arguments: args = {} } = request.params
       const discovery = runDiscoveryTool(catalog, name, args, LOAD_TOOL)
       if (discovery) return discovery
+      const skill = await readSkill(name, args)
+      if (skill) return skill
       if (name === LOAD_TOOL) {
         const { agent_id, version } = getArgs.parse(args)
         if (

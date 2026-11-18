@@ -14,6 +14,8 @@ import {
   manifestSchema,
 } from '../src/lib/validateManifest'
 import type { AgentManifest, AgentRecord } from '../src/types/agent'
+import { emptySkillExport, type SkillExport } from './skillExport'
+import type { SkillManifest } from '../src/types/skill'
 import { parseAllowlist, unallowedFindings } from './catalogSafety'
 import type { LinterAllowance } from './catalogSafety'
 
@@ -208,7 +210,7 @@ export function buildVersionFiles(
 
 export async function writeVersionFiles(
   directory: string,
-  files: ReadonlyMap<string, AgentManifest>,
+  files: ReadonlyMap<string, AgentManifest | SkillManifest>,
 ) {
   // Regenerate only the dedicated output directory so removed agents and
   // blocked snapshots cannot survive from an earlier build.
@@ -221,17 +223,43 @@ export async function writeVersionFiles(
   }
 }
 
-export interface PublicExport {
+export async function writeSkillFiles(publicDir: string, output: SkillExport) {
+  await writeVersionFiles(
+    resolve(publicDir, 'skills'),
+    new Map(
+      [...output.skillFiles].map(([path, skill]) => [
+        decodeURIComponent(path.slice('skills/'.length)),
+        skill,
+      ]),
+    ),
+  )
+  await writeFile(
+    resolve(publicDir, 'skills.json'),
+    JSON.stringify(output.skillIndex, null, 2) + '\n',
+  )
+}
+
+export interface PublicExport extends SkillExport {
   catalog: AgentManifest[]
   files: Map<string, AgentManifest>
 }
 
-export function exportDigest({ catalog, files }: PublicExport) {
+export function exportDigest({
+  catalog,
+  files,
+  skillIndex,
+  skillFiles,
+}: PublicExport) {
   const digest = createHash('sha256').update(JSON.stringify(catalog))
   for (const [path, manifest] of [...files].sort(([a], [b]) =>
     a.localeCompare(b, 'en'),
   ))
     digest.update(path).update(JSON.stringify(manifest))
+  digest.update('skills.json').update(JSON.stringify(skillIndex))
+  for (const [path, skill] of [...skillFiles].sort(([a], [b]) =>
+    a.localeCompare(b, 'en'),
+  ))
+    digest.update(path).update(JSON.stringify(skill))
   return digest.digest('hex')
 }
 
@@ -310,12 +338,14 @@ export async function exportCatalog() {
     return result
   })
   const output = result ?? {
+    ...emptySkillExport(),
     catalog: seeds,
     files: buildVersionFiles(seeds, [], SEED_AGENTS, allow, log),
   }
   const publicDir = fileURLToPath(new URL('../public/', import.meta.url))
   await mkdir(publicDir, { recursive: true })
   await writeVersionFiles(resolve(publicDir, 'agents'), output.files)
+  await writeSkillFiles(publicDir, output)
   await writeFile(
     resolve(publicDir, 'export-state.json'),
     JSON.stringify({ sha256: exportDigest(output) }) + '\n',

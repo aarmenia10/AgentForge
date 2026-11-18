@@ -63,6 +63,10 @@ service cloud.firestore {
     function editPath(agentId) { return /databases/$(database)/documents/agent_edits/$(agentId); }
     function versionPath(data) { return /databases/$(database)/documents/agent_versions/$(data.id + '@' + data.version); }
     function snapshotted(data) { return getAfter(versionPath(data)).data == data; }
+    function skillPath(skillId) { return /databases/$(database)/documents/skills/$(skillId); }
+    function skillEditPath(skillId) { return /databases/$(database)/documents/skill_edits/$(skillId); }
+    function skillVersionPath(data) { return /databases/$(database)/documents/skill_versions/$(data.id + '@' + data.version); }
+    function skillSnapshotted(data) { return getAfter(skillVersionPath(data)).data == data; }
     function exportMarked(source, id) {
       let path = /databases/$(database)/documents/export_sources/$(source)/changes/$(id);
       return existsAfter(path) && (!exists(path) || getAfter(path).data.revision != get(path).data.revision);
@@ -76,7 +80,13 @@ service cloud.firestore {
               && (getAfter(agentPath(id)).data != get(agentPath(id)).data || isAdmin()))
           || (source == 'agent_versions' && isAdmin()
               && !exists(/databases/$(database)/documents/agent_versions/$(id))
-              && existsAfter(/databases/$(database)/documents/agent_versions/$(id))));
+              && existsAfter(/databases/$(database)/documents/agent_versions/$(id)))
+          || (source == 'skills' && exists(skillPath(id))
+              && (liveApproved(get(skillPath(id)).data) || liveApproved(getAfter(skillPath(id)).data))
+              && (getAfter(skillPath(id)).data != get(skillPath(id)).data || isAdmin()))
+          || (source == 'skill_versions' && isAdmin()
+              && !exists(/databases/$(database)/documents/skill_versions/$(id))
+              && existsAfter(/databases/$(database)/documents/skill_versions/$(id))));
       }
       allow create, update: if validChange();
     }
@@ -259,6 +269,140 @@ service cloud.firestore {
         allow delete: if signedIn() && request.auth.uid == userId
           && readableAgent(get(agentPath(agentId)).data) && validStarDelta(agentId);
       }
+    }
+    match /skill_versions/{versionId} {
+      allow read, update, delete: if false;
+      allow create: if isAdmin()
+        && exportMarked('skill_versions', versionId)
+        && validSkill(request.resource.data, request.resource.data.id)
+        && versionId == request.resource.data.id + '@' + request.resource.data.version
+        && liveApproved(request.resource.data)
+        && mayApprove(request.resource.data.owner_uid)
+        && getAfter(skillPath(request.resource.data.id)).data == request.resource.data;
+    }
+    function boundedSkills() { return bounded() && request.query.limit <= 20; }
+    // Rules have no loops. Pad the last group with valid entries so a
+    // ten-file check can use constant indexes and a single list comparison.
+    // A missing kind or a non-map element fails at the field access.
+    function tenSkillFiles(files, i, kinds) {
+      return [files[i].kind, files[i + 1].kind, files[i + 2].kind, files[i + 3].kind,
+              files[i + 4].kind, files[i + 5].kind, files[i + 6].kind, files[i + 7].kind,
+              files[i + 8].kind, files[i + 9].kind].hasOnly(kinds);
+    }
+    function validSkillFiles(files, shared) {
+      let n = files.size();
+      let fill = {'kind': 'reference'};
+      let padded = files.concat([fill, fill, fill, fill, fill, fill, fill, fill, fill]);
+      let kinds = shared ? ['instructions', 'reference'] : ['instructions', 'reference', 'script'];
+      return n >= 1 && n <= 50
+        && tenSkillFiles(padded, 0, kinds)
+        && (n <= 10 || tenSkillFiles(padded, 10, kinds))
+        && (n <= 20 || tenSkillFiles(padded, 20, kinds))
+        && (n <= 30 || tenSkillFiles(padded, 30, kinds))
+        && (n <= 40 || tenSkillFiles(padded, 40, kinds));
+    }
+    function validSkill(data, skillId) {
+      return data.keys().hasOnly(['skill_schema_version', 'visibility', 'id', 'name', 'version', 'description', 'author', 'tags', 'files', 'stats', 'owner_uid', 'review_status'])
+        && data.skill_schema_version == 1
+        && data.id == skillId && skillId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+        && data.visibility in ['public', 'friends', 'private']
+        && data.review_status in ['pending', 'approved', 'rejected']
+        && data.owner_uid is string && data.owner_uid.size() > 0
+        && data.name is string && data.name.size() > 0
+        && data.version is string && data.version.size() > 0
+        && data.description is string && data.description.size() > 0
+        && data.author is map
+        && data.author.keys().hasOnly(['uid', 'name', 'handle', 'verified'])
+        && data.author.uid == data.owner_uid
+        && data.author.name is string && data.author.name.size() > 0
+        && data.author.handle is string && data.author.handle.matches('^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$')
+        && data.author.verified is bool
+        && data.tags is list && data.tags.size() > 0
+        && data.stats is map && data.stats.keys().hasOnly(['updated_at']) && data.stats.updated_at is string
+        && data.files is list && validSkillFiles(data.files, data.visibility != 'private');
+    }
+    function ownerSkillEdit(skillId) {
+      let before = resource.data;
+      let after = request.resource.data;
+      return verifiedEmail() && before.owner_uid == request.auth.uid
+        && (!liveApproved(before) || (after.visibility != 'public'
+          && after.diff(before).affectedKeys().hasOnly(['visibility', 'review_status', 'stats'])))
+        && !existsAfter(skillEditPath(skillId))
+        && after.owner_uid == before.owner_uid
+        && after.author.verified == before.author.verified
+        && after.review_status == 'pending'
+        && (ownIdentity(after) || (after.author == before.author
+          && after.diff(before).affectedKeys().hasOnly(['visibility', 'review_status'])))
+        && validSkill(after, skillId);
+    }
+    function adminSkillEdit(skillId) {
+      // Approval also validates file kinds on the record entering the export.
+      return isAdmin() && resource.data.visibility == 'public'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['review_status', 'author'])
+        && request.resource.data.author.diff(resource.data.author).affectedKeys().hasOnly(['verified'])
+        && request.resource.data.review_status in ['pending', 'approved', 'rejected']
+        && (request.resource.data.review_status == resource.data.review_status || request.resource.data.review_status != 'approved' || mayApprove(resource.data.owner_uid))
+        && (liveApproved(request.resource.data) || !existsAfter(skillEditPath(skillId)))
+        && (request.resource.data.review_status != 'approved'
+          || (resource.data.review_status == 'approved'
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['author']))
+          || skillSnapshotted(request.resource.data))
+        && request.resource.data.author.verified is bool
+        && (request.resource.data.review_status != 'approved' || validSkill(request.resource.data, skillId));
+    }
+    function approveSkillEdit(skillId) {
+      let live = resource.data;
+      let edit = get(skillEditPath(skillId)).data;
+      let after = request.resource.data;
+      return isAdmin() && liveApproved(live) && mayApprove(live.owner_uid)
+        && exists(skillEditPath(skillId)) && !existsAfter(skillEditPath(skillId))
+        && edit.owner_uid == live.owner_uid && edit.version != live.version
+        && edit.visibility == 'public' && edit.review_status in ['pending', 'rejected']
+        && after.review_status == 'approved'
+        && after.diff(edit).affectedKeys().hasOnly(['review_status', 'author', 'stats'])
+        && after.author.diff(edit.author).affectedKeys().hasOnly(['verified'])
+        && after.author.verified == live.author.verified
+        && after.stats.updated_at == edit.stats.updated_at
+        && skillSnapshotted(after)
+        && validSkill(after, skillId);
+    }
+    match /skill_edits/{skillId} {
+      function ownsLive() { return verifiedEmail() && get(skillPath(skillId)).data.owner_uid == request.auth.uid; }
+      function validEdit() {
+        let live = get(skillPath(skillId)).data;
+        let edit = request.resource.data;
+        return ownsLive() && liveApproved(live) && validSkill(edit, skillId)
+          && ownIdentity(edit) && edit.visibility == 'public' && edit.review_status == 'pending'
+          && edit.version != live.version && edit.owner_uid == live.owner_uid
+          && edit.author.verified == live.author.verified;
+      }
+      allow get: if (signedIn() && get(skillPath(skillId)).data.owner_uid == request.auth.uid) || isAdmin();
+      allow list: if boundedSkills() && ((signedIn() && resource.data.owner_uid == request.auth.uid) || isAdmin());
+      allow create: if validEdit();
+      allow update: if validEdit() || (isAdmin()
+        && request.resource.data.review_status == 'rejected'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['review_status']));
+      allow delete: if ownsLive() || (isAdmin() &&
+        ((liveApproved(getAfter(skillPath(skillId)).data)
+          && mayApprove(get(skillPath(skillId)).data.owner_uid)
+          && getAfter(skillPath(skillId)).data.diff(resource.data).affectedKeys().hasOnly(['review_status', 'author', 'stats'])
+          && getAfter(skillPath(skillId)).data.author.diff(resource.data.author).affectedKeys().hasOnly(['verified'])
+          && getAfter(skillPath(skillId)).data.stats.updated_at == resource.data.stats.updated_at
+          && getAfter(skillPath(skillId)).data.version == resource.data.version)
+        || !liveApproved(getAfter(skillPath(skillId)).data)));
+    }
+    match /skills/{skillId} {
+      // Public browsing uses Hosting. Account queries are bounded separately.
+      allow get: if (signedIn() && !exists(skillPath(skillId))) || readableAgent(resource.data);
+      allow list: if boundedSkills() && readableAgent(resource.data);
+      allow create: if verifiedEmail() && ownIdentity(request.resource.data)
+        && request.resource.data.review_status == 'pending'
+        && request.resource.data.author.verified == false
+        && validSkill(request.resource.data, skillId);
+      allow update: if ((!liveApproved(resource.data) && !liveApproved(request.resource.data))
+          || exportMarked('skills', skillId))
+        && (ownerSkillEdit(skillId) || adminSkillEdit(skillId) || approveSkillEdit(skillId));
+      allow delete: if false;
     }
   }
 }

@@ -11,7 +11,7 @@ import { agentIdSchema } from '../lib/validateManifest'
 export function markExportChange(
   write: { set(ref: DocumentReference, value: { revision: string }): unknown },
   db: Firestore,
-  source: 'agents' | 'agent_versions',
+  source: 'agents' | 'agent_versions' | 'skills' | 'skill_versions',
   id: string,
 ) {
   write.set(doc(db, 'export_sources', source, 'changes', id), {
