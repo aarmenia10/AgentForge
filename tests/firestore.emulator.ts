@@ -28,7 +28,7 @@ import './export.emulator'
 
 test('real Firestore transactions and rules enforce atomic stars and per-user ownership', async () => {
   const env = await initializeTestEnvironment({
-    projectId: 'demo-agentforge',
+    projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
   })
   const id = SEED_AGENTS[0].id
@@ -85,8 +85,8 @@ test('real Firestore transactions and rules enforce atomic stars and per-user ow
         {
           env: {
             ...process.env,
-            AGENTFORGE_CATALOG_SOURCE: 'firestore',
-            GOOGLE_CLOUD_PROJECT: 'demo-agentforge',
+            AGENTLEMON_CATALOG_SOURCE: 'firestore',
+            GOOGLE_CLOUD_PROJECT: 'demo-agentlemon',
           },
         },
       )

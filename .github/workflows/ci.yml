@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 25
     env:
       FIREBASE_PROJECT: agentforge-b10db
-      AGENTFORGE_CATALOG_SOURCE: seed
+      AGENTLEMON_CATALOG_SOURCE: seed
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +45,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          AGENTFORGE_CATALOG_SOURCE: seed
+          AGENTLEMON_CATALOG_SOURCE: seed
 
       - name: Test
         run: npm test
@@ -115,7 +115,7 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
           GOOGLE_CLOUD_PROJECT: ${{ env.FIREBASE_PROJECT }}
-          AGENTFORGE_CATALOG_SOURCE: firestore
+          AGENTLEMON_CATALOG_SOURCE: firestore
           CATALOG_CHECKPOINT: ${{ github.event_name == 'schedule' && format('{0}/catalog-checkpoint.json', runner.temp) || '' }}
           CATALOG_LIVE_STATE: ${{ runner.temp }}/live-export-state.json
           CATALOG_RECEIPTS: ${{ runner.temp }}/export-receipts.json
@@ -154,7 +154,7 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
           GOOGLE_CLOUD_PROJECT: ${{ env.FIREBASE_PROJECT }}
-          AGENTFORGE_CATALOG_SOURCE: firestore
+          AGENTLEMON_CATALOG_SOURCE: firestore
           CATALOG_RECEIPTS: ${{ runner.temp }}/export-receipts.json
         run: npm run build:catalog -- --acknowledge
 

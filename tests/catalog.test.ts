@@ -161,7 +161,7 @@ test('only approved public records enter catalog.json; storage metadata never le
   }
 })
 
-test('seeds have the registry identity and web search matches an AgentForge handle', () => {
+test('seeds have the registry identity and web search matches an AgentLemon handle', () => {
   for (const seed of SEED_AGENTS) {
     assert.deepEqual(seed.author, { uid: 'agentforge', name: 'AgentForge', handle: 'agentforge', verified: true })
     assert.equal(seed.visibility, 'public')

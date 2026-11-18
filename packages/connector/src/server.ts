@@ -33,7 +33,7 @@ import {
   selectAgent,
 } from '../../mcp-server/src/shared'
 
-export const CONNECTOR_NAME = 'agentforge-connector'
+export const CONNECTOR_NAME = 'agentlemon-connector'
 export const CONNECTOR_VERSION = '0.1.0'
 const LOAD_TOOL = 'get_agent'
 const getArgs = z.strictObject({
@@ -42,7 +42,7 @@ const getArgs = z.strictObject({
 })
 const guideText = CONNECTOR_GUIDE_PREFACE + '\n' + REGISTRY_GUIDE
 const guideDescription =
-  'How the AgentForge registry is laid out and how to choose an agent: search several ways, compare candidates, prefer the narrowest full fit, and use no agent when nothing fits.'
+  'How the AgentLemon registry is laid out and how to choose an agent: search several ways, compare candidates, prefer the narrowest full fit, and use no agent when nothing fits.'
 
 export function createConnectorServer(
   catalog: readonly AgentManifest[],

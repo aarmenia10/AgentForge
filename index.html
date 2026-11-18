@@ -4,13 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="AgentForge is the open, MCP-native registry for AI agents. Discover, inspect, and install agents into Claude or Cursor in one click." />
-    <title>AgentForge · The GitHub for AI Agents</title>
+    <meta name="description" content="AgentLemon is the open, MCP-native registry for AI agents. Discover, inspect, and install agents into Claude or Cursor in one click." />
+    <title>AgentLemon · The GitHub for AI Agents</title>
+    <script>
+      // The site moved to agentlemon.web.app (P3-0). The old address keeps
+      // serving catalog.json, version files, and MCP tarballs for existing
+      // installs; only page visits are sent on.
+      ;(function () {
+        var h = location.hostname
+        if (h === 'agentforge-b10db.web.app' || h === 'agentforge-b10db.firebaseapp.com')
+          location.replace('https://agentlemon.web.app' + location.pathname + location.search + location.hash)
+      })()
+    </script>
     <script>
       // Apply the stored theme before first paint to avoid a flash.
       (function () {
         try {
-          var stored = localStorage.getItem('agentforge:theme')
+          var stored = localStorage.getItem('agentlemon:theme')
           var dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
           document.documentElement.classList.toggle('dark', dark)
         } catch (_) {}

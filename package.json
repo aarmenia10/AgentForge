@@ -1,5 +1,5 @@
 {
-  "name": "agentforge",
+  "name": "agentlemon",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "emulators": "firebase emulators:start --only auth,firestore --project demo-agentforge",
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-agentlemon",
     "dev:emulator": "vite --mode emulator",
     "build:emulator": "npm run build:catalog && vite build --mode emulator",
     "build": "npm run build:catalog && tsc -b && vite build",
@@ -21,7 +21,7 @@
     "test:package": "npm run build:catalog && npm run build:mcp && tsx --test tests/package.smoke.ts",
     "pretest": "npm run build:mcp",
     "test": "tsx --test tests/*.test.ts",
-    "test:firestore": "firebase emulators:exec --only firestore --project demo-agentforge \"tsx --test tests/firestore.emulator.ts\"",
+    "test:firestore": "firebase emulators:exec --only firestore --project demo-agentlemon \"tsx --test tests/firestore.emulator.ts\"",
     "release:mcp": "npm run build:catalog && npm run build:mcp && cd packages/mcp-server && npm pack --pack-destination ../../public/mcp"
   },
   "dependencies": {

@@ -238,7 +238,7 @@ export function exportDigest({ catalog, files }: PublicExport) {
 async function withFirestore<T>(
   run: (db: Firestore) => Promise<T>,
 ): Promise<T | undefined> {
-  if (process.env.AGENTFORGE_CATALOG_SOURCE === 'seed') return undefined
+  if (process.env.AGENTLEMON_CATALOG_SOURCE === 'seed') return undefined
   const { applicationDefault, initializeApp, deleteApp } =
     await import('firebase-admin/app')
   const { getFirestore } = await import('firebase-admin/firestore')
@@ -246,7 +246,7 @@ async function withFirestore<T>(
   const explicit = Boolean(
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
     emulator ||
-    process.env.AGENTFORGE_CATALOG_SOURCE === 'firestore',
+    process.env.AGENTLEMON_CATALOG_SOURCE === 'firestore',
   )
   const credential = applicationDefault()
   if (!emulator) {

@@ -79,7 +79,7 @@ export function discoveryTools(loadTool: string): Tool[] {
     {
       name: 'search_registry',
       description:
-        'Find candidate agents. Use this at the start of a specialized task, before doing the work unaided, and whenever the user asks to use AgentForge. Returns several ranked candidates with the fields needed to compare them (required inputs, output fields, required tools, verified-author status, last update). Rank is word overlap, not suitability, so never load the first result on the strength of one search. Run several queries (domain, action, expected output), or omit query to browse a category, then call compare_agents. Searches the static catalog in memory.',
+        'Find candidate agents. Use this at the start of a specialized task, before doing the work unaided, and whenever the user asks to use AgentLemon. Returns several ranked candidates with the fields needed to compare them (required inputs, output fields, required tools, verified-author status, last update). Rank is word overlap, not suitability, so never load the first result on the strength of one search. Run several queries (domain, action, expected output), or omit query to browse a category, then call compare_agents. Searches the static catalog in memory.',
       inputSchema: {
         type: 'object',
         properties: {

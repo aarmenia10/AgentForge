@@ -45,7 +45,7 @@ test('username format problems are explained in plain words', () => {
   )
   assert.match(handleFormatProblem('-ada') ?? '', /Start and end/)
   assert.match(handleFormatProblem('ada-') ?? '', /Start and end/)
-  for (const reserved of ['agentforge', 'admin', 'support'])
+  for (const reserved of ['agentforge', 'agentlemon', 'admin', 'support'])
     assert.match(handleFormatProblem(reserved) ?? '', /reserved/)
   assert.match(HANDLE_RULE, /3 to 30 lowercase letters, digits, or hyphens/)
 })
@@ -129,7 +129,7 @@ test('profile memory: a known profile or a shown welcome skips the check', () =>
     assert.equal(readProfileMemory('u2')?.handle, 'pat')
     // Per user: another account in the same browser is still checked once.
     assert.equal(needsWelcomeCheck('u3'), true)
-    globalThis.localStorage.setItem('agentforge.profile.u4', '{not json')
+    globalThis.localStorage.setItem('agentlemon.profile.u4', '{not json')
     assert.equal(readProfileMemory('u4'), null)
   } finally {
     Object.defineProperty(globalThis, 'localStorage', {
@@ -178,5 +178,5 @@ test('the install tab warns about an unverified author and says nothing extra fo
   assert.doesNotMatch(verified, /not confirmed|has not confirmed/)
   assert.doesNotMatch(verified, /safety|reviewed|safe to use/i)
   // The connector card stays at the top of the install tab.
-  assert.match(verified, /Fastest: add AgentForge as a connector/)
+  assert.match(verified, /Fastest: add AgentLemon as a connector/)
 })

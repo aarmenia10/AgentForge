@@ -23,7 +23,7 @@ export function TopNav({ search }: TopNavProps) {
   return (
     <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
-        <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="AgentForge home">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="AgentLemon home">
           <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-teal-400 to-navy-600 text-white shadow-lg shadow-teal-500/25">
             <Anvil className="size-5" />
           </span>

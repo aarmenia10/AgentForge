@@ -1,5 +1,5 @@
 /**
- * AgentForge remote connector: the request handler.
+ * AgentLemon remote connector: the request handler.
  * The Worker entry point is worker.ts, which may export nothing but handlers.
  *
  *   POST /mcp   MCP over Streamable HTTP, stateless, JSON responses
@@ -15,8 +15,8 @@ import bundledCatalog from '../../../public/catalog.json'
 import { createConnectorServer } from './server'
 import { resolveAgent, versionUrl } from '../../mcp-server/src/versions'
 
-export const CATALOG_URL = 'https://agentforge-b10db.web.app/catalog.json'
-export const SITE_URL = 'https://agentforge-b10db.web.app'
+export const CATALOG_URL = 'https://agentlemon.web.app/catalog.json'
+export const SITE_URL = 'https://agentlemon.web.app'
 const CACHE_MS = 5 * 60 * 1000
 const FETCH_TIMEOUT_MS = 5000
 
@@ -124,7 +124,7 @@ export function createConnector(options: ConnectorOptions = {}) {
       const { agents, source } = await loadCatalog()
       return new Response(
         [
-          'AgentForge remote connector',
+          'AgentLemon remote connector',
           '',
           'This is an MCP server for AI apps, not a web page.',
           `Add ${url.origin}/mcp as a custom connector in your AI app's settings.`,

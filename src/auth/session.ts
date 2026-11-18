@@ -3,7 +3,7 @@
  * loading Firebase entirely for visitors who have never signed in, while a
  * returning user still gets their session restored on page load.
  */
-const HINT_KEY = 'agentforge:signed-in'
+const HINT_KEY = 'agentlemon:signed-in'
 
 export function hasSessionHint(): boolean {
   try {

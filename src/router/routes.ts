@@ -68,7 +68,7 @@ function notFound(): Route {
   return { name: 'not-found', params: {} }
 }
 
-const SITE = 'AgentForge'
+const SITE = 'AgentLemon'
 
 /** The document title for a route. Home keeps the title from index.html. */
 export function routeTitle(route: Route): string {

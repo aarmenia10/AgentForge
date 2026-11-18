@@ -65,7 +65,7 @@ export default function App() {
 
       <footer className="border-t border-slate-900/5 py-8 dark:border-white/10">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 text-sm text-slate-500 sm:px-6 dark:text-slate-400">
-          <p>AgentForge is open source under the MIT license.</p>
+          <p>AgentLemon is open source under the MIT license.</p>
           <a
             href="https://github.com/aarmenia10/AgentForge"
             target="_blank"

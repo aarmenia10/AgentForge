@@ -22,7 +22,12 @@ export interface Page<T> {
   items: T[]
   cursor: string | null
 }
-export const RESERVED_HANDLES = ['agentforge', 'admin', 'support'] as const
+export const RESERVED_HANDLES = [
+  'agentforge',
+  'agentlemon',
+  'admin',
+  'support',
+] as const
 export function validHandle(handle: string): boolean {
   return (
     /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(handle) &&

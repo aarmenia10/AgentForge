@@ -20,7 +20,7 @@ test(
     assert.ok(npmCli, 'Run this check with npm run test:package')
     const repo = resolve('.')
     const packageDir = resolve('packages/mcp-server')
-    const temporary = await mkdtemp(join(tmpdir(), 'agentforge-release-'))
+    const temporary = await mkdtemp(join(tmpdir(), 'agentlemon-release-'))
     assert.ok(
       relative(repo, temporary).startsWith('..'),
       'Install must be outside the repository',
@@ -82,12 +82,12 @@ test(
       const installedPackage = join(
         installDir,
         'node_modules',
-        'agentforge-registry',
+        'agentlemon-registry',
       )
       const manifest = JSON.parse(
         await readFile(join(installedPackage, 'package.json'), 'utf8'),
       )
-      assert.equal(manifest.name, 'agentforge-registry')
+      assert.equal(manifest.name, 'agentlemon-registry')
       assert.equal(
         manifest.version,
         JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8'))
@@ -100,13 +100,14 @@ test(
           'Committed release contains current ' + file,
         )
       }
+      assert.equal(manifest.dependencies.agentlemon, undefined)
       assert.equal(manifest.dependencies.agentforge, undefined)
       for (const version of Object.values(manifest.dependencies) as string[]) {
         assert.doesNotMatch(version, /^(?:file:|link:|workspace:|\.|\/)/)
       }
       const executable = join(
         installedPackage,
-        manifest.bin['agentforge-registry'],
+        manifest.bin['agentlemon-registry'],
       )
       const catalog = join(installedPackage, 'catalog.json')
       const pin = 'postgres-index-tuner@1.0.0'
@@ -153,7 +154,7 @@ test(
             ),
           )
           const resource = await client.readResource({
-            uri: 'agentforge://active/manifest',
+            uri: 'agentlemon://active/manifest',
           })
           const active = JSON.parse(
             (resource.contents[0] as { text: string }).text,
@@ -179,14 +180,14 @@ test(
     } finally {
       assert.equal(dirname(temporary), resolve(tmpdir()))
       assert.ok(
-        temporary.startsWith(join(resolve(tmpdir()), 'agentforge-release-')),
+        temporary.startsWith(join(resolve(tmpdir()), 'agentlemon-release-')),
       )
       await rm(temporary, { recursive: true, force: true })
     }
   },
 )
 
-for (const version of ['0.1.0', '0.1.1', '0.2.0', '0.2.1']) {
+for (const version of ['0.1.0', '0.1.1', '0.2.0', '0.2.1', '0.2.2']) {
   test(
     'committed ' +
       version +

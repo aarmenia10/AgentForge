@@ -9,7 +9,7 @@ service cloud.firestore {
     function relationshipPath(uid, other) { return /databases/$(database)/documents/users/$(uid)/relationships/$(other); }
     function validHandle(handle) {
       return handle is string && handle.matches('^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$')
-        && !(handle in ['agentforge', 'admin', 'support']);
+        && !(handle in ['agentforge', 'agentlemon', 'admin', 'support']);
     }
     function validProfile(uid) {
       let data = request.resource.data;

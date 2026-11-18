@@ -13,7 +13,7 @@ import type { LoadedAuth } from './loadAuthService'
  * - sign-up with a password under 6 characters fails with `auth/weak-password`
  * - `refreshUser` marks the current user verified, as if they followed the link
  */
-const STORAGE_KEY = 'agentforge:stub-user'
+const STORAGE_KEY = 'agentlemon:stub-user'
 
 function fail(code: string): never {
   throw Object.assign(new Error(code), { code })

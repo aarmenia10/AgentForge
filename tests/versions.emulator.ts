@@ -22,7 +22,7 @@ import { agentResolver, loadCatalog } from '../packages/mcp-server/src/catalog'
 
 test('approved versions are atomic, exact, immutable and cannot be reused', async () => {
   const env = await initializeTestEnvironment({
-    projectId: 'demo-agentforge',
+    projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
   })
   const ownerDb = env
@@ -42,8 +42,8 @@ test('approved versions are atomic, exact, immutable and cannot be reused', asyn
       {
         env: {
           ...process.env,
-          AGENTFORGE_CATALOG_SOURCE: 'firestore',
-          GOOGLE_CLOUD_PROJECT: 'demo-agentforge',
+          AGENTLEMON_CATALOG_SOURCE: 'firestore',
+          GOOGLE_CLOUD_PROJECT: 'demo-agentlemon',
         },
       },
     )
@@ -148,7 +148,7 @@ test('approved versions are atomic, exact, immutable and cannot be reused', asyn
     await promisify(execFile)(
       process.execPath,
       ['--import', 'tsx', 'scripts/export-catalog.ts'],
-      { env: { ...process.env, AGENTFORGE_CATALOG_SOURCE: 'seed' } },
+      { env: { ...process.env, AGENTLEMON_CATALOG_SOURCE: 'seed' } },
     )
     await env.cleanup()
   }

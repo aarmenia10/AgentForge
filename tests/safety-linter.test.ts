@@ -237,7 +237,7 @@ test('remaining text and endpoint rules cover hidden markup, paths, and register
   for (const endpoint of [
     'https://city.kawasaki.jp',
     'https://api.github.com',
-    'https://agentforge-b10db.web.app',
+    'https://agentlemon.web.app',
   ]) {
     const m = fixture('Example')
     m.tools_required = [

@@ -34,7 +34,7 @@ export async function sendVerificationFor<T extends { emailVerified: boolean }>(
   if (!user.emailVerified) await send(user)
 }
 
-const sessionKey = 'agentforge.auth-session'
+const sessionKey = 'agentlemon.auth-session'
 function rememberedSession() {
   try {
     return globalThis.localStorage?.getItem(sessionKey) === '1'

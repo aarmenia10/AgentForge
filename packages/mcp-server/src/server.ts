@@ -27,7 +27,7 @@ export { renderBlueprint }
 
 const LOAD_TOOL = 'switch_agent'
 const switchArgs = z.strictObject({ agent_id: z.string().min(1) })
-const uri = 'agentforge://active/manifest'
+const uri = 'agentlemon://active/manifest'
 
 export function createRegistryServer(
   catalog: AgentManifest[],
@@ -37,7 +37,7 @@ export function createRegistryServer(
 ) {
   let active = initial ?? (selector ? selectAgent(catalog, selector) : undefined)
   const server = new Server(
-    { name: 'agentforge-registry', version: '0.2.2' },
+    { name: 'agentlemon-registry', version: '0.3.0' },
     {
       capabilities: {
         tools: { listChanged: true },
@@ -188,7 +188,7 @@ export function createRegistryServer(
     name: GUIDE_NAME,
     mimeType: 'text/markdown',
     description:
-      'The AgentForge navigation guide: registry layout, how to search, how to choose, when not to, safety, and reporting',
+      'The AgentLemon navigation guide: registry layout, how to search, how to choose, when not to, safety, and reporting',
   }
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: active

@@ -1,10 +1,10 @@
 import type { AgentManifest } from '@/types/agent'
 
 /** Name of the package that serves registry agents over MCP stdio. */
-export const MCP_SERVER_PACKAGE = 'agentforge-registry'
+export const MCP_SERVER_PACKAGE = 'agentlemon-registry'
 
 /** Must match packages/mcp-server/package.json. A test enforces it. */
-export const MCP_SERVER_VERSION = '0.2.2'
+export const MCP_SERVER_VERSION = '0.3.0'
 
 /**
  * What `npx` installs. The server is distributed as a tarball on our own
@@ -12,14 +12,14 @@ export const MCP_SERVER_VERSION = '0.2.2'
  * no account and no package name that a third party could claim. Each
  * released tarball stays in public/mcp/ forever so old configs keep working.
  */
-export const MCP_SERVER_SPEC = `https://agentforge-b10db.web.app/mcp/${MCP_SERVER_PACKAGE}-${MCP_SERVER_VERSION}.tgz`
+export const MCP_SERVER_SPEC = `https://agentlemon.web.app/mcp/${MCP_SERVER_PACKAGE}-${MCP_SERVER_VERSION}.tgz`
 
 /**
  * The remote connector (README 7.6): one URL a user pastes into their AI
  * app's connector settings. Hosted on Cloudflare Workers; the path is /mcp.
  */
 export const MCP_CONNECTOR_URL =
-  'https://agentforge-connector.lesslimit.workers.dev/mcp'
+  'https://agentlemon-connector.lesslimit.workers.dev/mcp'
 
 export type McpClient = 'claude_desktop' | 'cursor' | 'claude_code' | 'codex'
 
@@ -78,7 +78,7 @@ export interface McpConfig {
 
 /** Key under `mcpServers`. One entry per installed agent keeps installs additive. */
 export function mcpServerKey(agent: Pick<AgentManifest, 'id'>): string {
-  return `agentforge-${agent.id}`
+  return `agentlemon-${agent.id}`
 }
 
 /** Pins the exact manifest version so a config never drifts under the user. */

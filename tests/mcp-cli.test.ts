@@ -17,7 +17,7 @@ const executable = resolve('packages/mcp-server/dist/cli.js')
 const offline = `data:text/javascript,${encodeURIComponent("globalThis.fetch = async () => { throw new Error('offline') }")}`
 
 test('CLI and environment catalog overrides preserve precedence and fail closed', async () => {
-  const cwd = await mkdtemp(join(tmpdir(), 'agentforge-overrides-'))
+  const cwd = await mkdtemp(join(tmpdir(), 'agentlemon-overrides-'))
   const valid = join(cwd, 'valid.json')
   const invalid = join(cwd, 'invalid.json')
   const agent = { ...SEED_AGENTS[0], name: 'Override catalog agent' }
@@ -39,7 +39,7 @@ test('CLI and environment catalog overrides preserve precedence and fail closed'
           `${agent.id}@${agent.version}`,
         ],
         cwd,
-        env: { ...getDefaultEnvironment(), AGENTFORGE_CATALOG_URL: source },
+        env: { ...getDefaultEnvironment(), AGENTLEMON_CATALOG_URL: source },
         stderr: 'pipe',
       })
       const client = new Client({ name: 'override-test', version: '1.0.0' })
@@ -47,7 +47,7 @@ test('CLI and environment catalog overrides preserve precedence and fail closed'
         await client.connect(transport)
         assert.match(
           JSON.stringify(
-            await client.readResource({ uri: 'agentforge://active/manifest' }),
+            await client.readResource({ uri: 'agentlemon://active/manifest' }),
           ),
           /Override catalog agent/,
         )
@@ -65,7 +65,7 @@ test('CLI and environment catalog overrides preserve precedence and fail closed'
       await assert.rejects(
         run(process.execPath, ['--import', offline, executable, ...args], {
           cwd,
-          env: { ...process.env, AGENTFORGE_CATALOG_URL: source },
+          env: { ...process.env, AGENTLEMON_CATALOG_URL: source },
           timeout: 10_000,
           windowsHide: true,
         }),
@@ -74,14 +74,14 @@ test('CLI and environment catalog overrides preserve precedence and fail closed'
         ) => {
           assert.equal(error.code, 1)
           assert.equal(error.stdout, '')
-          assert.match(error.stderr ?? '', /^agentforge-registry:/)
+          assert.match(error.stderr ?? '', /^agentlemon-registry:/)
           return true
         },
       )
     }
   } finally {
     assert.equal(dirname(cwd), resolve(tmpdir()))
-    assert.ok(cwd.startsWith(join(resolve(tmpdir()), 'agentforge-overrides-')))
+    assert.ok(cwd.startsWith(join(resolve(tmpdir()), 'agentlemon-overrides-')))
     await rm(cwd, { recursive: true, force: true })
   }
 })
