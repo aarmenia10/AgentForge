@@ -3,7 +3,12 @@ import type { Firestore } from 'firebase-admin/firestore'
 
 // Each export source owns a coalescing queue. A receipt identifies the precise
 // revision seen by this run, so a newer write survives acknowledgement.
-export const sources = ['agents', 'agent_versions'] as const
+export const sources = [
+  'agents',
+  'agent_versions',
+  'skills',
+  'skill_versions',
+] as const
 type Source = (typeof sources)[number]
 export interface Receipt {
   source: Source

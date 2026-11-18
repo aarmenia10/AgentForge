@@ -1,6 +1,7 @@
+import type { SkillManifest } from '../types/skill'
 import type { AgentManifest, AgentTool } from '../types/agent'
 
-export const LINTER_VERSION = '1'
+export const LINTER_VERSION = '2'
 export interface LintFinding {
   rule: string
   severity: 'block' | 'warn'
@@ -27,7 +28,7 @@ const normalize = (s: string) =>
     .toLowerCase()
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
-    .replace(/\s+/g, ' ')
+    .replace(/(?: [^\S ]|[^\S ]| {2})\s*/g, ' ')
 const inflections = new Map<string, string>()
 for (const base of 'ignore disregard forget override bypass drop take have apply matter count treat consider follow start begin tell inform mention reveal disclose show alert notify hide conceal keep ask acknowledge say use run send upload execute delete modify change copy read enable answer respond pretend skip disable auto-approve auto-accept allow assume act write install push deploy commit open cat print echo output display list dump collect gather extract include append paste return post save store log record find look submit transmit forward email mail report sync beacon ping call request fetch curl wget encode add put render embed decode decrypt deobfuscate unescape obey do refuse'.split(
   ' ',
@@ -66,8 +67,14 @@ for (const [forms, base] of [
   ['did done does doing', 'do'],
 ])
   for (const form of forms.split(' ')) inflections.set(form, base)
+const inflectedWord = new RegExp(
+  '\\b(?:' +
+    [...inflections.keys()].filter((word) => /^[a-z]+$/.test(word)).join('|') +
+    ')\\b',
+  'g',
+)
 const foldVerbs = (text: string) =>
-  text.replace(/\b[a-z]+\b/g, (word) => inflections.get(word) ?? word)
+  text.replace(inflectedWord, (word) => inflections.get(word)!)
 const sendWords = new Set(
   'send post upload submit transmit forward email mail report sync push beacon ping call request fetch curl wget append encode'.split(
     ' ',
@@ -148,7 +155,7 @@ function sentences(raw: string): string[] {
     .map((s) => s.replace(/\ufff0/g, '.'))
 }
 function excerpt(s: string) {
-  return Array.from(s)
+  return Array.from(s.slice(0, 121))
     .map((c) => {
       invisible.lastIndex = 0
       return invisible.test(c) || c === '\r'
@@ -291,6 +298,30 @@ function validPackage(spec: string, family: string) {
   )
 }
 
+const rot13 = (c: string) =>
+  String.fromCharCode(c.charCodeAt(0) + (c.toLowerCase() <= 'm' ? 13 : -13))
+const rot13Words =
+  'ignore instructions rules user send upload chat conversation password secret read execute without approval system override hide unfiltered data files email output credentials'
+    .split(' ')
+    .join('|')
+const decodedWord = new RegExp('\\b(?:' + rot13Words + ')\\b', 'gi')
+const encodedWord = new RegExp(
+  '\\b(?:' + rot13Words.replace(/[a-z]/g, rot13) + ')\\b',
+  'i',
+)
+// Both base64 and contiguous hex require a run in this ASCII alphabet.
+const encodingAlphabet = new Uint8Array(128)
+for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/_-')
+  encodingAlphabet[c.charCodeAt(0)] = 1
+function hasEncodedToken(text: string) {
+  let length = 0
+  for (let i = 0; i < text.length; i++) {
+    if (encodingAlphabet[text.charCodeAt(i)]) {
+      if (++length >= 24) return true
+    } else length = 0
+  }
+  return false
+}
 function decodedFields(text: string): { encoding: string; text: string }[] {
   const result: { encoding: string; text: string }[] = []
   function transform(
@@ -322,23 +353,31 @@ function decodedFields(text: string): { encoding: string; text: string }[] {
       return null
     }
   }
-  transform('base64', /[A-Za-z0-9+/_-]{24,}={0,2}/g, (s) => {
-    try {
-      return utf8(
-        Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) =>
-          c.charCodeAt(0),
-        ),
-      )
-    } catch {
-      return null
-    }
-  })
-  transform('hex', /\b[\da-fA-F]{32,}\b|(?:\\x[\da-fA-F]{2})+/g, (s) => {
-    const hex = s.replace(/\\x/g, '')
-    return hex.length % 2
-      ? null
-      : utf8(Uint8Array.from(hex.match(/../g)!, (h) => parseInt(h, 16)))
-  })
+  const longToken = hasEncodedToken(text)
+  if (longToken)
+    transform(
+      'base64',
+      /(?<![A-Za-z0-9+/_-])[A-Za-z0-9+/_-]{24,}={0,2}/g,
+      (s) => {
+        try {
+          return utf8(
+            Uint8Array.from(
+              atob(s.replace(/-/g, '+').replace(/_/g, '/')),
+              (c) => c.charCodeAt(0),
+            ),
+          )
+        } catch {
+          return null
+        }
+      },
+    )
+  if (longToken || text.includes('\\x'))
+    transform('hex', /\b[\da-fA-F]{32,}\b|(?:\\x[\da-fA-F]{2})+/g, (s) => {
+      const hex = s.replace(/\\x/g, '')
+      return hex.length % 2
+        ? null
+        : utf8(Uint8Array.from(hex.match(/../g)!, (h) => parseInt(h, 16)))
+    })
   transform(
     'escapes',
     /(?:\\u[\da-fA-F]{4}|\\u\{[\da-fA-F]{1,6}\}|&#\d+;|&#x[\da-fA-F]+;|%[\da-fA-F]{2}){3,}/g,
@@ -357,23 +396,53 @@ function decodedFields(text: string): { encoding: string; text: string }[] {
       }
     },
   )
-  transform('rot13', /\b[a-zA-Z]+(?:[ ,]+[a-zA-Z]+){7,}\b/g, (s) => {
-    const d = s.replace(/[a-z]/gi, (c) =>
-      String.fromCharCode(
-        c.charCodeAt(0) + (c.toLowerCase() <= 'm' ? 13 : -13),
-      ),
-    )
-    const hits = d
-      .toLowerCase()
-      .match(
-        /\b(?:ignore|instructions|rules|user|send|upload|chat|conversation|password|secret|read|execute|without|approval|system|override|hide|unfiltered|data|files|email|output|credentials)\b/g,
-      )
-    return (hits?.length ?? 0) >= 3 ? d : null
-  })
+  if (encodedWord.test(text))
+    transform('rot13', /\b[a-zA-Z]+(?:[ ,]+[a-zA-Z]+){7,}\b/g, (s) => {
+      const d = s.replace(/[a-z]/gi, rot13)
+      const hits = d.match(decodedWord)
+      return (hits?.length ?? 0) >= 3 ? d : null
+    })
   return result
 }
 
-export function lintManifest(manifest: AgentManifest): LintResult {
+const persona =
+  /\b(?:developer mode|jailbreak|jailbroken|(?:you are|act as) dan|do anything now|(?:no|without any|free of) (?:restrictions|filters|guidelines|limits|content policy|safety)|unfiltered|uncensored|(?:you|the model) (?:can|may) say anything|pretend (?:you|that you) (?:have no|are not bound))\b/
+const permission =
+  /\b(?:auto[- ]?approve|auto[- ]?accept|always allow|allow all) (?:tools|tool calls?|commands|edits|actions)\b|--(?:dangerously-skip-permissions|yolo|no-confirm|auto-approve)\b|\b(?:you have|assume you have|act as if you have) (?:full|root|admin|unrestricted)(?: admin)? (?:access|permissions?)\b/
+const remoteImage =
+  /<(?:img|picture|source)\b|<video\b[^<>]*\bposter\s*=|<input\b[^<>]*\btype\s*=\s*["']?image\b|style\s*=\s*["'][^"']*url\(|\b(?:render|display|show|output|embed|include) (?:an? |the )?(?:image|picture|pixel|badge) (?:from|at|with) (?:the url|https?:\/\/|a link)/
+const shellCommand =
+  /\b(?:bash|source)\s*<\(curl|\bsh -c ["']?\$\(curl|\beval ["']?\$\((?:curl|wget)|\biex\s*\(|\binvoke-expression\b|\bpowershell -(?:enc|encodedcommand)\b|\bdownloadstring\(|\brm -rf (?:\/|~|\*|\.|\$home)(?:\s|$)|\b(?:del|rd) \/s \/q c:\\|\bformat c:|\bmkfs\b|>\s*\/dev\/sda|:\(\)\{ :\|:& \};:|\bchmod (?:777 \/(?:\s|$)|-r 777\b)|\bchown -r (?:\/|~)(?:\s|$)|\bcrontab\b|\/etc\/cron|\blaunchctl load\b|\bschtasks \/create\b|\bsystemctl enable\b|\b(?:nc|ncat) -e\b|bash -i >& \/dev\/tcp\/|\/dev\/udp\/|\bsocat exec:|\bssh -r\b|\bsudo (?:-s|su)\b|(?:^| )-e [a-z0-9+/_-]{24,}/
+const anyTextPattern = new RegExp(
+  [persona, permission, remoteImage, shellCommand]
+    .map((pattern) => pattern.source)
+    .join('|'),
+)
+
+// For plain ASCII prose, first look for any word needed by a text rule.
+// Punctuation outside this narrow alphabet always takes the full scanner.
+// Include every recognized verb and inflection, stand-alone credential paths,
+// persona/permission phrases, bare commands, and encoded ROT13 trigger words.
+const proseSignals = new Set([
+  ...inflections.keys(),
+  ...inflections.values(),
+  ...sendWords,
+  ...'instructions rules bound user prompt blueprint silently quietly secretly covertly auto autoapprove autoaccept developer jailbreak jailbroken dan anything restrictions filters guidelines limits policy safety unfiltered uncensored permissions access'.split(
+    ' ',
+  ),
+  ...'pem env keychain login cookies wallet seed recovery keys key token tokens password passwords credentials environ printenv'.split(
+    ' ',
+  ),
+  ...'mkfs crontab launchctl schtasks systemctl socat sudo mkfifo rot13'.split(
+    ' ',
+  ),
+])
+const proseCandidate = new RegExp(
+  '\\b(?:' + [...proseSignals].join('|') + ')\\b|' + encodedWord.source,
+  'i',
+)
+
+function createScanner(largeReferences = false) {
   const findings: LintFinding[] = []
   const found = new Map<string, LintFinding>()
   function add(
@@ -408,7 +477,16 @@ export function lintManifest(manifest: AgentManifest): LintResult {
     found.set(key, finding)
   }
   function scan(raw: string, path: string, depth = 0, encoding = '') {
-    const n = foldVerbs(normalize(raw))
+    if (
+      largeReferences &&
+      raw.length > 2048 &&
+      !/[^a-zA-Z0-9., \t\n]/.test(raw) &&
+      !proseCandidate.test(raw) &&
+      !hasEncodedToken(raw)
+    )
+      return
+    const normalized = normalize(raw)
+    const n = foldVerbs(normalized)
     const hit = (
       rule: string,
       pattern: RegExp,
@@ -424,36 +502,41 @@ export function lintManifest(manifest: AgentManifest): LintResult {
           encoding,
         )
     }
-    const chars = Array.from(raw)
-    for (let i = 0; i < chars.length; i++) {
-      const c = chars[i]
-      invisible.lastIndex = 0
-      const hidden = invisible.test(c)
-      const allowed =
-        ((c === '\ufe0e' || c === '\ufe0f') &&
-          emoji.test(chars[i - 1] ?? '')) ||
-        (c === '\u200d' &&
-          emoji.test(chars[i - 1] ?? '') &&
-          emoji.test(chars[i + 1] ?? ''))
-      if ((hidden && !allowed) || (c === '\r' && chars[i + 1] !== '\n')) {
-        add(
-          'SL-07',
-          path,
-          chars.slice(Math.max(0, i - 40), i + 80).join(''),
-          'block',
-          encoding,
-        )
-        break
+    const checkPatterns = anyTextPattern.test(n)
+    invisible.lastIndex = 0
+    if (invisible.test(raw) || /\r(?!\n)/.test(raw)) {
+      const chars = Array.from(raw)
+      for (let i = 0; i < chars.length; i++) {
+        const c = chars[i]
+        invisible.lastIndex = 0
+        const hidden = invisible.test(c)
+        const allowed =
+          ((c === '\ufe0e' || c === '\ufe0f') &&
+            emoji.test(chars[i - 1] ?? '')) ||
+          (c === '\u200d' &&
+            emoji.test(chars[i - 1] ?? '') &&
+            emoji.test(chars[i + 1] ?? ''))
+        if ((hidden && !allowed) || (c === '\r' && chars[i + 1] !== '\n')) {
+          add(
+            'SL-07',
+            path,
+            chars.slice(Math.max(0, i - 40), i + 80).join(''),
+            'block',
+            encoding,
+          )
+          break
+        }
       }
     }
-    for (const word of raw.matchAll(/\p{L}+/gu))
-      if (
-        /\p{Script=Latin}/u.test(word[0]) &&
-        /[\p{Script=Cyrillic}\p{Script=Greek}]/u.test(word[0])
-      ) {
-        add('SL-07w', path, raw, 'warn', encoding)
-        break
-      }
+    if (/[\p{Script=Cyrillic}\p{Script=Greek}]/u.test(raw))
+      for (const word of raw.matchAll(/\p{L}+/gu))
+        if (
+          /\p{Script=Latin}/u.test(word[0]) &&
+          /[\p{Script=Cyrillic}\p{Script=Greek}]/u.test(word[0])
+        ) {
+          add('SL-07w', path, raw, 'warn', encoding)
+          break
+        }
     if (/<!--|\[\/\/\]:\s*#|\[comment\]:\s*<>/i.test(raw))
       add('SL-08', path, raw, 'block', encoding)
     if (
@@ -589,24 +672,24 @@ export function lintManifest(manifest: AgentManifest): LintResult {
         }
       }
     }
-    hit(
-      'SL-03',
-      /\b(?:developer mode|jailbreak|jailbroken|(?:you are|act as) dan|do anything now|(?:no|without any|free of) (?:restrictions|filters|guidelines|limits|content policy|safety)|unfiltered|uncensored|(?:you|the model) (?:can|may) say anything|pretend (?:you|that you) (?:have no|are not bound))\b/,
-      'warn',
-    )
-    hit(
-      'SL-04',
-      /\b(?:auto[- ]?approve|auto[- ]?accept|always allow|allow all) (?:tools|tool calls?|commands|edits|actions)\b|--(?:dangerously-skip-permissions|yolo|no-confirm|auto-approve)\b|\b(?:you have|assume you have|act as if you have) (?:full|root|admin|unrestricted)(?: admin)? (?:access|permissions?)\b/,
-    )
+
+    if (checkPatterns) {
+      hit('SL-03', persona, 'warn')
+      hit('SL-04', permission)
+    }
     if (
       (/\bpush\b/.test(n) && /--force\b/.test(n)) ||
       (/\brm\b/.test(n) && /-y\b/.test(n))
     )
       add('SL-04', path, raw, 'block', encoding)
-    for (const token of n.matchAll(/\S+/g)) {
-      if (token[0].includes('http') && /[?&][\w-]+=[{<[]|\/\{\{/.test(token[0]))
-        add('SL-06', path, token[0], 'block', encoding)
-    }
+    if (n.includes('http'))
+      for (const token of n.matchAll(/\S+/g)) {
+        if (
+          token[0].includes('http') &&
+          /[?&][\w-]+=[{<[]|\/\{\{/.test(token[0])
+        )
+          add('SL-06', path, token[0], 'block', encoding)
+      }
     for (const sentence of pieces) {
       const put = /\b(?:append|add|put)\b/.exec(sentence)
       if (
@@ -617,10 +700,8 @@ export function lintManifest(manifest: AgentManifest): LintResult {
       )
         add('SL-06', path, sentence, 'block', encoding)
     }
-    hit(
-      'SL-09',
-      /<(?:img|picture|source)\b|<video\b[^<>]*\bposter\s*=|<input\b[^<>]*\btype\s*=\s*["']?image\b|style\s*=\s*["'][^"']*url\(|\b(?:render|display|show|output|embed|include) (?:an? |the )?(?:image|picture|pixel|badge) (?:from|at|with) (?:the url|https?:\/\/|a link)/,
-    )
+
+    if (checkPatterns) hit('SL-09', remoteImage)
     if (inlineImage(n)) add('SL-09', path, raw, 'block', encoding)
     if (/<svg\b/.test(n) && /<image\b[^<>]*\bhref\s*=/.test(n))
       add('SL-09', path, raw, 'block', encoding)
@@ -651,52 +732,56 @@ export function lintManifest(manifest: AgentManifest): LintResult {
       )
         add('SL-10', path, pieces[i], 'block', encoding)
     }
-    for (const line of raw.split('\n')) {
-      const l = normalize(line)
-      const parts = l.split('|')
-      for (let i = 1; i < parts.length; i++) {
-        const download =
-          /\b(?:curl|wget|iwr|invoke-webrequest|irm|invoke-restmethod)\b/.exec(
-            parts[i - 1],
+    if (n.includes('|'))
+      for (const line of raw.split('\n')) {
+        const l = normalize(line)
+        const parts = l.split('|')
+        for (let i = 1; i < parts.length; i++) {
+          const download =
+            /\b(?:curl|wget|iwr|invoke-webrequest|irm|invoke-restmethod)\b/.exec(
+              parts[i - 1],
+            )
+          if (
+            download &&
+            /\b(?:https?:\/\/|[a-z0-9-]+\.[a-z]{2,})/.test(
+              parts[i - 1].slice(download.index + download[0].length),
+            ) &&
+            /^\s*(?:sh|bash|zsh|python3?|node|perl|ruby|iex|invoke-expression|powershell|pwsh)\b/.test(
+              parts[i],
+            )
           )
-        if (
-          download &&
-          /\b(?:https?:\/\/|[a-z0-9-]+\.[a-z]{2,})/.test(
-            parts[i - 1].slice(download.index + download[0].length),
-          ) &&
-          /^\s*(?:sh|bash|zsh|python3?|node|perl|ruby|iex|invoke-expression|powershell|pwsh)\b/.test(
-            parts[i],
-          )
-        )
-          add('SL-11', path, raw, 'block', encoding)
+            add('SL-11', path, raw, 'block', encoding)
+        }
       }
-    }
-    hit(
-      'SL-11',
-      /\b(?:bash|source)\s*<\(curl|\bsh -c ["']?\$\(curl|\beval ["']?\$\((?:curl|wget)|\biex\s*\(|\binvoke-expression\b|\bpowershell -(?:enc|encodedcommand)\b|\bdownloadstring\(|\brm -rf (?:\/|~|\*|\.|\$home)(?:\s|$)|\b(?:del|rd) \/s \/q c:\\|\bformat c:|\bmkfs\b|>\s*\/dev\/sda|:\(\)\{ :\|:& \};:|\bchmod (?:777 \/(?:\s|$)|-r 777\b)|\bchown -r (?:\/|~)(?:\s|$)|\bcrontab\b|\/etc\/cron|\blaunchctl load\b|\bschtasks \/create\b|\bsystemctl enable\b|\b(?:nc|ncat) -e\b|bash -i >& \/dev\/tcp\/|\/dev\/udp\/|\bsocat exec:|\bssh -r\b|\bsudo (?:-s|su)\b|(?:^| )-e [a-z0-9+/_-]{24,}/,
-    )
-    for (const line of raw.split('\n').map(normalize)) {
-      const combinations = [
-        [/\bstart-bitstransfer\b/, /https?:\/\//],
-        [/\bdd if=/, /\bof=\/dev\//],
-        [
-          /(?:>>?|\b(?:write|append|add)\b)/,
-          /~\/\.(?:bashrc|zshrc|profile|bash_profile)|\$profile/,
-        ],
-        [/\breg add\b/, /\\run(?:\\|\b)/],
-        [/\bmkfifo\b/, /\bnc\b/],
-        [
-          /\b(?:grep -r|find)\b/,
-          /\b(?:password|secret|token|api_key|id_rsa)\b/,
-        ],
-      ]
-      if (
-        combinations.some(
-          ([command, target]) => command.test(line) && target.test(line),
-        )
+
+    if (checkPatterns) hit('SL-11', shellCommand)
+    if (
+      /start-bitstransfer|dd if=|profile|bashrc|zshrc|reg add|mkfifo|grep -r|find/.test(
+        normalized,
       )
-        add('SL-11', path, line, 'block', encoding)
-    }
+    )
+      for (const line of raw.split('\n').map(normalize)) {
+        const combinations = [
+          [/\bstart-bitstransfer\b/, /https?:\/\//],
+          [/\bdd if=/, /\bof=\/dev\//],
+          [
+            /(?:>>?|\b(?:write|append|add)\b)/,
+            /~\/\.(?:bashrc|zshrc|profile|bash_profile)|\$profile/,
+          ],
+          [/\breg add\b/, /\\run(?:\\|\b)/],
+          [/\bmkfifo\b/, /\bnc\b/],
+          [
+            /\b(?:grep -r|find)\b/,
+            /\b(?:password|secret|token|api_key|id_rsa)\b/,
+          ],
+        ]
+        if (
+          combinations.some(
+            ([command, target]) => command.test(line) && target.test(line),
+          )
+        )
+          add('SL-11', path, line, 'block', encoding)
+      }
     if (depth < 2)
       for (const decoded of decodedFields(raw)) {
         const start = findings.length
@@ -718,6 +803,11 @@ export function lintManifest(manifest: AgentManifest): LintResult {
         )
       }
   }
+  return { findings, scan, add }
+}
+
+export function lintManifest(manifest: AgentManifest): LintResult {
+  const { findings, scan, add } = createScanner()
   function endpoint(tool: AgentTool, path: string) {
     if (tool.endpoint === undefined) return
     const text = tool.endpoint
@@ -861,23 +951,27 @@ const publicSuffixes = new Set(
   ),
 )
 
-/**
- * Skills (docs/SAFETY_LINTER.md section 7). INTERIM: only SK-01 is applied.
- * P3-9 adds the text rules over name, description, tags, instructions, and
- * reference files, and bumps LINTER_VERSION to 2. The signature is stable.
- */
-export function lintSkill(skill: {
-  files: readonly { path: string; kind: string; content: string }[]
-}): LintResult {
-  const findings: LintFinding[] = skill.files
-    .filter((file) => file.kind === 'script')
-    .map((file) => ({
+export function lintSkill(
+  skill: Pick<SkillManifest, 'files' | 'name' | 'description' | 'tags'>,
+): LintResult {
+  const { findings, scan } = createScanner(true)
+  scan(skill.name, 'name')
+  scan(skill.description, 'description')
+  skill.tags.forEach((tag, i) => scan(tag, 'tags[' + i + ']'))
+  for (const file of skill.files) {
+    const path = 'files[' + JSON.stringify(file.path) + ']'
+    if (file.kind !== 'script') {
+      scan(file.content, path + '.content')
+      continue
+    }
+    findings.push({
       rule: 'SK-01',
       severity: 'block' as const,
-      path: `files[${JSON.stringify(file.path)}]`,
-      excerpt: (file.content.split('\n', 1)[0] ?? '').slice(0, 120),
+      path,
+      excerpt: excerpt(file.content.split('\n', 1)[0] ?? ''),
       message:
         'A script is code an AI app may be asked to run. Scripts may stay in a private skill; remove them to share it with friends or submit it for public review.',
-    }))
+    })
+  }
   return { linter_version: LINTER_VERSION, findings }
 }

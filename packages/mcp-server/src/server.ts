@@ -1,3 +1,4 @@
+import { skillTools, hostedSkillReader } from './skills'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import {
   CallToolRequestSchema,
@@ -34,10 +35,11 @@ export function createRegistryServer(
   selector?: string,
   resolve: (selector: string) => Promise<AgentManifest> = async (value) => selectAgent(catalog, value),
   initial?: AgentManifest,
+  readSkill = hostedSkillReader(),
 ) {
   let active = initial ?? (selector ? selectAgent(catalog, selector) : undefined)
   const server = new Server(
-    { name: 'agentlemon-registry', version: '0.3.0' },
+    { name: 'agentlemon-registry', version: '0.3.1' },
     {
       capabilities: {
         tools: { listChanged: true },
@@ -63,6 +65,7 @@ export function createRegistryServer(
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const tools: Tool[] = [
       ...discoveryTools(LOAD_TOOL),
+      ...skillTools,
       {
         name: 'switch_agent',
         description:
@@ -96,6 +99,8 @@ export function createRegistryServer(
       const { name, arguments: args = {} } = request.params
       const discovery = runDiscoveryTool(catalog, name, args, LOAD_TOOL)
       if (discovery) return discovery
+      const skill = await readSkill(name, args)
+      if (skill) return skill
       if (name === 'switch_agent') {
         const next = await resolve(switchArgs.parse(args).agent_id)
         active = next

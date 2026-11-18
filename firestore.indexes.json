@@ -15,7 +15,39 @@
         { "fieldPath": "visibility", "order": "ASCENDING" },
         { "fieldPath": "review_status", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "skills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "visibility", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "skills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "review_status", "order": "ASCENDING" }
+      ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "skills",
+      "fieldPath": "files",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "skill_edits",
+      "fieldPath": "files",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "skill_versions",
+      "fieldPath": "files",
+      "indexes": []
+    }
+  ]
 }
