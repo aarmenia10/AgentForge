@@ -72,6 +72,43 @@ test('every route has a title and the gated set is exact', () => {
     'me',
     'review',
     'settings',
+    'skill-upload',
     'studio',
   ])
+})
+
+test('skill pages: the list, the upload page, and one page per valid id', () => {
+  assert.deepEqual(matchRoute('/skills'), { name: 'skills', params: {} })
+  assert.deepEqual(matchRoute('/skills/'), { name: 'skills', params: {} })
+  assert.deepEqual(matchRoute('/skills/new'), {
+    name: 'skill-upload',
+    params: {},
+  })
+  assert.deepEqual(matchRoute('/skills/pdf-forms'), {
+    name: 'skill',
+    params: { id: 'pdf-forms' },
+  })
+  assert.deepEqual(matchRoute('/skills/pdf-forms/'), {
+    name: 'skill',
+    params: { id: 'pdf-forms' },
+  })
+  for (const bad of [
+    '/skills/PDF',
+    '/skills/a_b',
+    '/skills/-a',
+    '/skills/a/b',
+    '/skills/%E0%A4%A',
+    '/skills//',
+  ])
+    assert.equal(matchRoute(bad).name, 'not-found', bad)
+  assert.equal(routeTitle(matchRoute('/skills')), 'Skills · AgentLemon')
+  assert.equal(
+    routeTitle(matchRoute('/skills/new')),
+    'Upload a skill · AgentLemon',
+  )
+  assert.equal(
+    routeTitle(matchRoute('/skills/pdf-forms')),
+    'pdf-forms · Skills · AgentLemon',
+  )
+  assert.equal(routeTitle(matchRoute('/me')), 'My items · AgentLemon')
 })

@@ -16,6 +16,9 @@ const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
   studio: lazy(() => import('./pages/StudioPage')),
   review: lazy(() => import('./pages/ReviewPage')),
   profile: lazy(() => import('./pages/ProfilePage')),
+  skills: lazy(() => import('./pages/SkillsPage')),
+  'skill-upload': lazy(() => import('./pages/SkillUploadPage')),
+  skill: lazy(() => import('./pages/SkillPage')),
   'not-found': lazy(() => import('./pages/NotFoundPage')),
 }
 
@@ -57,7 +60,9 @@ export default function App() {
       {Page ? (
         <Suspense fallback={<PageHold />}>
           {/* Keyed so each arrival mounts fresh, e.g. /u/a to /u/b. */}
-          <Page key={`${route.name}:${route.params.handle ?? ''}`} />
+          <Page
+            key={`${route.name}:${route.params.handle ?? route.params.id ?? ''}`}
+          />
         </Suspense>
       ) : (
         <HomePage query={query} patchQuery={patchQuery} resetQuery={resetQuery} />

@@ -1,6 +1,7 @@
 import {
   ChevronDown,
   ClipboardCheck,
+  FilePlus2,
   LayoutGrid,
   LogOut,
   MailWarning,
@@ -41,8 +42,9 @@ function checkAdmin(uid: string): Promise<boolean> {
 }
 
 const MENU_LINKS: readonly { to: string; label: string; icon: LucideIcon }[] = [
-  { to: '/me', label: 'My agents', icon: LayoutGrid },
+  { to: '/me', label: 'My items', icon: LayoutGrid },
   { to: '/studio', label: 'New agent', icon: Plus },
+  { to: '/skills/new', label: 'New skill', icon: FilePlus2 },
   { to: '/friends', label: 'Friends', icon: Users },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
