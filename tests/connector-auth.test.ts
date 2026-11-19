@@ -713,3 +713,26 @@ test('account calls stay within the Firestore budget, overwrite nothing, and pre
   )
   assert.ok(!unconfirmed.calls.includes('users/alice'))
 })
+
+test("Claude's pinned client metadata is used when claude.ai cannot be fetched, for that exact id only", async () => {
+  const pinned = 'https://claude.ai/oauth/mcp-oauth-client-metadata'
+  const client = connectorClient({
+    async fetch() {
+      return new Response('Forbidden', { status: 403 })
+    },
+  })
+  const ok = await client.authorize(pinned, { redirect_uri: CALLBACK })
+  assert.equal(ok.status, 302)
+  assert.match(
+    ok.headers.get('Location')!,
+    new RegExp(`^${SITE_ORIGIN}/connect#r=`),
+  )
+  for (const [id, redirect_uri] of [
+    [pinned, 'http://127.0.0.1:43501/callback'],
+    ['https://claude.ai/oauth/other', CALLBACK],
+  ]) {
+    const denied = await client.authorize(id, { redirect_uri })
+    assert.equal(denied.status, 400)
+    assert.equal(denied.headers.get('Location'), null)
+  }
+})
