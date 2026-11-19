@@ -22,6 +22,18 @@ const AUTH_METADATA = '/.well-known/oauth-authorization-server'
 const COOKIE = '__Host-al_flow'
 const CLAUDE_CALLBACK = 'https://claude.ai/api/mcp/auth_callback'
 const CIMD_HOSTS = new Set(['claude.ai'])
+// Claude's published client metadata (fetched 2026-11-19). Cloudflare
+// Workers cannot always fetch claude.ai, so this exact document is the
+// fallback for that exact client id. The redirect allowlist still applies.
+const PINNED_CLIENTS: Record<
+  string,
+  { redirect_uris: string[]; client_name: string }
+> = {
+  'https://claude.ai/oauth/mcp-oauth-client-metadata': {
+    redirect_uris: [CLAUDE_CALLBACK],
+    client_name: 'Claude',
+  },
+}
 const LOOPBACK =
   /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::([0-9]{1,5}))?\/callback$/
 export const SETUP_MESSAGE = 'Account sign-in is not set up yet.'
@@ -229,6 +241,17 @@ function rotationHeaders(env: OAuthEnv): Record<string, string> {
   }
 }
 
+function pinnedClient(id: string): Registration | null {
+  const pinned = PINNED_CLIENTS[id]
+  return pinned
+    ? {
+        redirect_uris: pinned.redirect_uris.filter((uri) => allowed(uri)),
+        client_name: pinned.client_name,
+        application_type: 'web',
+      }
+    : null
+}
+
 export function createOAuth(options: OAuthOptions = {}) {
   const now = () => Math.floor((options.now ?? Date.now)() / 1000)
   const fetcher = options.fetch ?? ((url, init) => fetch(url, init))
@@ -293,7 +316,7 @@ export function createOAuth(options: OAuthOptions = {}) {
       return errorPage(`Redirect is not allowlisted: ${uri.slice(0, 240)}`)
     const cimd = client.startsWith('https://')
     const registration = cimd
-      ? await metadata(client).catch(() => null)
+      ? await metadata(client).catch(() => pinnedClient(client))
       : await codec.open<Registration>('client', client)
     if (
       !registration?.redirect_uris.some(
