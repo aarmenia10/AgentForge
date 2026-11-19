@@ -222,6 +222,14 @@ test('real Auth and Firestore REST enforce account isolation, private create-onl
           item.id.startsWith('alice-') && item.prompt_blueprint === undefined,
       ),
     )
+    for (const item of own.items) {
+      if (item.visibility === 'private' || item.visibility === 'friends') {
+        assert.match(item.review, /^Not needed/)
+        assert.equal('review_status' in item, false)
+      } else {
+        assert.ok('review_status' in item)
+      }
+    }
     const bobList = await toolBody(
       await call(bobTokens.access_token, 'list_my_items', { kind: 'agent' }),
     )

@@ -22,6 +22,7 @@ import {
   ScreenError,
 } from './skillActions'
 import { toIndexEntry } from './skillDraft'
+import { originLabel } from '@/lib/portability'
 
 const PAGE = SKILL_PAGE_MAX
 
@@ -226,8 +227,10 @@ export function SkillRow({
         <StatusText tone="indigo">Skill</StatusText>
         <VisibilityLabel visibility={record.visibility} />
         <SkillReviewLabel record={record} />
-        {record.saved_from_chat && (
-          <StatusText tone="indigo">Saved from chat</StatusText>
+        {originLabel(record.origin_app, record.saved_from_chat) && (
+          <StatusText tone="indigo">
+            {originLabel(record.origin_app, record.saved_from_chat)}
+          </StatusText>
         )}
         {edit &&
           (edit.review_status === 'rejected' ? (

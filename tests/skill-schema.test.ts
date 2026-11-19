@@ -511,6 +511,35 @@ test('item references round-trip and are always pinned', () => {
 
 /* ---------- Worker safety ---------- */
 
+test('origin_app is optional on SkillManifest, allowlisted, and round-trips through writer and reader schemas', () => {
+  const base = skill()
+  for (const app of ['claude', 'chatgpt', 'other'] as const) {
+    const validated = validateSkillManifest({ ...base, origin_app: app })
+    assert.equal(validated.ok, true)
+    if (validated.ok) assert.equal(validated.value.origin_app, app)
+
+    const rec = validateSkillRecord({
+      ...base,
+      origin_app: app,
+      owner_uid: 'alice',
+      review_status: 'approved',
+    })
+    assert.equal(rec.ok, true)
+    if (rec.ok) assert.equal(rec.value.origin_app, app)
+  }
+
+  // Without origin_app is also valid
+  const without = validateSkillManifest(base)
+  assert.equal(without.ok, true)
+  if (without.ok) assert.equal(without.value.origin_app, undefined)
+
+  // Invalid origin_app fails
+  for (const bad of ['gemini', 'unknown', 123, null]) {
+    const validated = validateSkillManifest({ ...base, origin_app: bad })
+    assert.equal(validated.ok, false)
+  }
+})
+
 test('skillSchema imports nothing that a Worker cannot run', () => {
   const source = readFileSync(
     new URL('../src/lib/skillSchema.ts', import.meta.url),

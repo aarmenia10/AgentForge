@@ -26,12 +26,17 @@ Field names are snake_case because the record is serialized as-is. `SkillManifes
 | `tags`                 | `string[]`                              | 1 to 10 lowercase slugs, unique. Same vocabulary as agent tags, so categories and suggestions (P3-12) work across both kinds         |
 | `files`                | `{ path, kind, content }[]`             | 1 to 50 files. `kind` is `'instructions' \| 'reference' \| 'script'`. `content` is the full text. See sections 3 and 4               |
 | `stats`                | `{ updated_at }`                        | ISO 8601 with offset. P3-13 adds vote counts here; public readers ignore fields they do not know (section 7.3), so that is additive  |
+| `origin_app`           | `'claude' \| 'chatgpt' \| 'other'`      | Optional. Recorded when saved through the connector; omitted for items created on the site (P3-2)                                    |
 | `owner_uid`            | `string`                                | Record only                                                                                                                          |
 | `review_status`        | `'pending' \| 'approved' \| 'rejected'` | Record only. Same meaning and transitions as for agents                                                                              |
 
 A skill record has no `shared_with`. On agents that field is retained only for compatibility and grants nothing (decision of 2026-11-14), so a new contract does not carry it.
 
 The record stores `name` and `description` beside SKILL.md, rather than only inside it, so lists and the public index can show them without parsing Markdown. The validator rejects a record where the two disagree, which keeps one source of truth: the file.
+
+### 2.1 Origin and portability (P3-2)
+
+Skills saved through the connector record their originating AI app in `origin_app` (`'claude'`, `'chatgpt'`, or `'other'`). Skills created on the website omit this field. Because public skill readers ignore unknown fields, `origin_app` is included directly in the public skill manifest without breaking released clients.
 
 ## 3. Files
 

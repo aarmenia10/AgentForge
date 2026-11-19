@@ -381,6 +381,7 @@ function shapes(strict: boolean) {
     author,
     tags,
     stats,
+    origin_app: z.enum(['claude', 'chatgpt', 'other']).optional(),
   }
   const manifest = obj({
     ...base,

@@ -37,7 +37,9 @@ test('local and connector resolve the same old pin; bad version responses fail c
       fetchCatalog: async (url) =>
         url.endsWith('/catalog.json')
           ? Response.json([latest])
-          : fetchVersion(url),
+          : url.endsWith('/origins.json')
+            ? Response.json({})
+            : fetchVersion(url),
     })
     const remote = new Client({ name: 'remote-version-test', version: '1' })
     await remote.connect(

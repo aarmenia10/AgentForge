@@ -8,6 +8,8 @@ import {
   buildCatalog,
   seedRecord,
   buildVersionFiles,
+  buildOrigins,
+  sortOrigins,
   exportDigest,
   writeVersionFiles,
 } from '../scripts/export-catalog'
@@ -281,4 +283,81 @@ test('skill allowances bind item kind, pin, path and whole-file hash', () => {
   file.content += '\n'
   assert.ok(unallowedFindings(sample, [entry]).some((f) => f.rule === 'SL-01'))
   assert.throws(() => parseAllowlist([{ ...entry, kind: 'unknown' }]))
+})
+
+test('origins.json holds only public approved versions; private and friends origins never reach public export', () => {
+  const publicApproved: AgentRecord = {
+    ...record,
+    id: 'agent-public-approved',
+    version: '1.0.0',
+    visibility: 'public',
+    review_status: 'approved',
+    origin_app: 'claude',
+  }
+  const publicPending: AgentRecord = {
+    ...record,
+    id: 'agent-public-pending',
+    version: '1.0.0',
+    visibility: 'public',
+    review_status: 'pending',
+    origin_app: 'chatgpt',
+  }
+  const friendsRecord: AgentRecord = {
+    ...record,
+    id: 'agent-friends',
+    version: '1.0.0',
+    visibility: 'friends',
+    review_status: 'approved',
+    origin_app: 'chatgpt',
+  }
+  const privateRecord: AgentRecord = {
+    ...record,
+    id: 'agent-private',
+    version: '1.0.0',
+    visibility: 'private',
+    review_status: 'approved',
+    origin_app: 'other',
+  }
+
+  const catalog = buildCatalog(
+    [],
+    [publicApproved, publicPending, friendsRecord, privateRecord],
+  )
+  assert.equal(catalog.length, 1)
+  assert.equal(catalog[0].id, 'agent-public-approved')
+
+  const snapshots = [
+    publicApproved,
+    { ...publicApproved, version: '1.1.0', origin_app: 'claude' as const },
+    publicPending,
+    friendsRecord,
+    privateRecord,
+  ]
+
+  const origins = buildOrigins(catalog, snapshots)
+  assert.deepEqual(origins, {
+    'agent-public-approved@1.0.0': 'claude',
+    'agent-public-approved@1.1.0': 'claude',
+  })
+
+  const sorted = sortOrigins({ 'b@1.0.0': 'claude', 'a@1.0.0': 'chatgpt' })
+  assert.deepEqual(Object.keys(sorted), ['a@1.0.0', 'b@1.0.0'])
+
+  // Private, friends, and pending origins never appear in public origins
+  assert.equal(origins['agent-public-pending@1.0.0'], undefined)
+  assert.equal(origins['agent-friends@1.0.0'], undefined)
+  assert.equal(origins['agent-private@1.0.0'], undefined)
+
+  // Digest includes origins.json
+  const output1 = {
+    catalog,
+    files: buildVersionFiles(catalog, snapshots),
+    ...emptySkillExport(),
+    origins,
+  }
+  const output2 = {
+    ...output1,
+    origins: { ...origins, 'agent-public-approved@1.0.0': 'chatgpt' as const },
+  }
+  assert.notEqual(exportDigest(output1), exportDigest(output2))
 })

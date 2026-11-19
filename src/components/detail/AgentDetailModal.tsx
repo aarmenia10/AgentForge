@@ -15,6 +15,11 @@ import { useAuth } from '@/auth/AuthProvider'
 import { agentRepository } from '@/lib/agentRepository'
 import { formatCount, formatRelativeTime } from '@/lib/format'
 import { TOOL_TYPE_LABELS, type AgentManifest, type AgentTool } from '@/types/agent'
+import {
+  fetchPublicOrigins,
+  publicOriginLabel,
+  type OriginApp,
+} from '@/lib/portability'
 import { AuthorLink, cn, CopyButton, FrameworkBadge } from '../ui'
 import { InstallPanel } from './InstallPanel'
 import { SchemaViewer } from './SchemaViewer'
@@ -49,6 +54,23 @@ export function AgentDetailModal({
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const baseId = useId()
+  const [originApp, setOriginApp] = useState<OriginApp | null>(null)
+
+  useEffect(() => {
+    let active = true
+    if (agent.visibility === 'public') {
+      fetchPublicOrigins()
+        .then((origins) => {
+          if (active) {
+            setOriginApp(origins[`${agent.id}@${agent.version}`] ?? null)
+          }
+        })
+        .catch(() => {})
+    }
+    return () => {
+      active = false
+    }
+  }, [agent.id, agent.version, agent.visibility])
 
   // Lock page scroll, move focus in, and restore both on close.
   useEffect(() => {
@@ -134,6 +156,11 @@ export function AgentDetailModal({
               <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                 Star totals in the catalog refresh about hourly.
               </p>
+              {publicOriginLabel(originApp) && (
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {publicOriginLabel(originApp)}
+                </p>
+              )}
             </div>
             <button
               type="button"

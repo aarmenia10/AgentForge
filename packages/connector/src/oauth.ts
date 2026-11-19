@@ -686,7 +686,7 @@ export function createOAuth(options: OAuthOptions = {}) {
       return data.epoch === access.epoch &&
         active(grant, now()) &&
         grant.gen >= 1
-        ? { access, db }
+        ? { access, db, grant }
         : null
     },
     async handle(

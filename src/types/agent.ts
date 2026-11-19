@@ -73,6 +73,7 @@ export interface AgentRecord extends AgentManifest {
   review_status: 'pending' | 'approved' | 'rejected'
   shared_with: string[]
   saved_from_chat?: true
+  origin_app?: 'claude' | 'chatgpt' | 'other'
 }
 
 /* ---------- UI-facing constants derived from the contract ---------- */

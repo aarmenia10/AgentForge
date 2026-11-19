@@ -46,3 +46,7 @@ await copyFile(
   new URL('../../public/catalog.json', import.meta.url),
   new URL('./catalog.json', import.meta.url),
 )
+await copyFile(
+  new URL('../../public/origins.json', import.meta.url),
+  new URL('./dist/origins.json', import.meta.url),
+)

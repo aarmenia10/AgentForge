@@ -86,6 +86,9 @@ service cloud.firestore {
       allow list, delete: if false;
     }
     function validChatMarker(data) { return data.get('saved_from_chat', true) == true; }
+    function validOriginApp(data) {
+      return !('origin_app' in data) || data.origin_app in ['claude', 'chatgpt', 'other'];
+    }
     function agentPath(agentId) { return /databases/$(database)/documents/agents/$(agentId); }
     function editPath(agentId) { return /databases/$(database)/documents/agent_edits/$(agentId); }
     function versionPath(data) { return /databases/$(database)/documents/agent_versions/$(data.id + '@' + data.version); }
@@ -151,8 +154,9 @@ service cloud.firestore {
       // Required fields are accessed below, so missing fields deny without a second key scan.
       return data.keys().hasOnly(['schema_version', 'visibility', 'id', 'name', 'version', 'description',
           'author', 'tags', 'framework', 'tools_required', 'input_schema', 'output_schema',
-          'prompt_blueprint', 'stats', 'owner_uid', 'review_status', 'shared_with', 'saved_from_chat'])
+          'prompt_blueprint', 'stats', 'owner_uid', 'review_status', 'shared_with', 'saved_from_chat', 'origin_app'])
         && validChatMarker(data)
+        && validOriginApp(data)
         && data.schema_version == 2
         && data.id == agentId && agentId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
         && data.visibility in ['public', 'friends', 'private']
@@ -330,8 +334,9 @@ service cloud.firestore {
         && (n <= 40 || tenSkillFiles(padded, 40, kinds));
     }
     function validSkill(data, skillId) {
-      return data.keys().hasOnly(['skill_schema_version', 'visibility', 'id', 'name', 'version', 'description', 'author', 'tags', 'files', 'stats', 'owner_uid', 'review_status', 'saved_from_chat'])
+      return data.keys().hasOnly(['skill_schema_version', 'visibility', 'id', 'name', 'version', 'description', 'author', 'tags', 'files', 'stats', 'owner_uid', 'review_status', 'saved_from_chat', 'origin_app'])
         && validChatMarker(data)
+        && validOriginApp(data)
         && data.skill_schema_version == 1
         && data.id == skillId && skillId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
         && data.visibility in ['public', 'friends', 'private']

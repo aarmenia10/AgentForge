@@ -5,8 +5,9 @@ import {
   parsePublicSkillVersion,
   skillVersionPath,
 } from '../src/lib/skillSchema'
-import { exportDigest } from './export-catalog'
+import { exportDigest, sortOrigins } from './export-catalog'
 import type { PublicExport } from './export-catalog'
+import type { OriginApp } from '../src/lib/portability'
 
 const runDay = new Date().toISOString().slice(0, 10)
 const scope = () =>
@@ -25,6 +26,7 @@ export async function saveCheckpoint(path: string, result: PublicExport) {
       day: runDay,
       catalog: result.catalog,
       versions: [...result.files.values()],
+      ...(result.origins !== undefined ? { origins: result.origins } : {}),
     }),
   )
 }
@@ -82,7 +84,27 @@ export async function readCheckpoint(
       )
     )
       throw new Error('Missing current skill version')
-    const result = { catalog, files, skillIndex, skillFiles }
+    const rawOrigins = data.origins
+    let origins: Record<string, OriginApp> | undefined
+    if (rawOrigins && typeof rawOrigins === 'object') {
+      const parsed: Record<string, OriginApp> = {}
+      for (const [key, app] of Object.entries(rawOrigins)) {
+        if (
+          typeof key === 'string' &&
+          (app === 'claude' || app === 'chatgpt' || app === 'other')
+        ) {
+          parsed[key] = app
+        }
+      }
+      origins = sortOrigins(parsed)
+    }
+    const result: PublicExport = {
+      catalog,
+      files,
+      skillIndex,
+      skillFiles,
+      ...(origins !== undefined ? { origins } : {}),
+    }
     if (live !== JSON.stringify({ sha256: exportDigest(result) }) + '\n')
       throw new Error('Hosting digest mismatch')
     return result

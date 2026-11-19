@@ -11,6 +11,7 @@ import { formatRelativeTime } from '@/lib/format'
 import { MCP_CONNECTOR_URL } from '@/lib/mcpConfig'
 import { formatBytes, skillBytes } from '@/lib/skillRepository'
 import { SKILL_INSTRUCTIONS_PATH } from '@/lib/skillSchema'
+import { publicOriginLabel } from '@/lib/portability'
 import type {
   SkillFile,
   SkillFileSummary,
@@ -108,6 +109,11 @@ export function SkillDetail({
           <p className="text-xs text-slate-600 dark:text-slate-400">
             {VERIFIED_AUTHOR_LABEL} means the registry confirmed who the author
             is. It is not a safety check or a review of the skill.
+          </p>
+        )}
+        {isPublic && publicOriginLabel(skill.origin_app) && (
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {publicOriginLabel(skill.origin_app)}
           </p>
         )}
       </div>
