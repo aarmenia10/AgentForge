@@ -8,6 +8,8 @@ export const sources = [
   'agent_versions',
   'skills',
   'skill_versions',
+  'votes',
+  'comments',
 ] as const
 type Source = (typeof sources)[number]
 export interface Receipt {

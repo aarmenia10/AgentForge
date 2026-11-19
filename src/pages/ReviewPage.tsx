@@ -3,6 +3,7 @@ import RequireAccount from '@/components/RequireAccount'
 import { PageHold, PageShell } from '@/components/PageShell'
 import { ReviewQueue } from '@/components/review/ReviewQueue'
 import { SkillReviewQueue } from '@/components/skills/SkillReviewQueue'
+import { AdminReportsView } from '@/components/ratings/AdminReportsView'
 import { cn } from '@/components/ui'
 
 export default function ReviewPage() {
@@ -18,7 +19,7 @@ export default function ReviewPage() {
 }
 
 type Access = 'checking' | 'admin' | 'not-admin' | 'error'
-type Items = 'agents' | 'skills'
+type Items = 'agents' | 'skills' | 'reports'
 
 function ReviewerOnly() {
   const [access, setAccess] = useState<Access>('checking')
@@ -67,6 +68,7 @@ function ReviewerOnly() {
           [
             ['agents', 'Agents'],
             ['skills', 'Skills'],
+            ['reports', 'Reports'],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -94,6 +96,9 @@ function ReviewerOnly() {
       </div>
       <div hidden={items !== 'skills'}>
         {seen.has('skills') && <SkillReviewQueue />}
+      </div>
+      <div hidden={items !== 'reports'}>
+        {seen.has('reports') && <AdminReportsView />}
       </div>
     </PageShell>
   )

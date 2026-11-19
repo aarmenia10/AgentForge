@@ -15,6 +15,12 @@ import {
 } from '../src/lib/validateManifest'
 import type { AgentManifest, AgentRecord } from '../src/types/agent'
 import { emptySkillExport, type SkillExport } from './skillExport'
+import {
+  emptyRatingsExport,
+  writeRatingsFiles,
+  type RatingsExport,
+  type RatingFile,
+} from './ratingsExport'
 import type { SkillManifest } from '../src/types/skill'
 import type { OriginApp } from '../src/lib/portability'
 import { parseAllowlist, unallowedFindings } from './catalogSafety'
@@ -278,7 +284,7 @@ export function buildOrigins(
   return sortOrigins(origins)
 }
 
-export interface PublicExport extends SkillExport {
+export interface PublicExport extends SkillExport, RatingsExport {
   catalog: AgentManifest[]
   files: Map<string, AgentManifest>
   origins?: Record<string, OriginApp>
@@ -290,6 +296,7 @@ export function exportDigest({
   skillIndex,
   skillFiles,
   origins,
+  ratingsFiles,
 }: PublicExport) {
   const digest = createHash('sha256').update(JSON.stringify(catalog))
   for (const [path, manifest] of [...files].sort(([a], [b]) =>
@@ -301,6 +308,10 @@ export function exportDigest({
     a.localeCompare(b, 'en'),
   ))
     digest.update(path).update(JSON.stringify(skill))
+  for (const [path, rating] of [...(ratingsFiles ?? new Map())].sort(
+    ([a], [b]) => a.localeCompare(b, 'en'),
+  ))
+    digest.update(path).update(JSON.stringify(rating))
   digest
     .update('origins.json')
     .update(JSON.stringify(sortOrigins(origins ?? {})))
@@ -381,8 +392,20 @@ export async function exportCatalog() {
       )
     return result
   })
+  const seedRatings = new Map<string, RatingFile>()
+  for (const seed of seeds) {
+    seedRatings.set(`ratings/agent/${seed.id}.json`, {
+      kind: 'agent',
+      id: seed.id,
+      thumbs_up: seed.stats.stars,
+      thumbs_down: 0,
+      comments: [],
+    })
+  }
   const output = result ?? {
     ...emptySkillExport(),
+    ...emptyRatingsExport(),
+    ratingsFiles: seedRatings,
     catalog: seeds,
     files: buildVersionFiles(seeds, [], SEED_AGENTS, allow, log),
     origins: {},
@@ -391,6 +414,7 @@ export async function exportCatalog() {
   await mkdir(publicDir, { recursive: true })
   await writeVersionFiles(resolve(publicDir, 'agents'), output.files)
   await writeSkillFiles(publicDir, output)
+  await writeRatingsFiles(publicDir, output)
   await writeFile(
     resolve(publicDir, 'origins.json'),
     `${JSON.stringify(sortOrigins(output.origins ?? {}), null, 2)}\n`,

@@ -5,14 +5,12 @@ import {
   ListChecks,
   PlugZap,
   ShieldCheck,
-  Star,
   Wrench,
   X,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
-import { agentRepository } from '@/lib/agentRepository'
 import { formatCount, formatRelativeTime } from '@/lib/format'
 import { TOOL_TYPE_LABELS, type AgentManifest, type AgentTool } from '@/types/agent'
 import {
@@ -20,6 +18,10 @@ import {
   publicOriginLabel,
   type OriginApp,
 } from '@/lib/portability'
+import { VoteButtons } from '@/components/ratings/VoteButtons'
+import { CommentsSection } from '@/components/ratings/CommentsSection'
+import { ReportDialog } from '@/components/ratings/ReportDialog'
+import { fetchRatings, type RatingData } from '@/services/ratings'
 import { AuthorLink, cn, CopyButton, FrameworkBadge } from '../ui'
 import { InstallPanel } from './InstallPanel'
 import { SchemaViewer } from './SchemaViewer'
@@ -49,12 +51,28 @@ export function AgentDetailModal({
   onClose,
   installable = true,
 }: AgentDetailModalProps) {
+  const { status, user } = useAuth()
+  const uid = status === 'signed-in' && user ? user.uid : null
   const [tab, setTab] = useState<TabId>('overview')
   const tabs = installable ? TABS : TABS.filter((t) => t.id !== 'install')
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const baseId = useId()
   const [originApp, setOriginApp] = useState<OriginApp | null>(null)
+  const [rating, setRating] = useState<RatingData | null>(null)
+  const [showReport, setShowReport] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    fetchRatings('agent', agent.id)
+      .then((r) => {
+        if (active) setRating(r)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [agent.id])
 
   useEffect(() => {
     let active = true
@@ -146,15 +164,29 @@ export function AgentDetailModal({
               </h2>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
                 <AuthorLink author={agent.author} showVerifiedLabel />
-                <StarButton agent={agent} />
+                <VoteButtons
+                  kind="agent"
+                  itemId={agent.id}
+                  initialThumbsUp={rating?.thumbs_up ?? agent.stats.stars}
+                  initialThumbsDown={rating?.thumbs_down ?? 0}
+                />
                 <span className="inline-flex items-center gap-1">
                   <Eye className="size-3.5" />
                   {formatCount(agent.stats.views)} views
                 </span>
                 <span>Updated {formatRelativeTime(agent.stats.updated_at)}</span>
+                {uid && uid !== agent.author.uid && (
+                  <button
+                    type="button"
+                    onClick={() => setShowReport(true)}
+                    className="text-xs text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400"
+                  >
+                    Report
+                  </button>
+                )}
               </div>
               <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                Star totals in the catalog refresh about hourly.
+                Vote totals in the catalog refresh about hourly.
               </p>
               {publicOriginLabel(originApp) && (
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -211,7 +243,7 @@ export function AgentDetailModal({
           aria-labelledby={`${baseId}-tab-${tab}`}
           className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7"
         >
-          {tab === 'overview' && <OverviewPanel agent={agent} />}
+          {tab === 'overview' && <OverviewPanel agent={agent} rating={rating} />}
           {tab === 'tools' && <ToolsPanel tools={agent.tools_required} />}
           {tab === 'schema' && (
             <div className="space-y-8">
@@ -245,124 +277,27 @@ export function AgentDetailModal({
           </footer>
         )}
       </div>
+
+      {showReport && (
+        <ReportDialog
+          kind="agent"
+          itemId={agent.id}
+          targetType="item"
+          targetId={agent.id}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   )
 }
 
-/**
- * Reads whether this user starred the agent. Loads Firestore only here, when a
- * signed-in user opens a detail view. Null when it cannot tell, for example
- * because the agent has no live document yet.
- */
-async function readOwnStar(agentId: string, uid: string): Promise<boolean | null> {
-  const [{ getFirebaseServices }, { doc, getDoc }] = await Promise.all([
-    import('@/lib/firebase'),
-    import('firebase/firestore'),
-  ])
-  const { db, auth } = getFirebaseServices()
-  await auth.authStateReady()
-  if (auth.currentUser?.uid !== uid) return null
-  const star = await getDoc(doc(db, 'agents', agentId, 'stars', uid))
-  return star.exists()
-}
-
-function describeStarError(error: unknown): string {
-  const code =
-    error && typeof error === 'object' && 'code' in error
-      ? String((error as { code: unknown }).code).replace(/^firestore\//, '')
-      : null
-  if (code === 'unavailable' || code === 'deadline-exceeded')
-    return 'Could not reach the server, so your star was not saved. Try again.'
-  if (code === 'resource-exhausted')
-    return 'The site has reached its daily limit. Try again tomorrow.'
-  if (error instanceof Error && /^Agent does not exist/.test(error.message))
-    return 'Stars are not open for this agent yet.'
-  if (error instanceof Error && /^Sign in/.test(error.message))
-    return 'Your session ended. Sign in again to star agents.'
-  return 'Could not save your star. Try again.'
-}
-
-/**
- * A star icon and the count, no pill (README 7.1). Signed out, it asks for
- * sign-in. Signed in, it toggles at once and reverts on failure.
- */
-function StarButton({ agent }: { agent: AgentManifest }) {
-  const { status, user, openSignIn } = useAuth()
-  const uid = status === 'signed-in' && user ? user.uid : null
-  const [count, setCount] = useState(agent.stats.stars)
-  const [starred, setStarred] = useState<boolean | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    setStarred(null)
-    if (!uid) return
-    let active = true
-    readOwnStar(agent.id, uid)
-      .then((value) => active && setStarred(value))
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [agent.id, uid])
-
-  async function onClick() {
-    if (!uid) {
-      openSignIn({ reason: 'Sign in to star this agent.' })
-      return
-    }
-    if (busy) return
-    const before = { count, starred }
-    if (starred !== null) {
-      setStarred(!starred)
-      setCount(Math.max(0, count + (starred ? -1 : 1)))
-    }
-    setBusy(true)
-    setMessage(null)
-    try {
-      const next = await agentRepository.toggleStar(agent.id, uid)
-      setCount(next)
-      if (before.starred === null)
-        setStarred(await readOwnStar(agent.id, uid).catch(() => null))
-    } catch (error) {
-      setCount(before.count)
-      setStarred(before.starred)
-      setMessage(describeStarError(error))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={onClick}
-        aria-pressed={uid && starred !== null ? starred : undefined}
-        aria-busy={busy || undefined}
-        aria-label={`${starred ? 'Starred' : 'Star this agent'}, ${formatCount(count)} stars`}
-        title={uid ? (starred ? 'Remove your star' : 'Star this agent') : 'Sign in to star this agent'}
-        className="-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 transition hover:text-amber-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500 dark:hover:text-amber-300"
-      >
-        <Star
-          aria-hidden="true"
-          className={cn(
-            'size-3.5 text-amber-500',
-            starred && 'fill-amber-400 text-amber-400',
-          )}
-        />
-        <span className="tabular-nums">{formatCount(count)}</span> stars
-      </button>
-      {message && (
-        <span role="status" className="basis-full text-rose-700 dark:text-rose-300">
-          {message}
-        </span>
-      )}
-    </>
-  )
-}
-
-function OverviewPanel({ agent }: { agent: AgentManifest }) {
+function OverviewPanel({
+  agent,
+  rating,
+}: {
+  agent: AgentManifest
+  rating: RatingData | null
+}) {
   const { system_prompt, instructions, verification_rules } = agent.prompt_blueprint
   return (
     <div className="space-y-7">
@@ -425,6 +360,16 @@ function OverviewPanel({ agent }: { agent: AgentManifest }) {
           </ul>
         </section>
       )}
+
+      <section className="pt-4 border-t border-slate-900/10 dark:border-white/10">
+        <h3 className="mb-3 text-sm font-semibold">Comments</h3>
+        <CommentsSection
+          kind="agent"
+          itemId={agent.id}
+          initialComments={rating?.comments ?? []}
+          authorUid={agent.author.uid}
+        />
+      </section>
     </div>
   )
 }

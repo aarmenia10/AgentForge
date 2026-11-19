@@ -25,8 +25,15 @@ export function emptySkillExport(): SkillExport {
   }
 }
 export function summarizeSkill(skill: SkillManifest): SkillIndexEntry {
+  const s = skill as SkillManifest & {
+    thumbs_up?: number
+    thumbs_down?: number
+    stats?: { thumbs_up?: number; thumbs_down?: number }
+  }
   return {
     ...skill,
+    thumbs_up: s.thumbs_up ?? s.stats?.thumbs_up ?? 0,
+    thumbs_down: s.thumbs_down ?? s.stats?.thumbs_down ?? 0,
     files: skill.files.map(({ path, kind, content }) => ({
       path,
       kind,

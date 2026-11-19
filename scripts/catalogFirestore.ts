@@ -14,6 +14,8 @@ import type { OriginApp } from '../src/lib/portability'
 import type { LinterAllowance } from './catalogSafety'
 import { readSkillExport } from './skillExport'
 import { pendingChanges } from './catalogChanges'
+import { readRatingsExport } from './ratingsExport'
+import { getBlockedWordsSync } from '../src/lib/blockedWords'
 
 type Log = (notice: ExportNotice) => void
 
@@ -101,13 +103,23 @@ export async function readFirestoreExport(
 ) {
   // Capture receipts BEFORE reading data. Writes during a run are either
   // reflected here or remain queued for the next successful publication.
-  const [agents, versions, skills, skillVersions] = await Promise.all([
-    pendingChanges(db, 'agents'),
-    pendingChanges(db, 'agent_versions'),
-    pendingChanges(db, 'skills'),
-    pendingChanges(db, 'skill_versions'),
-  ])
-  const receipts = [...agents, ...versions, ...skills, ...skillVersions]
+  const [agents, versions, skills, skillVersions, votes, comments] =
+    await Promise.all([
+      pendingChanges(db, 'agents'),
+      pendingChanges(db, 'agent_versions'),
+      pendingChanges(db, 'skills'),
+      pendingChanges(db, 'skill_versions'),
+      pendingChanges(db, 'votes'),
+      pendingChanges(db, 'comments'),
+    ])
+  const receipts = [
+    ...agents,
+    ...versions,
+    ...skills,
+    ...skillVersions,
+    ...votes,
+    ...comments,
+  ]
   const skillExport = await readSkillExport(
     db,
     skills,
@@ -138,11 +150,22 @@ export async function readFirestoreExport(
     const snapshots = history.docs
       .map((doc) => recordData(doc, true, log))
       .filter(Boolean)
+    const ratingsExport = await readRatingsExport(
+      db,
+      catalog,
+      skillExport.skillIndex,
+      votes,
+      comments,
+      getBlockedWordsSync(),
+      log,
+      previous,
+    )
     return {
       catalog,
       files: buildVersionFiles(catalog, snapshots, seeds, allow, log),
       origins: buildOrigins(catalog, snapshots, allow, log),
       ...skillExport,
+      ...ratingsExport,
       receipts,
     }
   }
@@ -252,13 +275,25 @@ export async function readFirestoreExport(
     const id = at > 0 ? key.slice(0, at) : key
     if (!catalog.has(id)) delete origins[key]
   }
+  const sortedCatalog = [...catalog.values()].sort((a, b) =>
+    a.id.localeCompare(b.id, 'en'),
+  )
+  const ratingsExport = await readRatingsExport(
+    db,
+    sortedCatalog,
+    skillExport.skillIndex,
+    votes,
+    comments,
+    getBlockedWordsSync(),
+    log,
+    previous,
+  )
   return {
-    catalog: [...catalog.values()].sort((a, b) =>
-      a.id.localeCompare(b.id, 'en'),
-    ),
+    catalog: sortedCatalog,
     files,
     origins: sortOrigins(origins),
     ...skillExport,
+    ...ratingsExport,
     receipts,
   }
 }
