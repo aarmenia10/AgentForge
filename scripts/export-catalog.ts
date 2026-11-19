@@ -16,6 +16,7 @@ import {
 import type { AgentManifest, AgentRecord } from '../src/types/agent'
 import { emptySkillExport, type SkillExport } from './skillExport'
 import type { SkillManifest } from '../src/types/skill'
+import type { OriginApp } from '../src/lib/portability'
 import { parseAllowlist, unallowedFindings } from './catalogSafety'
 import type { LinterAllowance } from './catalogSafety'
 
@@ -239,9 +240,48 @@ export async function writeSkillFiles(publicDir: string, output: SkillExport) {
   )
 }
 
+export function sortOrigins(
+  origins: Record<string, OriginApp>,
+): Record<string, OriginApp> {
+  const sorted: Record<string, OriginApp> = {}
+  for (const key of Object.keys(origins).sort((a, b) =>
+    a.localeCompare(b, 'en'),
+  )) {
+    sorted[key] = origins[key]
+  }
+  return sorted
+}
+
+export function buildOrigins(
+  catalog: readonly AgentManifest[],
+  snapshots: unknown[],
+  allow: readonly LinterAllowance[] = [],
+  log: (notice: ExportNotice) => void = () => {},
+): Record<string, OriginApp> {
+  const eligible = new Map(catalog.map((agent) => [agent.id, agent]))
+  const origins: Record<string, OriginApp> = {}
+  for (const value of snapshots) {
+    let snapshot: AgentRecord
+    try {
+      snapshot = validateAgentRecord(value)
+    } catch {
+      continue
+    }
+    const current = eligible.get(snapshot.id)
+    if (!current || current.author.uid !== snapshot.owner_uid) continue
+    if (!snapshot.origin_app) continue
+    const [manifest] = buildCatalog([], [snapshot], allow, log)
+    if (manifest) {
+      origins[`${snapshot.id}@${snapshot.version}`] = snapshot.origin_app
+    }
+  }
+  return sortOrigins(origins)
+}
+
 export interface PublicExport extends SkillExport {
   catalog: AgentManifest[]
   files: Map<string, AgentManifest>
+  origins?: Record<string, OriginApp>
 }
 
 export function exportDigest({
@@ -249,6 +289,7 @@ export function exportDigest({
   files,
   skillIndex,
   skillFiles,
+  origins,
 }: PublicExport) {
   const digest = createHash('sha256').update(JSON.stringify(catalog))
   for (const [path, manifest] of [...files].sort(([a], [b]) =>
@@ -260,6 +301,9 @@ export function exportDigest({
     a.localeCompare(b, 'en'),
   ))
     digest.update(path).update(JSON.stringify(skill))
+  digest
+    .update('origins.json')
+    .update(JSON.stringify(sortOrigins(origins ?? {})))
   return digest.digest('hex')
 }
 
@@ -341,11 +385,17 @@ export async function exportCatalog() {
     ...emptySkillExport(),
     catalog: seeds,
     files: buildVersionFiles(seeds, [], SEED_AGENTS, allow, log),
+    origins: {},
   }
   const publicDir = fileURLToPath(new URL('../public/', import.meta.url))
   await mkdir(publicDir, { recursive: true })
   await writeVersionFiles(resolve(publicDir, 'agents'), output.files)
   await writeSkillFiles(publicDir, output)
+  await writeFile(
+    resolve(publicDir, 'origins.json'),
+    `${JSON.stringify(sortOrigins(output.origins ?? {}), null, 2)}\n`,
+    'utf8',
+  )
   await writeFile(
     resolve(publicDir, 'export-state.json'),
     JSON.stringify({ sha256: exportDigest(output) }) + '\n',

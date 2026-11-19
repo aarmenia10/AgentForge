@@ -385,6 +385,41 @@ test('skill access, sharing, proposals, immutable approval and queued public fil
     assert.deepEqual(excluded.skillIndex.skills, [])
     assert.equal(excluded.skillFiles.size, 0)
     assert.deepEqual(await readdir(join(directory, 'skills')), [])
+
+    // origin_app validation on skill creation
+    for (const app of ['claude', 'chatgpt', 'other'] as const) {
+      await owner.createSkill({
+        ...manifest,
+        id: 'test-skill-' + app,
+        origin_app: app,
+      })
+      const stored = await owner.getSkillRecord('test-skill-' + app)
+      assert.equal(stored?.origin_app, app)
+    }
+    for (const badApp of ['gemini', 'unknown', 123, null]) {
+      await assert.rejects(
+        () =>
+          owner.createSkill({
+            ...manifest,
+            id: 'test-skill-bad',
+            // @ts-expect-error invalid origin_app
+            origin_app: badApp,
+          }),
+        /rules|validation|invalid|shape|origin_app|denied/i,
+      )
+    }
+
+    // Direct firestore rules rejection of invalid origin_app
+    await assertFails(
+      setDoc(doc(alice, 'skills/test-skill-rules-bad'), {
+        ...manifest,
+        id: 'test-skill-rules-bad',
+        origin_app: 'unallowed_app',
+        owner_uid: 'alice',
+        review_status: 'pending',
+        shared_with: [],
+      }),
+    )
   } finally {
     await db.terminate()
     await env.cleanup()

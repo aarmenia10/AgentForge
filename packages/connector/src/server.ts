@@ -19,6 +19,10 @@ import { z } from 'zod'
 import type { AgentManifest } from '../../../src/types/agent'
 import { versionSchema } from '../../../src/lib/manifestSchema'
 import {
+  createPortabilityBlock,
+  type OriginApp,
+} from '../../../src/lib/portability'
+import {
   CONNECTOR_CONDENSED_GUIDE,
   CONNECTOR_GUIDE_PREFACE,
   GUIDE_NAME,
@@ -64,6 +68,9 @@ export function createConnectorServer(
     name: string,
     args: unknown,
   ) => Promise<ReturnType<typeof jsonResult>>,
+  origins:
+    | Readonly<Record<string, OriginApp>>
+    | (() => Promise<Readonly<Record<string, OriginApp>>>) = {},
 ) {
   const server = new Server(
     { name: CONNECTOR_NAME, version: CONNECTOR_VERSION },
@@ -143,10 +150,14 @@ export function createConnectorServer(
             ? `${agent_id}@${version}`
             : agent_id,
         )
+        const originsMap =
+          typeof origins === 'function' ? await origins() : origins
+        const originApp = originsMap[`${agent.id}@${agent.version}`]
         return jsonResult({
           notice: BLUEPRINT_NOTICE,
           agent,
           blueprint: renderBlueprint(agent),
+          portability: createPortabilityBlock(agent, originApp),
         })
       }
       throw new Error(`Unknown tool: ${name}`)

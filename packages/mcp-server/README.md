@@ -1,9 +1,9 @@
 # agentlemon-registry
 
-Version 0.3.0. Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
+Version 0.3.2. Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
 
 ```sh
-npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.0.tgz --agent postgres-index-tuner@1.0.0
+npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.2.tgz --agent postgres-index-tuner@1.0.0
 ```
 
 The server is distributed as a tarball on the AgentLemon site, not through the npm
@@ -23,7 +23,7 @@ version always fails closed; it never silently substitutes another version. When
 For OpenAI Codex, install the pinned agent using the documented stdio command:
 
 ```sh
-codex mcp add agentlemon-postgres-index-tuner -- npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.0.tgz --agent postgres-index-tuner@1.0.0
+codex mcp add agentlemon-postgres-index-tuner -- npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.2.tgz --agent postgres-index-tuner@1.0.0
 ```
 
 See [OpenAI's MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).

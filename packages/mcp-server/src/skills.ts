@@ -11,6 +11,7 @@ import {
   utf8ByteLength,
 } from '../../../src/lib/skillSchema'
 import type { SkillIndex, SkillIndexEntry } from '../../../src/types/skill'
+import { createPortabilityBlock } from '../../../src/lib/portability'
 import {
   DEFAULT_SEARCH_LIMIT,
   MAX_SEARCH_LIMIT,
@@ -147,6 +148,7 @@ export function createSkillReader(
             kind,
             bytes: utf8ByteLength(content),
           })),
+        portability: createPortabilityBlock(skill, skill.origin_app),
       })
     }
     if (name === 'get_skill_file') {

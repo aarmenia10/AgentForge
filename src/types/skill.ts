@@ -54,6 +54,7 @@ export interface SkillManifest {
   /** Exactly one `instructions` file, at path `SKILL.md`. */
   files: SkillFile[]
   stats: SkillStats
+  origin_app?: 'claude' | 'chatgpt' | 'other'
 }
 
 /** Firestore document metadata. Never serialized into a public file. */

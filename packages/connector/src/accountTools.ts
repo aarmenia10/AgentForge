@@ -20,6 +20,12 @@ import {
 } from '../../mcp-server/src/shared'
 import { FirestoreError, identity, type Firestore } from './firebase'
 import type { Access } from './oauth'
+import type { Grant } from './grants'
+import {
+  clientOriginApp,
+  createPortabilityBlock,
+  type OriginApp,
+} from '../../../src/lib/portability'
 
 const kind = z.enum(['agent', 'skill'])
 const visibility = z.enum(['public', 'friends', 'private'])
@@ -61,6 +67,8 @@ const metadataFields = [
   'visibility',
   'review_status',
   'stats.updated_at',
+  'saved_from_chat',
+  'origin_app',
 ]
 export const MAX_AGENT_BYTES = 200 * 1024
 export const INLINE_LINT_BYTES = 12 * 1024
@@ -140,6 +148,9 @@ interface Context {
   now: () => number
   publicAgent: (id: string, version?: string) => Promise<AgentManifest | null>
   publicSkill: (id: string, version?: string) => Promise<SkillManifest | null>
+  grant?: Grant
+  publicOrigins?:
+    Record<string, OriginApp> | (() => Promise<Record<string, OriginApp>>)
 }
 
 const profileSchema = z.object({
@@ -193,21 +204,42 @@ async function listItems(input: unknown, { db, access }: Context) {
       : !args.kind && itemKind === 'agent'
         ? next('skill')
         : null
+  const sanitizedItems = items.map((item) => {
+    const base = { kind: itemKind, ...item }
+    if (base.visibility === 'private') {
+      const rest = { ...base }
+      delete (rest as Record<string, unknown>).review_status
+      return {
+        ...rest,
+        review: 'Not needed: private items are visible only to you.',
+      }
+    }
+    if (base.visibility === 'friends') {
+      const rest = { ...base }
+      delete (rest as Record<string, unknown>).review_status
+      return {
+        ...rest,
+        review: 'Not needed: friends items are visible only to your friends.',
+      }
+    }
+    return base
+  })
   return jsonResult({
-    items: items.map((item) => ({ kind: itemKind, ...item })),
+    items: sanitizedItems,
     next_cursor,
   })
 }
 
 async function getItem(
   input: unknown,
-  { db, publicAgent, publicSkill }: Context,
+  { db, publicAgent, publicSkill, publicOrigins }: Context,
 ) {
   const { kind, id, version } = getArgs.parse(input)
   let item = await (kind === 'agent' ? publicAgent : publicSkill)(
     id,
     version,
   ).catch(() => null)
+  let docFields: Record<string, unknown> | undefined
   if (!item) {
     const unavailable = () =>
       new Error('This item or version is unavailable to your account.')
@@ -222,6 +254,7 @@ async function getItem(
       (version && doc.fields.version !== version)
     )
       throw unavailable()
+    docFields = doc.fields
     if (kind === 'agent') item = manifestSchema.strip().parse(doc.fields)
     else {
       const parsed = validateSkillManifest(
@@ -231,17 +264,41 @@ async function getItem(
       item = parsed.value
     }
   }
+  const reviewField =
+    item.visibility === 'private'
+      ? { review: 'Not needed: private items are visible only to you.' }
+      : item.visibility === 'friends'
+        ? {
+            review:
+              'Not needed: friends items are visible only to your friends.',
+          }
+        : { review_status: (docFields?.review_status as string) ?? 'approved' }
+
+  const originsMap =
+    typeof publicOrigins === 'function' ? await publicOrigins() : publicOrigins
+  const originApp: OriginApp | undefined =
+    (docFields?.origin_app as OriginApp | undefined) ??
+    (kind === 'agent'
+      ? originsMap?.[`${item.id}@${item.version}`]
+      : (item as SkillManifest).origin_app)
+
+  const portability = createPortabilityBlock(item, originApp)
+
   return 'prompt_blueprint' in item
     ? jsonResult({
         notice: BLUEPRINT_NOTICE,
         kind,
         agent: item,
         blueprint: renderBlueprint(item),
+        ...reviewField,
+        portability,
       })
     : jsonResult({
         notice: `${BLUEPRINT_NOTICE} Do not run skill scripts without the user’s explicit request.`,
         kind,
         skill: item,
+        ...reviewField,
+        portability,
       })
 }
 
@@ -251,6 +308,7 @@ export function prepareChatSave(
   uid: string,
   person: z.infer<typeof profileSchema>,
   time: number,
+  originApp?: OriginApp,
 ) {
   const data =
     kind === 'agent'
@@ -281,6 +339,7 @@ export function prepareChatSave(
     owner_uid: uid,
     review_status: 'pending',
     saved_from_chat: true,
+    ...(originApp && { origin_app: originApp }),
   }
   if (kind === 'agent') {
     const manifest = manifestSchema.parse(normalized)
@@ -317,12 +376,14 @@ async function saveItem(
     throw new Error(
       `Choose your username at ${SITE_ORIGIN}/settings before saving items.`,
     )
+  const originApp = clientOriginApp(context.grant?.app)
   const { record, findings } = prepareChatSave(
     kind,
     input,
     access.uid,
     person,
     context.now(),
+    originApp,
   )
   try {
     await db.put(`${itemCollection(kind)}/${record.id}`, record)

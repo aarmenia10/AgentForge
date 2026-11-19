@@ -481,6 +481,28 @@ test('visibility, review, admin authority, bounded views, and star rules', async
         assert.equal((await a.getAgentRecord('alice-friends'))?.stats.stars, 1)
       },
     )
+    await t.test(
+      'origin_app is optional, allowlisted to claude, chatgpt, and other, and preserved on updates',
+      async () => {
+        for (const app of ['claude', 'chatgpt', 'other'] as const) {
+          const valid = { ...raw(`alice-${app}`, 'private'), origin_app: app }
+          await assertSucceeds(setDoc(doc(alice, `agents/alice-${app}`), valid))
+          const stored = await a.getAgentRecord(`alice-${app}`)
+          assert.equal(stored?.origin_app, app)
+        }
+
+        // Invalid origin_app fails rules
+        for (const badApp of ['gemini', 'anthropic', 'unknown', 123, null]) {
+          const invalid = {
+            ...raw('alice-bad-origin', 'private'),
+            origin_app: badApp,
+          }
+          await assertFails(
+            setDoc(doc(alice, 'agents/alice-bad-origin'), invalid),
+          )
+        }
+      },
+    )
   } finally {
     await env.cleanup()
   }

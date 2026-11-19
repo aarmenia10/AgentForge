@@ -674,6 +674,9 @@ test('account calls stay within the Firestore budget, overwrite nothing, and pre
   ])
   assert.equal(full.agent.author.handle, 'alice')
   assert.equal('saved_from_chat' in full.agent, false)
+  assert.match(full.review, /^Not needed/)
+  assert.equal('review_status' in full, false)
+  assert.ok(full.portability)
   const scripted = skill()
   scripted.files.push({
     path: 'scripts/echo.sh',

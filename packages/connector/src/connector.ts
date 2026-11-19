@@ -21,6 +21,7 @@ import bundledCatalog from '../../../public/catalog.json'
 import { createConnectorServer } from './server'
 import { hostedSkillReader } from '../../mcp-server/src/skills'
 import { resolveAgent, versionUrl } from '../../mcp-server/src/versions'
+import type { OriginApp } from '../../../src/lib/portability'
 import {
   accountToolNames,
   runAccountTool,
@@ -120,6 +121,40 @@ export function createConnector(options: ConnectorOptions = {}) {
       pin,
     )
     return skill.author.uid === entry.author.uid ? skill : null
+  }
+
+  let cachedOrigins:
+    | {
+        origins: Record<string, OriginApp>
+        at: number
+      }
+    | undefined
+
+  async function loadOrigins(): Promise<Record<string, OriginApp>> {
+    if (cachedOrigins && now() - cachedOrigins.at < CACHE_MS)
+      return cachedOrigins.origins
+    try {
+      const response = await fetchCatalog(
+        new URL('origins.json', CATALOG_URL).href,
+      )
+      if (response.ok) {
+        cachedOrigins = {
+          origins: (await response.json()) as Record<string, OriginApp>,
+          at: now(),
+        }
+      } else {
+        cachedOrigins = {
+          origins: cachedOrigins?.origins ?? {},
+          at: now(),
+        }
+      }
+    } catch {
+      cachedOrigins = {
+        origins: cachedOrigins?.origins ?? {},
+        at: now(),
+      }
+    }
+    return cachedOrigins.origins
   }
 
   return async function handle(
@@ -234,9 +269,11 @@ export function createConnector(options: ConnectorOptions = {}) {
                     ? resolve(version ? `${id}@${version}` : id)
                     : Promise.resolve(null),
                 publicSkill,
+                publicOrigins: loadOrigins,
               })
             }
           : undefined,
+        loadOrigins,
       )
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,

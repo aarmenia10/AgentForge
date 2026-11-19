@@ -129,6 +129,7 @@ export function createSkillStore(db: Firestore, uid: string): SkillStore {
           owner_uid: uid,
           review_status: 'pending',
           ...(previous?.saved_from_chat && { saved_from_chat: true }),
+          ...(previous?.origin_app && { origin_app: previous.origin_app }),
           stats: {
             updated_at: new Date().toISOString(),
           },

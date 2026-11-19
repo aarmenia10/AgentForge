@@ -26,6 +26,11 @@ import {
 
 export { renderBlueprint }
 
+import {
+  createPortabilityBlock,
+  type OriginApp,
+} from '../../../src/lib/portability'
+
 const LOAD_TOOL = 'switch_agent'
 const switchArgs = z.strictObject({ agent_id: z.string().min(1) })
 const uri = 'agentlemon://active/manifest'
@@ -36,10 +41,11 @@ export function createRegistryServer(
   resolve: (selector: string) => Promise<AgentManifest> = async (value) => selectAgent(catalog, value),
   initial?: AgentManifest,
   readSkill = hostedSkillReader(),
+  origins: Readonly<Record<string, OriginApp>> = {},
 ) {
   let active = initial ?? (selector ? selectAgent(catalog, selector) : undefined)
   const server = new Server(
-    { name: 'agentlemon-registry', version: '0.3.1' },
+    { name: 'agentlemon-registry', version: '0.3.2' },
     {
       capabilities: {
         tools: { listChanged: true },
@@ -101,20 +107,34 @@ export function createRegistryServer(
       if (discovery) return discovery
       const skill = await readSkill(name, args)
       if (skill) return skill
-      if (name === 'switch_agent') {
-        const next = await resolve(switchArgs.parse(args).agent_id)
-        active = next
-        await Promise.all([
-          server.notification({ method: 'notifications/tools/list_changed' }),
-          server.notification({ method: 'notifications/prompts/list_changed' }),
-          server.notification({
-            method: 'notifications/resources/list_changed',
-          }),
-        ])
+      if (name === 'switch_agent' || name === 'get_agent') {
+        const rawTarget =
+          args && typeof args === 'object' && 'agent_id' in args
+            ? (args as { agent_id: unknown }).agent_id
+            : undefined
+        const next = await resolve(
+          typeof rawTarget === 'string'
+            ? rawTarget
+            : switchArgs.parse(args).agent_id,
+        )
+        if (name === 'switch_agent') {
+          active = next
+          await Promise.all([
+            server.notification({ method: 'notifications/tools/list_changed' }),
+            server.notification({
+              method: 'notifications/prompts/list_changed',
+            }),
+            server.notification({
+              method: 'notifications/resources/list_changed',
+            }),
+          ])
+        }
+        const originApp = origins[`${next.id}@${next.version}`]
         return jsonResult({
           notice: BLUEPRINT_NOTICE,
           agent: next,
           blueprint: renderBlueprint(next),
+          portability: createPortabilityBlock(next, originApp),
         })
       }
       const agent = activeAgent()

@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   DEFAULT_CATALOG_URL,
   loadCatalog,
+  loadOrigins,
   agentResolver,
   localSkillReader,
 } from './catalog'
@@ -28,6 +29,7 @@ try {
       process.env.AGENTLEMON_CATALOG_URL ??
       process.env.AGENTFORGE_CATALOG_URL
     const catalog = await loadCatalog(source)
+    const origins = await loadOrigins(source)
     const resolve = agentResolver(catalog, source)
     const active = values.agent ? await resolve(values.agent) : undefined
     const server = createRegistryServer(
@@ -36,6 +38,7 @@ try {
       resolve,
       active,
       localSkillReader(source),
+      origins,
     )
     const shutdown = () => {
       void server.close().finally(() => process.exit(0))

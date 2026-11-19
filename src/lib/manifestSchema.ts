@@ -81,6 +81,7 @@ export const agentRecordSchema = manifestSchema.extend({
 export function storedAgentRecordSchema() {
   return agentRecordSchema.extend({
     saved_from_chat: z.literal(true).optional(),
+    origin_app: z.enum(['claude', 'chatgpt', 'other']).optional(),
   })
 }
 

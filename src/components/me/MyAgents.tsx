@@ -21,6 +21,7 @@ import {
   withdrawPendingEdit,
 } from '@/services/agents'
 import type { AgentRecord } from '@/types/agent'
+import { originLabel } from '@/lib/portability'
 import { VisibilityChanger } from './VisibilityChanger'
 
 const PAGE = 20
@@ -228,8 +229,10 @@ function AgentRow({
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
         <VisibilityLabel visibility={record.visibility} />
         <ReviewLabel record={record} />
-        {record.saved_from_chat && (
-          <StatusText tone="indigo">Saved from chat</StatusText>
+        {originLabel(record.origin_app, record.saved_from_chat) && (
+          <StatusText tone="indigo">
+            {originLabel(record.origin_app, record.saved_from_chat)}
+          </StatusText>
         )}
         {edit &&
           (edit.review_status === 'rejected' ? (

@@ -7,6 +7,7 @@ import {
 import { createSkillReader, hostedSkillReader } from './skills'
 import { resolveAgent, versionUrl } from './versions'
 import type { AgentManifest } from '../../../src/types/agent'
+import type { OriginApp } from '../../../src/lib/portability'
 
 export const DEFAULT_CATALOG_URL = 'https://agentlemon.web.app/catalog.json'
 
@@ -26,6 +27,53 @@ async function readCatalog(source: string | URL): Promise<AgentManifest[]> {
     )
   }
   return validateCatalog(JSON.parse(json))
+}
+
+async function readOrigins(
+  source: string | URL,
+): Promise<Record<string, OriginApp>> {
+  let json: string
+  if (typeof source === 'string' && /^https?:\/\//.test(source)) {
+    const url = new URL('origins.json', source).href
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!response.ok) return {}
+    json = await response.text()
+  } else {
+    try {
+      json = await readFile(
+        source instanceof URL
+          ? source
+          : resolve(dirname(resolve(source)), 'origins.json'),
+        'utf8',
+      )
+    } catch {
+      return {}
+    }
+  }
+  try {
+    return JSON.parse(json) as Record<string, OriginApp>
+  } catch {
+    return {}
+  }
+}
+
+export async function loadOrigins(
+  source?: string,
+): Promise<Record<string, OriginApp>> {
+  if (source !== undefined) return readOrigins(source)
+  try {
+    return await readOrigins(DEFAULT_CATALOG_URL)
+  } catch {
+    try {
+      return await readOrigins(new URL('./origins.json', import.meta.url))
+    } catch {
+      return readOrigins(
+        new URL('../../../public/origins.json', import.meta.url),
+      )
+    }
+  }
 }
 
 export async function loadCatalog(source?: string): Promise<AgentManifest[]> {

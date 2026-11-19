@@ -2,8 +2,15 @@ import { isDeepStrictEqual } from 'node:util'
 import type { DocumentSnapshot, Firestore } from 'firebase-admin/firestore'
 import type { AgentManifest, AgentRecord } from '../src/types/agent'
 import { validateAgentRecord, versionSchema } from '../src/lib/validateManifest'
-import { buildCatalog, buildVersionFiles, seedRecord } from './export-catalog'
+import {
+  buildCatalog,
+  buildOrigins,
+  buildVersionFiles,
+  seedRecord,
+  sortOrigins,
+} from './export-catalog'
 import type { ExportNotice, PublicExport } from './export-catalog'
+import type { OriginApp } from '../src/lib/portability'
 import type { LinterAllowance } from './catalogSafety'
 import { readSkillExport } from './skillExport'
 import { pendingChanges } from './catalogChanges'
@@ -134,6 +141,7 @@ export async function readFirestoreExport(
     return {
       catalog,
       files: buildVersionFiles(catalog, snapshots, seeds, allow, log),
+      origins: buildOrigins(catalog, snapshots, allow, log),
       ...skillExport,
       receipts,
     }
@@ -141,6 +149,7 @@ export async function readFirestoreExport(
 
   const catalog = new Map(previous.catalog.map((agent) => [agent.id, agent]))
   const files = new Map(previous.files)
+  const origins: Record<string, OriginApp> = { ...(previous.origins ?? {}) }
   const seedById = new Map(seeds.map((seed) => [seed.id, seed]))
   const rebuiltHistory = new Set<string>()
   for (const { id } of agents) {
@@ -168,6 +177,8 @@ export async function readFirestoreExport(
       // owner) requires history for just this id, including pre-marker pins.
       for (const key of files.keys())
         if (key.startsWith(id + '/')) files.delete(key)
+      for (const key of Object.keys(origins))
+        if (key.startsWith(id + '@')) delete origins[key]
       if (after) {
         const history = await db
           .collection('agent_versions')
@@ -184,6 +195,8 @@ export async function readFirestoreExport(
           log,
         ))
           files.set(key, manifest)
+        const agentOrigins = buildOrigins([after], rows, allow, log)
+        Object.assign(origins, agentOrigins)
       }
       rebuiltHistory.add(id)
     } else if (after && 'createdVersion' in state && state.createdVersion) {
@@ -195,6 +208,13 @@ export async function readFirestoreExport(
         log,
       ))
         files.set(key, manifest)
+      const agentOrigins = buildOrigins(
+        [after],
+        [state.createdVersion],
+        allow,
+        log,
+      )
+      Object.assign(origins, agentOrigins)
     }
   }
 
@@ -213,6 +233,7 @@ export async function readFirestoreExport(
     const seed = seedById.get(id)
     const key = `${id}/${version}.json`
     files.delete(key)
+    delete origins[`${id}@${version}`]
     for (const [path, manifest] of buildVersionFiles(
       [agent],
       value ? [value] : [],
@@ -221,12 +242,22 @@ export async function readFirestoreExport(
       log,
     ))
       files.set(path, manifest)
+    if (value && agent) {
+      const versionOrigins = buildOrigins([agent], [value], allow, log)
+      Object.assign(origins, versionOrigins)
+    }
+  }
+  for (const key of Object.keys(origins)) {
+    const at = key.indexOf('@')
+    const id = at > 0 ? key.slice(0, at) : key
+    if (!catalog.has(id)) delete origins[key]
   }
   return {
     catalog: [...catalog.values()].sort((a, b) =>
       a.id.localeCompare(b.id, 'en'),
     ),
     files,
+    origins: sortOrigins(origins),
     ...skillExport,
     receipts,
   }
