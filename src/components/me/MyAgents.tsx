@@ -228,6 +228,9 @@ function AgentRow({
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
         <VisibilityLabel visibility={record.visibility} />
         <ReviewLabel record={record} />
+        {record.saved_from_chat && (
+          <StatusText tone="indigo">Saved from chat</StatusText>
+        )}
         {edit &&
           (edit.review_status === 'rejected' ? (
             <StatusText tone="rose">

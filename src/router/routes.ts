@@ -9,6 +9,7 @@ export type RouteName =
   | 'home'
   | 'me'
   | 'settings'
+  | 'connect'
   | 'friends'
   | 'studio'
   | 'review'
@@ -39,6 +40,7 @@ const STATIC: Record<string, RouteName> = {
   '/index.html': 'home',
   '/me': 'me',
   '/settings': 'settings',
+  '/connect': 'connect',
   '/friends': 'friends',
   '/studio': 'studio',
   '/review': 'review',
@@ -102,6 +104,8 @@ export function routeTitle(route: Route): string {
       return `My items · ${SITE}`
     case 'settings':
       return `Settings · ${SITE}`
+    case 'connect':
+      return `Connect to ${SITE}`
     case 'friends':
       return `Friends · ${SITE}`
     case 'studio':

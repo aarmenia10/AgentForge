@@ -8,13 +8,29 @@ on:
       - 'packages/connector/**'
       - 'packages/mcp-server/src/**'
       - 'src/lib/manifestSchema.ts'
+      - 'src/lib/skillSchema.ts'
+      - 'src/lib/safetyLinter.ts'
+      - 'src/services/connectorConfig.ts'
       - 'src/types/**'
       - 'public/catalog.json'
+      - '.github/workflows/connector.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/connector/**'
+      - 'packages/mcp-server/src/**'
+      - 'src/lib/manifestSchema.ts'
+      - 'src/lib/skillSchema.ts'
+      - 'src/lib/safetyLinter.ts'
+      - 'src/services/connectorConfig.ts'
+      - 'src/types/**'
+      - 'public/catalog.json'
+      - 'tests/connector*'
       - '.github/workflows/connector.yml'
   workflow_dispatch:
 
 concurrency:
-  group: connector
+  group: ${{ github.event_name == 'pull_request' && format('connector-pr-{0}', github.event.number) || 'connector' }}
   cancel-in-progress: false
 
 permissions:
@@ -46,11 +62,15 @@ jobs:
         run: npm run check
 
       - name: Test
-        run: npx tsx --test tests/connector.test.ts
+        run: npx tsx --test tests/connector.test.ts tests/connector-auth.test.ts
+
+      - name: Benchmark private saves in workerd
+        run: npm --prefix packages/connector run benchmark
 
       # A secret pasted with a stray line break or extra line makes the API
       # reject the request header. Use the first non-empty line, trimmed.
       - name: Check for Cloudflare credentials
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         id: creds
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

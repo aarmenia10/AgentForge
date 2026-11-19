@@ -73,6 +73,7 @@ export function createAgentStore(db: Firestore, uid: string) {
       owner_uid: uid,
       shared_with: [],
       review_status: 'pending',
+      ...(previous?.saved_from_chat && { saved_from_chat: true }),
       stats: {
         stars: previous?.stats.stars ?? 0,
         views: previous?.stats.views ?? 0,

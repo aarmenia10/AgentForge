@@ -31,10 +31,24 @@ const MIN_PASSWORD = 6
 type FieldErrors = Partial<Record<'name' | 'email' | 'password', string>>
 
 /** Sign-in, sign-up, and password reset. Mounted by AuthProvider only while open. */
-export default function SignInDialog() {
-  const auth = useAuth()
+export default function SignInDialog({
+  isolated,
+}: {
+  isolated?: {
+    prepare: () => Promise<void>
+    signInWithEmail: (email: string, password: string) => Promise<unknown>
+    signInWithGoogle: () => Promise<unknown>
+    closeSignIn: () => void
+    dismiss: () => void
+  }
+} = {}) {
+  const siteAuth = useAuth()
+  const auth = { ...siteAuth, ...isolated }
   const { closeSignIn, prepare } = auth
-  const [view, setView] = useState<View>(auth.dialog?.mode ?? 'sign-in')
+  const dismiss = isolated?.dismiss ?? closeSignIn
+  const [view, setView] = useState<View>(
+    isolated ? 'sign-in' : (auth.dialog?.mode ?? 'sign-in'),
+  )
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -89,7 +103,7 @@ export default function SignInDialog() {
   function onDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape') {
       event.stopPropagation()
-      closeSignIn()
+      dismiss()
       return
     }
     if (event.key !== 'Tab') return
@@ -188,7 +202,7 @@ export default function SignInDialog() {
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6">
       <div
         className="absolute inset-0 bg-navy-950/60 backdrop-blur-sm"
-        onClick={closeSignIn}
+        onClick={dismiss}
         aria-hidden="true"
       />
       <div
@@ -207,7 +221,7 @@ export default function SignInDialog() {
           </h2>
           <button
             type="button"
-            onClick={closeSignIn}
+            onClick={dismiss}
             aria-label="Close"
             className="-mr-2 -mt-1 grid size-10 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-900/5 dark:text-slate-300 dark:hover:bg-white/10"
           >
@@ -237,8 +251,14 @@ export default function SignInDialog() {
             </p>
           ) : (
             <p>
-              {auth.dialog?.reason ? `${auth.dialog.reason} ` : ''}
-              You do not need an account to browse or install agents.
+              {isolated ? (
+                'Sign in to approve this connection.'
+              ) : (
+                <>
+                  {auth.dialog?.reason ? `${auth.dialog.reason} ` : ''}
+                  You do not need an account to browse or install agents.
+                </>
+              )}
             </p>
           )}
         </div>
@@ -332,7 +352,7 @@ export default function SignInDialog() {
                     : undefined
                 }
                 action={
-                  view === 'sign-in' ? (
+                  view === 'sign-in' && !isolated ? (
                     <button
                       type="button"
                       onClick={() => go('reset')}
@@ -406,38 +426,40 @@ export default function SignInDialog() {
           </form>
         )}
 
-        <div className="mt-5 text-center text-sm text-slate-600 dark:text-slate-300">
-          {view === 'sign-in' && (
-            <p>
-              New to AgentLemon?{' '}
-              <TextButton onClick={() => go('sign-up')}>
-                Create an account
-              </TextButton>
-            </p>
-          )}
-          {view === 'sign-up' && (
-            <p>
-              Already have an account?{' '}
-              <TextButton onClick={() => go('sign-in')}>Sign in</TextButton>
-            </p>
-          )}
-          {(view === 'reset' || view === 'reset-sent') && (
-            <p>
-              <TextButton onClick={() => go('sign-in')}>
-                Back to sign in
-              </TextButton>
-            </p>
-          )}
-          {view === 'verify-sent' && (
-            <button
-              type="button"
-              onClick={closeSignIn}
-              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-teal-500 px-5 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition hover:bg-teal-600"
-            >
-              Done
-            </button>
-          )}
-        </div>
+        {!isolated && (
+          <div className="mt-5 text-center text-sm text-slate-600 dark:text-slate-300">
+            {view === 'sign-in' && (
+              <p>
+                New to AgentLemon?{' '}
+                <TextButton onClick={() => go('sign-up')}>
+                  Create an account
+                </TextButton>
+              </p>
+            )}
+            {view === 'sign-up' && (
+              <p>
+                Already have an account?{' '}
+                <TextButton onClick={() => go('sign-in')}>Sign in</TextButton>
+              </p>
+            )}
+            {(view === 'reset' || view === 'reset-sent') && (
+              <p>
+                <TextButton onClick={() => go('sign-in')}>
+                  Back to sign in
+                </TextButton>
+              </p>
+            )}
+            {view === 'verify-sent' && (
+              <button
+                type="button"
+                onClick={closeSignIn}
+                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-teal-500 px-5 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition hover:bg-teal-600"
+              >
+                Done
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

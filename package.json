@@ -21,7 +21,7 @@
     "test:package": "npm run build:catalog && npm run build:mcp && tsx --test tests/package.smoke.ts",
     "pretest": "npm run build:mcp",
     "test": "tsx --test tests/*.test.ts",
-    "test:firestore": "firebase emulators:exec --only firestore --project demo-agentlemon \"tsx --test tests/firestore.emulator.ts\"",
+    "test:firestore": "firebase emulators:exec --only auth,firestore --project demo-agentlemon \"tsx --test tests/firestore.emulator.ts\"",
     "release:mcp": "npm run build:catalog && npm run build:mcp && cd packages/mcp-server && npm pack --pack-destination ../../public/mcp"
   },
   "dependencies": {

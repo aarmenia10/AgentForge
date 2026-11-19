@@ -33,6 +33,7 @@ import {
   runDiscoveryTool,
   selectAgent,
 } from '../../mcp-server/src/shared'
+import { accountToolNames, accountTools } from './accountTools'
 
 export const CONNECTOR_NAME = 'agentlemon-connector'
 export const CONNECTOR_VERSION = '0.1.0'
@@ -45,11 +46,24 @@ const guideText = CONNECTOR_GUIDE_PREFACE + '\n' + REGISTRY_GUIDE
 const guideDescription =
   'How the AgentLemon registry is laid out and how to choose an agent: search several ways, compare candidates, prefer the narrowest full fit, and use no agent when nothing fits.'
 
+const publicTitles: Record<string, string> = {
+  search_registry: 'Search for agents',
+  compare_agents: 'Compare agents',
+  get_agent: 'Get an agent',
+  search_skills: 'Search for skills',
+  get_skill: 'Get a skill',
+  get_skill_file: 'Get a skill file',
+}
+
 export function createConnectorServer(
   catalog: readonly AgentManifest[],
   resolve: (selector: string) => Promise<AgentManifest> = async (value) =>
     selectAgent(catalog, value),
   readSkill = hostedSkillReader(),
+  account?: (
+    name: string,
+    args: unknown,
+  ) => Promise<ReturnType<typeof jsonResult>>,
 ) {
   const server = new Server(
     { name: CONNECTOR_NAME, version: CONNECTOR_VERSION },
@@ -59,8 +73,8 @@ export function createConnectorServer(
     },
   )
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    const tools = [
       ...discoveryTools(LOAD_TOOL),
       ...skillTools,
       {
@@ -85,12 +99,33 @@ export function createConnectorServer(
         },
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
-    ],
-  }))
+    ] as const
+    if (!account) return { tools: [...tools] }
+    const securitySchemes = [{ type: 'noauth' }]
+    return {
+      tools: [
+        ...tools.map((tool) => ({
+          ...tool,
+          title: publicTitles[tool.name],
+          annotations: { ...tool.annotations, title: publicTitles[tool.name] },
+          securitySchemes,
+          _meta: {
+            ...('_meta' in tool && typeof tool._meta === 'object'
+              ? tool._meta
+              : {}),
+            securitySchemes,
+          },
+        })),
+        ...accountTools,
+      ],
+    }
+  })
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
       const { name, arguments: args = {} } = request.params
+      if (account && accountToolNames.has(name))
+        return await account(name, args)
       const discovery = runDiscoveryTool(catalog, name, args, LOAD_TOOL)
       if (discovery) return discovery
       const skill = await readSkill(name, args)

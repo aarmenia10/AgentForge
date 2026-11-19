@@ -82,6 +82,8 @@ test('skill access, sharing, proposals, immutable approval and queued public fil
       createSkillStore(unconfirmed, 'alice').createSkill(manifest),
     )
     await owner.createSkill(manifest)
+    await assertFails(updateDoc(doc(alice, live), { saved_from_chat: false }))
+    await updateDoc(doc(alice, live), { saved_from_chat: true })
     const stored = (await owner.getSkillRecord(id))!
     for (const patch of [
       { review_status: 'approved' },
@@ -264,6 +266,7 @@ test('skill access, sharing, proposals, immutable approval and queued public fil
     const newer = await owner.getSkillRecord(id)
     assert.equal(newer?.author.verified, true)
     assert.equal(newer?.version, '2.0.0')
+    assert.equal(newer?.saved_from_chat, true)
     assert.equal(await owner.getPendingSkillEdit(id), null)
     await db.doc('admins/alice').delete()
     const queue = doc(alice, 'export_sources/skills/changes/' + id)
@@ -273,6 +276,12 @@ test('skill access, sharing, proposals, immutable approval and queued public fil
     const published = await publish()
     assert.equal(published.skillIndex.skills[0].id, id)
     assert.equal(published.skillFiles.size, 2)
+    assert.ok(!('saved_from_chat' in published.skillIndex.skills[0]))
+    assert.ok(
+      [...published.skillFiles.values()].every(
+        (item) => !('saved_from_chat' in item),
+      ),
+    )
     const checkpoint = join(directory, 'checkpoint.json'),
       digest = join(directory, 'digest.json')
     await saveCheckpoint(checkpoint, published)

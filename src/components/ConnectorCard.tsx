@@ -1,6 +1,7 @@
 import { Link2 } from 'lucide-react'
 import { useId } from 'react'
 import { MCP_CONNECTOR_URL } from '@/lib/mcpConfig'
+import { ACCOUNT_RESOURCE } from '@/services/connectorConfig'
 import { cn, CodeBlock } from './ui'
 
 type Variant = 'install' | 'settings' | 'welcome'
@@ -53,6 +54,15 @@ export function ConnectorCard({ variant = 'settings' }: { variant?: Variant }) {
           copyLabel="Copy link"
         />
       </div>
+      {variant === 'install' && (
+        <div className="mt-3">
+          <CodeBlock
+            code={ACCOUNT_RESOURCE}
+            title="Connector link with account access"
+            copyLabel="Copy account link"
+          />
+        </div>
+      )}
 
       <ol className="mt-4 space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
         <li>1. Open your AI app&apos;s settings and find Connectors.</li>

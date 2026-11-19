@@ -340,7 +340,10 @@ function decodedFields(text: string): { encoding: string; text: string }[] {
   }
   const utf8 = (bytes: Uint8Array) => {
     try {
-      const s = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+      const s = new TextDecoder('utf-8', {
+        fatal: true,
+        ignoreBOM: false,
+      }).decode(bytes)
       const chars = Array.from(s)
       return chars.length &&
         chars.filter((c) => !/[\p{Cc}\p{Cf}]/u.test(c) || /[\t\n\r]/.test(c))

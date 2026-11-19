@@ -1,0 +1,42 @@
+name: Connector encryption keys
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Initialize, rotate with a 35-day overlap, retire the old key, or revoke every connection in an emergency.'
+        required: true
+        type: choice
+        options: [initialize, rotate, retire, emergency]
+
+concurrency:
+  group: connector
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  manage:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: packages/connector
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/connector/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Manage keys in Cloudflare
+        env:
+          OPERATION: ${{ inputs.operation }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node rotate-keys.mjs "$OPERATION"
+      - name: Check the public connector
+        run: node smoke.mjs https://agentlemon-connector.lesslimit.workers.dev

@@ -63,6 +63,7 @@ export async function readSkillExport(
       return
     }
     const { owner_uid, review_status, ...manifest } = parsed.value
+    delete manifest.saved_from_chat
     if (
       manifest.author.uid !== owner_uid ||
       doc.id !== (snapshot ? manifest.id + '@' + manifest.version : manifest.id)

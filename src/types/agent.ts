@@ -72,6 +72,7 @@ export interface AgentRecord extends AgentManifest {
   owner_uid: string
   review_status: 'pending' | 'approved' | 'rejected'
   shared_with: string[]
+  saved_from_chat?: true
 }
 
 /* ---------- UI-facing constants derived from the contract ---------- */

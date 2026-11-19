@@ -60,6 +60,7 @@ export interface SkillManifest {
 export interface SkillRecord extends SkillManifest {
   owner_uid: string
   review_status: SkillReviewStatus
+  saved_from_chat?: true
 }
 
 /** One file as listed in the public index: no content. */
