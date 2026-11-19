@@ -155,7 +155,16 @@ function fixture(verified = true) {
           'refresh_token',
         )!
         exchangeInputs.push(old)
-        if (old === 'bad-token') return Response.json({}, { status: 400 })
+        if (old === 'bad-token')
+          return Response.json(
+            {
+              error: {
+                message: 'INVALID_REFRESH_TOKEN',
+                status: 'INVALID_ARGUMENT',
+              },
+            },
+            { status: 400 },
+          )
         return Response.json({
           id_token: idToken('alice', time, verified),
           refresh_token: `firebase-${++exchanges}`,
@@ -389,15 +398,15 @@ test('authorization validates PKCE, state, resource, origin, and the browser bin
     (await client.consent('complete', { r }, 'https://evil.test')).status,
     403,
   )
-  assert.equal(
-    (
-      await client.consent('complete', {
-        r,
-        refresh_token: 'bad-token',
-        scopes: [READ],
-      })
-    ).status,
-    400,
+  const refused = await client.consent('complete', {
+    r,
+    refresh_token: 'bad-token',
+    scopes: [READ],
+  })
+  assert.equal(refused.status, 400)
+  assert.match(
+    ((await refused.json()) as { error: string }).error,
+    /could not be verified \(INVALID_REFRESH_TOKEN\)/,
   )
   assert.equal(
     (

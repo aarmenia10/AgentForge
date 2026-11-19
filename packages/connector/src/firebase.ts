@@ -194,6 +194,12 @@ export function identity(idToken: string) {
   }
 }
 
+export class FirebaseExchangeError extends Error {
+  constructor(readonly code: string) {
+    super('Firebase sign-in expired or could not be verified.')
+  }
+}
+
 export async function exchange(
   fetcher: Fetch,
   key: string,
@@ -211,8 +217,21 @@ export async function exchange(
       }),
     },
   )
-  if (!response.ok)
-    throw new Error('Firebase sign-in expired or could not be verified.')
+  if (!response.ok) {
+    // Google's error codes (e.g. INVALID_REFRESH_TOKEN, API_KEY_SERVICE_BLOCKED)
+    // carry no secrets; only a strict uppercase code is ever surfaced.
+    const reason = await response
+      .json()
+      .then((value: unknown) => {
+        const message = (value as { error?: { message?: unknown } })?.error
+          ?.message
+        return typeof message === 'string'
+          ? /^[A-Z][A-Z_]{2,60}/.exec(message)?.[0]
+          : undefined
+      })
+      .catch(() => undefined)
+    throw new FirebaseExchangeError(reason ?? `HTTP_${response.status}`)
+  }
   const { id_token, refresh_token, user_id } =
     (await response.json()) as Record<string, string>
   const user = identity(id_token)
