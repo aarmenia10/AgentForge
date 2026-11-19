@@ -277,7 +277,7 @@ export function createOAuth(options: OAuthOptions = {}) {
     if (cached && cached.expires > now()) return cached.data
     const timeout = AbortSignal.timeout(options.metadataTimeout ?? 3000)
     const response = await fetcher(id, {
-      redirect: 'error',
+      redirect: 'manual',
       signal: timeout,
       headers: { Accept: 'application/json' },
     })

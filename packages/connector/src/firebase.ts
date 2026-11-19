@@ -91,7 +91,7 @@ export function firestore(fetcher: Fetch, idToken: string, project = PROJECT) {
         Authorization: `Bearer ${idToken}`,
         ...(body && { 'Content-Type': 'application/json' }),
       },
-      redirect: 'error',
+      redirect: 'manual',
       signal: AbortSignal.timeout(4000),
       body: body ? JSON.stringify(body) : undefined,
     })
@@ -209,14 +209,16 @@ export async function exchange(
     `${TOKEN_ENDPOINT}?key=${encodeURIComponent(key)}`,
     {
       method: 'POST',
-      redirect: 'error',
+      redirect: 'manual',
       signal: AbortSignal.timeout(4000),
       body: new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
       }),
     },
-  )
+  ).catch(() => {
+    throw new FirebaseExchangeError('FETCH_FAILED')
+  })
   if (!response.ok) {
     // Google's error codes (e.g. INVALID_REFRESH_TOKEN, API_KEY_SERVICE_BLOCKED)
     // carry no secrets; only a strict uppercase code is ever surfaced.
@@ -232,15 +234,24 @@ export async function exchange(
       .catch(() => undefined)
     throw new FirebaseExchangeError(reason ?? `HTTP_${response.status}`)
   }
-  const { id_token, refresh_token, user_id } =
-    (await response.json()) as Record<string, string>
-  const user = identity(id_token)
+  const body = (await response.json().catch(() => null)) as Record<
+    string,
+    string
+  > | null
+  if (!body) throw new FirebaseExchangeError('BAD_RESPONSE')
+  const { id_token, refresh_token, user_id } = body
+  let user: ReturnType<typeof identity>
+  try {
+    user = identity(id_token)
+  } catch {
+    throw new FirebaseExchangeError('BAD_ID_TOKEN')
+  }
   if (
     !refresh_token ||
     user.uid !== user_id ||
     !user.uid ||
     user.uid.includes('/')
   )
-    throw new Error('Invalid Firebase token exchange')
+    throw new FirebaseExchangeError('MISMATCHED_IDENTITY')
   return { idToken: id_token, refreshToken: refresh_token, ...user }
 }
