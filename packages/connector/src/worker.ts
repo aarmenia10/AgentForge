@@ -4,9 +4,10 @@
  * not a handler.
  */
 import { createConnector } from './connector'
+import type { OAuthEnv } from './oauth'
 
 const handle = createConnector()
 
 export default {
-  fetch: (request: Request) => handle(request),
+  fetch: (request: Request, env: OAuthEnv) => handle(request, env),
 }

@@ -78,6 +78,12 @@ export const agentRecordSchema = manifestSchema.extend({
   shared_with: z.array(text).max(100),
 }) satisfies z.ZodType<AgentRecord>
 
+export function storedAgentRecordSchema() {
+  return agentRecordSchema.extend({
+    saved_from_chat: z.literal(true).optional(),
+  })
+}
+
 /**
  * Structural check of a public catalog: every entry matches the manifest
  * shape, is public, and has a unique id. It does not compile the embedded

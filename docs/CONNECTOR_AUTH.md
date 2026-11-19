@@ -1,6 +1,6 @@
 # Connector sign-in (P3-1 design)
 
-Status: design for review, 2026-11-18. No code lands with this document. The build (P3-1, then P3-11) follows it once the owner approves it.
+Status: design of record for P3-1 and P3-11. The live Claude and ChatGPT walkthroughs are in P3-15.
 
 Names assume the rename in P3-0: the site at `https://agentlemon.web.app` and the connector Worker at `https://agentlemon-connector.lesslimit.workers.dev`. Every origin below is one constant in the code (`SITE_ORIGIN`, `CONNECTOR_ORIGIN`), so a later name change is a config edit.
 
@@ -150,7 +150,8 @@ Why 30 days idle, 90 absolute: long enough that a weekly user never re-connects 
 - **Routine rotation (yearly, or when someone with access leaves):** add a new key, make it `current`, keep the old one for 35 days. Every live refresh token is re-sealed with the new key on its next use, and a refresh token unused for 30 days is dead anyway. Then delete the old key.
 - **Emergency rotation (key may have leaked):** replace the whole secret with only a new key. Every connection fails with `invalid_grant` and its user reconnects once. This stops the Worker from honoring old tokens, but it does **not** stop someone who already decrypted Firebase refresh tokens (section 1). Tell users with email accounts to change their password; for Google accounts, the Firebase side offers nothing short of the Admin SDK. Record the incident in the decision log.
 - DCR `client_id`s sealed with a removed key stop working; Claude then re-registers (DCR clients must handle re-registration [M3]).
-- Declare `TOKEN_KEYS` and `FIREBASE_TOKEN_API_KEY` in `wrangler.toml` under the `secrets` property so a deploy fails if either is missing [C4]. `wrangler deploy` keeps existing secrets [C4], so CI never needs them.
+- `TOKEN_KEYS` and `FIREBASE_TOKEN_API_KEY` are optional Worker bindings at deploy time. If either is absent or the key ring is invalid, `/account/mcp` gives HTTP 503 with an account setup message. `/mcp` continues to serve the public catalog, and discovery metadata remains available. `wrangler deploy` keeps existing secrets [C4].
+- The manual **Connector encryption keys** workflow provisions `TOKEN_KEYS` through Wrangler stdin. Cloudflare hides secret values, so the workflow also puts the active key in a versioned Worker secret named `TOKEN_KEYS_<kid>`. Routine rotation creates a fresh key and references the previous slot and its retirement timestamp in `TOKEN_KEYS`. Authorization server metadata headers expose the current key ID and the previous key's deadline so the workflow can confirm deployment. The Worker stops accepting the previous key after 35 days. The `retire` operation removes its binding. `emergency` immediately publishes a ring that accepts only the new key and removes obsolete slots. All key material stays in Cloudflare between runs.
 
 ---
 
@@ -217,7 +218,7 @@ Spark allows 50,000 Firestore reads and 20,000 writes a day; a query bills one r
 | Refresh (about once an hour per active connection)                             | 1               | 1               | 1                                          | 1                |
 | `account_status`                                                               | 1               | 0               | 2 (grant, profile)                         | 0                |
 | `list_my_items`, page of k                                                     | 1               | 0               | 1 + max(k, 1)                              | 0                |
-| `get_item`, public approved                                                    | 1               | 0               | 0 (served from the catalog)                | 0                |
+| `get_item`, public approved                                                    | 1               | 0               | 1 (grant; the item comes from Hosting)     | 0                |
 | `get_item`, own item                                                           | 1               | 0               | 2                                          | 0                |
 | `get_item`, a friend's friends item                                            | 1               | 0               | 3 (grant, item, relationship in rules)     | 0                |
 | `save_agent` (create)                                                          | 1               | 0               | 3 (grant, profile, profile again in rules) | 1                |
@@ -230,7 +231,7 @@ Two shared ceilings worth knowing:
 - The 100,000 daily Worker requests are per Cloudflare account, so heavy account traffic can stop public search for the rest of the day. **[Certain]** on the limit [C1]; the fail mode is Error 1027, never a charge.
 - One authenticated user can burn Firestore quota for everyone. That is already true from the browser today, so the connector adds no new class of risk.
 
-CPU: the 10 ms budget is per request, and waiting on `fetch()` does not count [C1]. Opening a token and calling Firestore REST is cheap. Two places to measure in the build: the per-request MCP server construction (already live, so known to fit), and `save_*` with a large item, where zod parsing plus the safety linter run over the whole text. A 200 KB skill (the P3-8 cap) could exceed 10 ms in the linter. **[Guessing]** If a benchmark shows that, the Worker saves without linting above a size threshold and says so in the result; the site lints when the item is opened, and private items may be saved with findings anyway (decision of 2026-11-14). Talk to Firestore by REST, not the Firebase JS SDK, to keep the bundle and startup small.
+The Worker gets 10 ms of CPU per request. Waiting on `fetch()` does not count [C1]. Chat saves are benchmarked through the full MCP route in workerd, including token verification, validation, and Firestore payload construction. The Worker reports inline linter findings for items up to 12 KiB of JSON and defers linting for larger items to the site. Private saves proceed even with a block finding, per the 2026-11-14 decision. Chat agent manifests have a 200 KiB JSON limit. Skill files keep the P3-8 limits of 100 KiB per file and 200 KiB total. The benchmark checks warm batches against 9 ms CPU per call.
 
 ---
 
@@ -252,6 +253,9 @@ Design rules for these tools:
 
 - Validate with the zod schemas in `src/lib/manifestSchema.ts` only. `src/lib/validateManifest.ts` uses Ajv, which Workers forbid (decision of 2026-11-14), so the Worker cannot compile the item's input and output JSON Schemas. The site's Studio flags a bad schema when the user opens the item. **[Certain]** on the Ajv import.
 - A friend's item is someone else's text. Wrap it in the same notice as public blueprints.
+- `list_my_items` performs one Firestore query per page. An unfiltered sequence pages through agents and then skills. Follow `next_cursor` until it is null, including when a page is empty. Agent pages allow 25 results. Skill pages follow the existing 20-result Firestore limit.
+- Chat saves carry `saved_from_chat: true` in the Firestore record. Agent and skill records and snapshots can retain it through later site edits and review. Both exporters strip the field and the public manifest schemas omit it. The `/me` owner panels show “Saved from chat”.
+- The optional update tools are deferred. Chat saves create new records with an existence precondition.
 - Split read and write tools; no catch-all tool [A4]. Every tool gets a `title` and the right hint, because Claude bases auto-permission on them: read-only tools may run unprompted, destructive ones always prompt [A4]. ChatGPT reportedly treats any tool without `readOnlyHint: true` as a write and asks for confirmation [O2]. **UNVERIFIED**
 - Add OpenAI's per-tool `securitySchemes` (`noauth` for public tools, `oauth2` with the scope for account tools) in the tool descriptors. It is reported to be how ChatGPT learns which tools need sign-in [O3] and is harmless elsewhere. **UNVERIFIED**
 - Not in P3-1: "shared with me" listing. It costs a page of relationships plus a query per friend. `get_item` by id already covers a friend's item someone names. Add a `list_shared_with_me(friend_handle)` later if people ask.
@@ -289,14 +293,14 @@ Plain steps, in order. None costs money; do not accept any prompt that offers an
    - Application restrictions: **None.** Cloudflare's outgoing addresses are not fixed, so IP limits cannot work, and referrer limits are for browsers.
    - API restrictions: **Restrict key**, select **Token Service API** only. If the first test refresh fails with a "this API is blocked" error, also add **Identity Toolkit API** and tell Codex. **UNVERIFIED** whether Token Service alone is enough.
    - Copy the key. It can only turn refresh tokens someone already holds into ID tokens, so it is low-value, but it is still a secret: it goes only into Cloudflare.
-2. **Make the token key.** On any computer: `openssl rand -base64 32`. Write it into one line of JSON: `{"current":"k2026a","keys":{"k2026a":"PASTE_HERE"}}`.
-3. **Cloudflare dashboard, Workers and Pages, `agentlemon-connector`, Settings, Variables and Secrets.** Add two secrets of type **Secret**: `FIREBASE_TOKEN_API_KEY` (step 1) and `TOKEN_KEYS` (step 2). Do not add them to GitHub; CI does not need them.
+2. **Cloudflare dashboard, Workers and Pages, `agentlemon-connector`, Settings, Variables and Secrets.** Add the Google Cloud key as a **Secret** named `FIREBASE_TOKEN_API_KEY`.
+3. **GitHub, Actions, Connector encryption keys.** After the connector code deploys from `main`, choose **Run workflow** and **initialize**. The workflow uses the existing repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to generate and install the encryption keys. The owner never handles the generated values.
 4. **Check the Cloudflare plan is still Workers Free** and that no spending or paid add-on is enabled. Leave observability off.
 5. **Firebase console, Authentication, Settings, Authorized domains:** confirm `agentlemon.web.app` is listed (P3-0 should have done this). The `/connect` page's Google sign-in needs it.
 6. **The existing web API key** must allow `https://agentlemon.web.app/*` (also P3-0). The `/connect` page uses that key like every other page.
 7. **Do not upgrade Firebase Authentication to Identity Platform.** It bills by monthly active users.
 8. **After the build deploys:** add `https://agentlemon-connector.lesslimit.workers.dev/account/mcp` as a custom connector in Claude on the web, connect, and walk the test in section 12, "Manual". Then try ChatGPT in developer mode and note the redirect URI its error shows, if any.
-9. **Calendar a key rotation** a year out (section 6).
+9. **For routine rotation**, run the workflow with **rotate** and run **retire** after 35 days. Use **emergency** if a key may have leaked. That operation requires connected users to reconnect. See section 6 for the Firebase-side response to a leak.
 
 Rules and the `firebase.json` header change deploy through CI as usual.
 
@@ -304,7 +308,7 @@ Rules and the `firebase.json` header change deploy through CI as usual.
 
 ## 12. Test plan for Codex
 
-All automated tests run with no network: inject `fetch`, the clock, and random bytes, as `packages/connector` already does for the catalog. Firestore and Auth tests use the emulators (`npm run test:firestore`). The Auth emulator serves the token-refresh endpoint under `http://localhost:9099/securetoken.googleapis.com/v1/token`. **[Likely]**; confirm early, since several tests lean on it.
+Automated connector tests inject upstream `fetch`, the clock, and random bytes. `npm run test:firestore` runs both emulators under Java 21 and exercises the Secure Token refresh endpoint at `http://127.0.0.1:9099/securetoken.googleapis.com/v1/token` as well as the Firestore REST rules. Run `npm --prefix packages/connector run benchmark` for the workerd CPU check.
 
 **Envelope (`packages/connector/src/tokens.ts`)**
 
@@ -358,7 +362,7 @@ All automated tests run with no network: inject `fetch`, the clock, and random b
 33. `list_my_items` returns only the caller's items, across all three visibilities, and never another user's.
 34. `get_item` reads a friend's friends item, fails after unfriending, and fails for a stranger's private item.
 35. `save_agent` creates a private, pending item visible on the owner's account views; refuses an existing id without changing it; refuses a caller without a confirmed email with a clear message; never produces anything the exporter would publish.
-36. `update_saved_agent` refuses friends and public items and someone else's private item.
+36. If `update_saved_agent` is added later, confirm that it refuses friends and public items and someone else's private item.
 37. "Disconnect all apps" from the site's service function makes the next account call fail with 401.
 
 **Budget**
@@ -366,7 +370,7 @@ All automated tests run with no network: inject `fetch`, the clock, and random b
 38. A benchmark of `save_agent` with the largest allowed manifest, and later `save_skill` at the P3-8 cap, measured in the Workers runtime (`wrangler dev` or Miniflare) with a stated threshold under 10 ms of CPU, failing CI if it regresses.
 39. A count test: each tool makes at most the Firestore calls in section 8.
 
-**CI smoke after deploy** (extend `packages/connector/smoke.mjs`): both metadata documents return 200 and parse; an account tool without a token returns 401 with the header; public search on `/mcp` still works.
+**CI smoke after deploy** (`packages/connector/smoke.mjs`): both metadata kinds return 200 and parse. An account tool without a token returns the authentication challenge when configured or the setup error when a secret is missing. Public search on `/mcp` works in both cases.
 
 **Manual (P3-15, owner with Claude in Chrome)**: Claude web: add the account URL, public search works with no sign-in, "list my items" shows the Connect card, sign in, list shows exactly that account's private and friends items; a second account sees only its own. Claude mobile: same with the account already connected. Claude Code: `claude mcp add --transport http` the account URL, `/mcp` to sign in. "Save this as an agent" lands private on `/me`. "Disconnect all apps" in Settings, then the next call asks to reconnect. ChatGPT developer mode: the same, recording the plan used and whether save is allowed.
 
@@ -418,18 +422,18 @@ Read 2026-11-18. "Read directly" means I read the page or its source file. "Sear
 
 ## 15. README changes
 
-To land with the P3-1 build, not with this design. Replace section 7.6 in full with:
+Proposed text for the P3-1/P3-11 pull request description. The orchestrator can fold it into README section 7.6:
 
 > ### 7.6 Remote connector
 >
 > The local server needs Node and a terminal, and cannot run on a phone or in a web app. The remote connector is the registry behind a web address that a user pastes into their AI app's connector settings. Design of record for sign-in: `docs/CONNECTOR_AUTH.md`.
 >
-> - **Where it runs.** Cloudflare Workers, free plan, Worker `agentlemon-connector`. Code lives in `packages/connector/`. CI deploys it with the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. The Worker's own secrets, `TOKEN_KEYS` and `FIREBASE_TOKEN_API_KEY`, are set in Cloudflare by the owner and never stored in GitHub; `wrangler.toml` declares them so a deploy without them fails. The old `agentforge-connector` Worker stays public and untouched until nobody uses it.
+> - **Where it runs.** Cloudflare Workers Free, Worker `agentlemon-connector`. Code lives in `packages/connector/`. CI uses the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. A separate manual workflow generates and rotates `TOKEN_KEYS`. The owner adds `FIREBASE_TOKEN_API_KEY` in Cloudflare. Deploys and `/mcp` work without either secret. Until both are configured, `/account/mcp` reports that account sign-in is unavailable. The old `agentforge-connector` Worker stays available.
 > - **Two addresses.** `/mcp` is public and read-only, with no sign-in, and never asks for one. `/account/mcp` offers the same public tools with no sign-in, plus account tools; the first account tool a user calls makes their AI app sign them in. The account address is a superset, so one connector is enough.
 > - **Sign-in.** The Worker is an OAuth 2.1 authorization server for MCP clients: PKCE S256 only, Client ID Metadata Documents first, stateless Dynamic Client Registration as a fallback, and an allowlist of redirect URIs (Claude's hosted callback, loopback for native apps, ChatGPT once confirmed). The user signs in on our own site at `/connect`, in a fresh session that the browser does not keep, and approves the app by its host name. The Worker never holds admin power: every Firestore read and write uses the user's own Firebase ID token, so the security rules decide.
 > - **Stores nothing.** Access and refresh tokens are encrypted blobs that only the Worker can open, held by the user's AI app. The access token carries the user's Firebase ID token and lasts about 55 minutes; the refresh token carries the Firebase refresh token, rotates on every use, and lapses after 30 idle days or 90 days in all. Keys rotate as `docs/CONNECTOR_AUTH.md` section 6 describes. There is no database, key-value store, Durable Object, or log of user content.
 > - **Revocation.** Each user owns one document, `connector_grants/{uid}`, holding a counter and their active connections. Every account call checks it. Settings lists connected apps, disconnects one, or disconnects all. The same document makes authorization codes single-use and detects a replayed refresh token, which disconnects that app.
-> - **Tools.** Public: `search_registry`, `compare_agents`, and `get_agent({ agent_id, version? })`, which returns the full blueprint in one call; `agent_id` also accepts `id@version`, and conflicting selectors fail closed. Account: `account_status`, `list_my_items`, `get_item`, and (P3-11) `save_agent` and `save_skill`. **Anything saved from a chat is private.** Making it public is a deliberate step on the site and goes through review. Saving requires a confirmed email, enforced by the rules.
+> - **Tools.** Public tools include `search_registry`, `compare_agents`, `get_agent`, `search_skills`, `get_skill`, and `get_skill_file`. `get_agent` returns the full blueprint and accepts an exact version via `version` or `id@version`. Account tools are `account_status`, `list_my_items`, `get_item`, `save_agent`, and `save_skill`. Chat saves need a confirmed email and appear as private with a “Saved from chat” label on `/me`. Publishing takes a separate submission and review on the site.
 > - **Stateless.** A shared web service cannot remember which agent one user loaded, so there is no `switch_agent` and no per-agent tool. The guide is served through the instructions and the `registry_guide` resource and prompt.
 > - **One source of logic.** Search, comparison, validation, and the guide text are shared with `packages/mcp-server`, not copied. A test fails if the public tools on either address differ from the local server's.
 > - **Data.** Public tools read `catalog.json` from Firebase Hosting, cache it for a few minutes, and fall back to a bundled snapshot. An older requested pin is fetched from `/agents/<id>/<version>.json` only while the id remains in that catalog, and every response is validated as a public manifest with the exact id and version. Account tools read and write Firestore through its REST API with the user's token.

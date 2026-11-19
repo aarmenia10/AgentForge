@@ -585,11 +585,15 @@ export function validateSkillManifest(
   return validateWith<SkillManifest>(skillManifestSchema, value)
 }
 
+let storedSkillSchema: z.ZodType<SkillRecord> | undefined
 /** Full check of a Firestore skill record. Unknown keys fail. */
 export function validateSkillRecord(
   value: unknown,
 ): SkillValidation<SkillRecord> {
-  return validateWith<SkillRecord>(skillRecordSchema, value)
+  const schema = (storedSkillSchema ??= skillRecordSchema.extend({
+    saved_from_chat: z.literal(true).optional(),
+  }))
+  return validateWith(schema, value)
 }
 
 const describeIssues = (issues: SkillIssue[]) =>

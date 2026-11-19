@@ -226,6 +226,9 @@ export function SkillRow({
         <StatusText tone="indigo">Skill</StatusText>
         <VisibilityLabel visibility={record.visibility} />
         <SkillReviewLabel record={record} />
+        {record.saved_from_chat && (
+          <StatusText tone="indigo">Saved from chat</StatusText>
+        )}
         {edit &&
           (edit.review_status === 'rejected' ? (
             <StatusText tone="rose">

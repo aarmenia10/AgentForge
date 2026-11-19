@@ -7,6 +7,7 @@ import {
   agentRecordSchema,
   authorHandleSchema,
   manifestSchema,
+  storedAgentRecordSchema,
   versionSchema,
 } from './manifestSchema'
 
@@ -18,8 +19,12 @@ export {
   versionSchema,
 }
 
+let storedAgentSchema: ReturnType<typeof storedAgentRecordSchema> | undefined
 export function validateAgentRecord(value: unknown): AgentRecord {
-  const record = agentRecordSchema.parse(value)
+  // Only storage readers need this extension. Keep it out of the released
+  // registry bundle, which shares the manifest validator.
+  const schema = (storedAgentSchema ??= storedAgentRecordSchema())
+  const record = schema.parse(value)
   // Strip storage metadata before reusing manifest and JSON Schema validation.
   validateManifest(manifestSchema.strip().parse(record))
   return record

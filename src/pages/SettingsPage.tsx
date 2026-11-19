@@ -8,6 +8,7 @@ import { PageShell } from '@/components/PageShell'
 import { rememberProfile } from '@/components/profile/profileMemory'
 import { UsernameForm } from '@/components/profile/UsernameForm'
 import { EmailSettings } from '@/components/settings/EmailSettings'
+import { ConnectedApps } from '@/components/settings/ConnectedApps'
 import { secondaryButton, textLink } from '@/components/studio/parts'
 import { describeServiceError } from '@/lib/studioErrors'
 import { Link } from '@/router/Router'
@@ -118,6 +119,7 @@ function Settings() {
       <Section id="settings-connector" title="Connector link">
         <ConnectorCard />
       </Section>
+      <ConnectedApps />
 
       <Section id="settings-account" title="Account">
         <button

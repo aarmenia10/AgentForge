@@ -78,4 +78,49 @@ check(missing.isError === true, 'unknown agent fails closed')
 const guide = await client.readResource({ uri: 'agentlemon://guide' })
 check(guide.contents[0].text.length > 5000, 'registry_guide resource')
 await client.close()
+
+const resourcePath = '/.well-known/oauth-protected-resource/account/mcp'
+for (const path of [resourcePath, '/.well-known/oauth-protected-resource']) {
+  const metadata = await fetch(`${base}${path}`)
+  check(
+    metadata.ok && (await metadata.json()).resource === `${base}/account/mcp`,
+    `protected resource metadata at ${path}`,
+  )
+}
+const serverMetadata = await fetch(
+  `${base}/.well-known/oauth-authorization-server`,
+)
+check(
+  serverMetadata.ok &&
+    (await serverMetadata.json()).code_challenge_methods_supported.join(',') ===
+      'S256',
+  'authorization server metadata',
+)
+const account = await fetch(`${base}/account/mcp`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json, text/event-stream',
+  },
+  body: JSON.stringify({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'tools/call',
+    params: { name: 'account_status', arguments: {} },
+  }),
+})
+if (account.status === 503) {
+  check(
+    (await account.json()).error?.message ===
+      'Account sign-in is not set up yet.',
+    'public MCP survives missing account configuration',
+  )
+} else {
+  check(
+    account.status === 401 &&
+      account.headers.get('WWW-Authenticate') ===
+        `Bearer error="invalid_token", resource_metadata="${base}${resourcePath}", scope="items:read"`,
+    'account tool challenges before sign-in',
+  )
+}
 console.log(`\nConnector is live: ${base}/mcp`)

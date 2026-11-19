@@ -12,6 +12,7 @@ import type { RouteName } from './router/routes'
 const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
   me: lazy(() => import('./pages/MePage')),
   settings: lazy(() => import('./pages/SettingsPage')),
+  connect: lazy(() => import('./pages/ConnectPage')),
   friends: lazy(() => import('./pages/FriendsPage')),
   studio: lazy(() => import('./pages/StudioPage')),
   review: lazy(() => import('./pages/ReviewPage')),
