@@ -587,10 +587,7 @@ test('MCP gates every account tool and whole batches before dispatch, and decora
   assert.equal(insufficient.status, 403)
   assert.equal(
     insufficient.headers.get('WWW-Authenticate'),
-    NEEDS_AUTH.replace('invalid_token', 'insufficient_scope').replace(
-      `scope="${READ}"`,
-      `scope="${READ} ${WRITE}"`,
-    ),
+    NEEDS_AUTH.replace('invalid_token', 'insufficient_scope'),
   )
   const codec = tokenCodec(TEST_RING, () => START / 1000)
   const access = await codec.open<object>('at', access_token)
@@ -655,7 +652,8 @@ test('account calls stay within the Firestore budget, overwrite nothing, and pre
     'commit',
   ])
   assert.equal(saved.visibility, 'private')
-  assert.equal(saved.review_status, 'pending')
+  assert.match(saved.review, /^Not needed/)
+  assert.equal('review_status' in saved, false)
   assert.ok(
     saved.findings.some(
       ({ severity }: { severity: string }) => severity === 'block',
