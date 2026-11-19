@@ -21,6 +21,13 @@ service cloud.firestore {
         && (data.avatar_url == null || (data.avatar_url is string && data.avatar_url.size() <= 2048 && data.avatar_url.matches('https://.+')))
         && getAfter(handlePath(data.handle)).data.uid == uid;
     }
+    function validPreferences(data) {
+      return data.keys().hasOnly(['work_role', 'goals', 'ai_apps', 'help_topics'])
+        && (!data.keys().hasAny(['work_role']) || (data.work_role is string && data.work_role.size() <= 60))
+        && (!data.keys().hasAny(['goals']) || (data.goals is list && data.goals.size() <= 7))
+        && (!data.keys().hasAny(['ai_apps']) || (data.ai_apps is list && data.ai_apps.size() <= 7))
+        && (!data.keys().hasAny(['help_topics']) || (data.help_topics is list && data.help_topics.size() <= 7));
+    }
     match /users/{uid} {
       allow get: if signedIn();
       allow list: if signedIn() && bounded();
@@ -48,6 +55,12 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
           && mirrored();
         allow delete: if participant() && !existsAfter(relationshipPath(other, uid));
+      }
+      match /private/{doc} {
+        allow read: if signedIn() && request.auth.uid == uid && doc == 'preferences';
+        allow create, update: if signedIn() && request.auth.uid == uid && doc == 'preferences'
+          && validPreferences(request.resource.data);
+        allow delete: if signedIn() && request.auth.uid == uid && doc == 'preferences';
       }
     }
     match /handles/{handle} {
