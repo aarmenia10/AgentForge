@@ -10,6 +10,23 @@ export type OriginApp = 'claude' | 'chatgpt' | 'other'
 export const ORIGIN_APPS: readonly OriginApp[] = ['claude', 'chatgpt', 'other']
 
 /**
+ * Read a public origins file defensively: keep only "<id>@<version>" keys
+ * whose value is an allowed app. Anything else is dropped, never trusted.
+ */
+export function parseOrigins(value: unknown): Record<string, OriginApp> {
+  const origins: Record<string, OriginApp> = {}
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    return origins
+  for (const [key, app] of Object.entries(value as Record<string, unknown>))
+    if (
+      /^[a-z0-9]+(-[a-z0-9]+)*@[0-9A-Za-z.+-]{1,64}$/.test(key) &&
+      (ORIGIN_APPS as readonly unknown[]).includes(app)
+    )
+      origins[key] = app as OriginApp
+  return origins
+}
+
+/**
  * Maps a connector client host name to an allowed OriginApp.
  * claude.ai -> "claude"
  * chatgpt.com -> "chatgpt"

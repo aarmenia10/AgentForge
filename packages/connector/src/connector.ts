@@ -21,7 +21,7 @@ import bundledCatalog from '../../../public/catalog.json'
 import { createConnectorServer } from './server'
 import { hostedSkillReader } from '../../mcp-server/src/skills'
 import { resolveAgent, versionUrl } from '../../mcp-server/src/versions'
-import type { OriginApp } from '../../../src/lib/portability'
+import { parseOrigins, type OriginApp } from '../../../src/lib/portability'
 import {
   accountToolNames,
   runAccountTool,
@@ -139,7 +139,7 @@ export function createConnector(options: ConnectorOptions = {}) {
       )
       if (response.ok) {
         cachedOrigins = {
-          origins: (await response.json()) as Record<string, OriginApp>,
+          origins: parseOrigins(await response.json()),
           at: now(),
         }
       } else {

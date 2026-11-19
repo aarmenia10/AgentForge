@@ -7,7 +7,7 @@ import {
 import { createSkillReader, hostedSkillReader } from './skills'
 import { resolveAgent, versionUrl } from './versions'
 import type { AgentManifest } from '../../../src/types/agent'
-import type { OriginApp } from '../../../src/lib/portability'
+import { parseOrigins, type OriginApp } from '../../../src/lib/portability'
 
 export const DEFAULT_CATALOG_URL = 'https://agentlemon.web.app/catalog.json'
 
@@ -53,7 +53,7 @@ async function readOrigins(
     }
   }
   try {
-    return JSON.parse(json) as Record<string, OriginApp>
+    return parseOrigins(JSON.parse(json))
   } catch {
     return {}
   }
