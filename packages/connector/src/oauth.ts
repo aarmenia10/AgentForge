@@ -26,7 +26,8 @@ export const RESOURCE_METADATA =
 const AUTH_METADATA = '/.well-known/oauth-authorization-server'
 const COOKIE = '__Host-al_flow'
 const CLAUDE_CALLBACK = 'https://claude.ai/api/mcp/auth_callback'
-const CIMD_HOSTS = new Set(['claude.ai'])
+const CHATGPT_CALLBACK = 'https://chatgpt.com/connector_platform_oauth_redirect'
+const CIMD_HOSTS = new Set(['claude.ai', 'chatgpt.com'])
 // Claude's published client metadata (fetched 2026-11-19). Cloudflare
 // Workers cannot always fetch claude.ai, so this exact document is the
 // fallback for that exact client id. The redirect allowlist still applies.
@@ -37,6 +38,11 @@ const PINNED_CLIENTS: Record<
   'https://claude.ai/oauth/mcp-oauth-client-metadata': {
     redirect_uris: [CLAUDE_CALLBACK],
     client_name: 'Claude',
+  },
+  // Observed live 2026-11-19 (owner's first ChatGPT connection).
+  'https://chatgpt.com/oauth/client.json': {
+    redirect_uris: [CHATGPT_CALLBACK],
+    client_name: 'ChatGPT',
   },
 }
 const LOOPBACK =
@@ -160,7 +166,7 @@ function loopback(uri: string) {
     : null
 }
 const allowed = (uri: string) =>
-  uri === CLAUDE_CALLBACK || loopback(uri) !== null
+  uri === CLAUDE_CALLBACK || uri === CHATGPT_CALLBACK || loopback(uri) !== null
 const clientName = (value: unknown) =>
   typeof value === 'string'
     ? value
