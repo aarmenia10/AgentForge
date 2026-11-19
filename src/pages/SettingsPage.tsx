@@ -7,6 +7,7 @@ import RequireAccount from '@/components/RequireAccount'
 import { PageShell } from '@/components/PageShell'
 import { rememberProfile } from '@/components/profile/profileMemory'
 import { UsernameForm } from '@/components/profile/UsernameForm'
+import { PreferencesSection } from '@/components/settings/PreferencesSection'
 import { EmailSettings } from '@/components/settings/EmailSettings'
 import { ConnectedApps } from '@/components/settings/ConnectedApps'
 import { secondaryButton, textLink } from '@/components/studio/parts'
@@ -110,6 +111,10 @@ function Settings() {
             />
           </>
         )}
+      </Section>
+
+      <Section id="settings-preferences" title="Your answers">
+        <PreferencesSection />
       </Section>
 
       <Section id="settings-email" title="Email">
