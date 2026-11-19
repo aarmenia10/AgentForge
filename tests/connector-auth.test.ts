@@ -307,7 +307,7 @@ test('CIMD allows Claude and matches each loopback host across ports, with bound
   const client = connectorClient({
     metadataTimeout: 15,
     async fetch(input, init) {
-      assert.equal(init?.redirect, 'error')
+      assert.equal(init?.redirect, 'manual')
       checked.push(input)
       if (input.endsWith('/slow')) {
         // Keep the test process alive while the real timeout signal fires.
@@ -744,4 +744,16 @@ test("Claude's pinned client metadata is used when claude.ai cannot be fetched, 
     assert.equal(denied.status, 400)
     assert.equal(denied.headers.get('Location'), null)
   }
+})
+
+test('connector fetches never use redirect "error", which Cloudflare Workers reject', async () => {
+  const { readdir, readFile } = await import('node:fs/promises')
+  const dir = 'packages/connector/src'
+  for (const name of await readdir(dir))
+    if (name.endsWith('.ts'))
+      assert.doesNotMatch(
+        await readFile(`${dir}/${name}`, 'utf8'),
+        /redirect:\s*['"]error['"]/,
+        name,
+      )
 })
