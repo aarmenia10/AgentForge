@@ -199,7 +199,8 @@ export function createConnector(options: ConnectorOptions = {}) {
             ))
               return failure(503, 'Could not verify the connection. Try again.')
           }
-          if (!authorization) return withCors(oauth.challenge(READ))
+          if (!authorization)
+            return withCors(oauth.challenge(`${READ} ${WRITE}`))
           if (
             calls.some((name) => writeToolNames.has(name)) &&
             !authorization.access.scopes.includes(WRITE)

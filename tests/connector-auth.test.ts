@@ -289,7 +289,7 @@ test('discovery and registration publish exact metadata and seal only public cli
   for (const uri of [
     'https://example.com/callback',
     'https://claude.ai/api/mcp/auth_callback?x=1',
-    'https://chatgpt.com/connector_platform_oauth_redirect',
+    'https://chatgpt.com/connector_platform_oauth_redirect?x=1',
     'http://127.0.0.2/callback',
   ]) {
     const invalid = await client.json('/register', {
@@ -587,10 +587,7 @@ test('MCP gates every account tool and whole batches before dispatch, and decora
   assert.equal(insufficient.status, 403)
   assert.equal(
     insufficient.headers.get('WWW-Authenticate'),
-    NEEDS_AUTH.replace('invalid_token', 'insufficient_scope').replace(
-      `scope="${READ}"`,
-      `scope="${READ} ${WRITE}"`,
-    ),
+    NEEDS_AUTH.replace('invalid_token', 'insufficient_scope'),
   )
   const codec = tokenCodec(TEST_RING, () => START / 1000)
   const access = await codec.open<object>('at', access_token)
@@ -655,7 +652,8 @@ test('account calls stay within the Firestore budget, overwrite nothing, and pre
     'commit',
   ])
   assert.equal(saved.visibility, 'private')
-  assert.equal(saved.review_status, 'pending')
+  assert.match(saved.review, /^Not needed/)
+  assert.equal('review_status' in saved, false)
   assert.ok(
     saved.findings.some(
       ({ severity }: { severity: string }) => severity === 'block',
@@ -756,4 +754,23 @@ test('connector fetches never use redirect "error", which Cloudflare Workers rej
         /redirect:\s*['"]error['"]/,
         name,
       )
+})
+
+test("ChatGPT's pinned client and callback are allowed when chatgpt.com cannot be fetched", async () => {
+  const chatgpt = 'https://chatgpt.com/oauth/client.json'
+  const callback = 'https://chatgpt.com/connector_platform_oauth_redirect'
+  const client = connectorClient({
+    async fetch() {
+      return new Response('Forbidden', { status: 403 })
+    },
+  })
+  const ok = await client.authorize(chatgpt, { redirect_uri: callback })
+  assert.equal(ok.status, 302)
+  assert.match(
+    ok.headers.get('Location')!,
+    new RegExp(`^${SITE_ORIGIN}/connect#r=`),
+  )
+  const crossed = await client.authorize(chatgpt, { redirect_uri: CALLBACK })
+  assert.equal(crossed.status, 400)
+  assert.equal(crossed.headers.get('Location'), null)
 })

@@ -337,7 +337,7 @@ async function saveItem(
     id: record.id,
     kind,
     visibility: record.visibility,
-    review_status: record.review_status,
+    review: 'Not needed: private items are visible only to you.',
     url: `${SITE_ORIGIN}/me`,
     findings,
     ...(findings === null && {

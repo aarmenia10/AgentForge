@@ -25,7 +25,7 @@ export const TEST_ENV = {
   FIREBASE_TOKEN_API_KEY: 'test-key',
 }
 export const START = 1_800_000_000_000
-export const NEEDS_AUTH = `Bearer error="invalid_token", resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/account/mcp", scope="${READ}"`
+export const NEEDS_AUTH = `Bearer error="invalid_token", resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/account/mcp", scope="${READ} ${WRITE}"`
 
 export const rpc = (name: string, args: object = {}) => ({
   jsonrpc: '2.0',
