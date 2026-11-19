@@ -257,6 +257,8 @@ export function prepareChatSave(
       ? saveAgentArgs.parse(input).manifest
       : saveSkillArgs.parse(input).skill
   if (data.id.length > 1500) throw new Error('The item ID is too long.')
+  if (kind === 'skill' && data.id === 'new')
+    throw new Error('The skill ID "new" is reserved. Choose a different ID.')
   const bytes = encoder.encode(JSON.stringify(data)).byteLength
   if (kind === 'agent' && bytes > MAX_AGENT_BYTES)
     throw new Error('The agent manifest must be at most 200 KiB.')

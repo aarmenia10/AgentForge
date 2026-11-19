@@ -673,6 +673,16 @@ test('account calls stay within the Firestore budget, overwrite nothing, and pre
     kind: 'script',
     content: '#!/bin/sh\necho hello',
   })
+  await assert.rejects(
+    toolBody(
+      await client.send(
+        rpc('save_skill', { skill: { ...scripted, id: 'new' } }),
+        '/account/mcp',
+        access_token,
+      ),
+    ),
+    /skill ID "new" is reserved/,
+  )
   const storedSkill = await invoke('save_skill', { skill: scripted }, [
     'users/alice',
     'commit',
