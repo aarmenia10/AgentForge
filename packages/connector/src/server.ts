@@ -1,3 +1,7 @@
+import {
+  councilTools,
+  hostedCouncilReader,
+} from '../../mcp-server/src/councils'
 /**
  * The MCP server behind the remote connector. Stateless: one instance is
  * built per request and holds nothing afterwards, so there is no loaded
@@ -57,6 +61,8 @@ const publicTitles: Record<string, string> = {
   search_skills: 'Search for skills',
   get_skill: 'Get a skill',
   get_skill_file: 'Get a skill file',
+  search_councils: 'Search for councils',
+  get_council: 'Get a council',
 }
 
 export function createConnectorServer(
@@ -71,6 +77,7 @@ export function createConnectorServer(
   origins:
     | Readonly<Record<string, OriginApp>>
     | (() => Promise<Readonly<Record<string, OriginApp>>>) = {},
+  readCouncil = hostedCouncilReader(undefined, undefined, origins),
 ) {
   const server = new Server(
     { name: CONNECTOR_NAME, version: CONNECTOR_VERSION },
@@ -84,6 +91,7 @@ export function createConnectorServer(
     const tools = [
       ...discoveryTools(LOAD_TOOL),
       ...skillTools,
+      ...councilTools,
       {
         name: LOAD_TOOL,
         description:
@@ -137,6 +145,8 @@ export function createConnectorServer(
       if (discovery) return discovery
       const skill = await readSkill(name, args)
       if (skill) return skill
+      const council = await readCouncil(name, args)
+      if (council) return council
       if (name === LOAD_TOOL) {
         const { agent_id, version } = getArgs.parse(args)
         if (

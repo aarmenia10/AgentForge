@@ -118,7 +118,18 @@ service cloud.firestore {
               && !exists(/databases/$(database)/documents/skill_versions/$(id))
               && existsAfter(/databases/$(database)/documents/skill_versions/$(id))));
       }
-      allow create, update: if validChange();
+      function validCouncilChange() {
+        let data = request.resource.data;
+        return signedIn() && data.keys().hasOnly(['revision', 'changed_at'])
+          && data.revision is string && data.revision.size() == 36 && data.changed_at == request.time
+          && ((source == 'councils' && exists(councilPath(id))
+              && (liveApproved(get(councilPath(id)).data) || liveApproved(getAfter(councilPath(id)).data))
+              && getAfter(councilPath(id)).data != get(councilPath(id)).data)
+          || (source == 'council_versions' && isAdmin()
+              && !exists(/databases/$(database)/documents/council_versions/$(id))
+              && existsAfter(/databases/$(database)/documents/council_versions/$(id))));
+      }
+      allow create, update: if source in ['councils', 'council_versions'] ? validCouncilChange() : validChange();
     }
     match /agent_versions/{versionId} {
       allow read, update, delete: if false;
@@ -438,5 +449,192 @@ service cloud.firestore {
         && (ownerSkillEdit(skillId) || adminSkillEdit(skillId) || approveSkillEdit(skillId));
       allow delete: if false;
     }
+    function councilPath(id) { return /databases/$(database)/documents/councils/$(id); }
+    function councilEditPath(id) { return /databases/$(database)/documents/council_edits/$(id); }
+    function councilExportMarked(source, id) {
+      let path = /databases/$(database)/documents/export_sources/$(source)/changes/$(id);
+      return getAfter(path).data.changed_at == request.time;
+    }
+    function councilMayApprove(owner) {
+      let config = get(/databases/$(database)/documents/config/review);
+      return owner != request.auth.uid || config == null || config.data.allow_self_approval == true;
+    }
+    function councilPinPath(data) { return /databases/$(database)/documents/council_versions/$(data.id + '@' + data.version); }
+    function councilCheckPath(id, group) {
+      return /databases/$(database)/documents/councils/$(id)/member_checks/$(request.auth.uid)/groups/$(group);
+    }
+    function councilSlug(id) { return id is string && id.size() <= 1500 && id.matches('^[a-z0-9]+(-[a-z0-9]+)*$'); }
+    function councilVersion(version) {
+      return version is string && version.matches('^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)([.](0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?([+][0-9A-Za-z-]+([.][0-9A-Za-z-]+)*)?$');
+    }
+    function councilMemberShape(m) {
+      let ref = m.ref;
+      return ref.kind in ['agent', 'skill'] && ref.id.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+        && councilVersion(ref.version) && m.role is string && m.order is int && m.order > 0;
+    }
+    function councilSmallRoster(m) {
+      return councilMemberShape(m[0]) && councilMemberShape(m[1])
+        && (m.size() <= 2 || councilMemberShape(m[2]))
+        && (m.size() <= 3 || councilMemberShape(m[3]))
+        && (m.size() <= 4 || councilMemberShape(m[4]))
+        && (m.size() <= 5 || councilMemberShape(m[5]))
+        && (m.size() <= 6 || councilMemberShape(m[6]))
+        && (m.size() <= 7 || councilMemberShape(m[7]));
+    }
+    function validCouncil(data, id) {
+      return data.keys().hasOnly(['council_schema_version', 'visibility', 'id', 'version', 'name',
+          'description', 'author', 'tags', 'instructions', 'members', 'stats', 'owner_uid',
+          'review_status', 'saved_from_chat', 'origin_app'])
+        && data.council_schema_version == 1 && data.id == id && councilSlug(id) && councilVersion(data.version)
+        && data.visibility in ['private', 'friends', 'public'] && data.review_status in ['pending', 'approved', 'rejected']
+        && validChatMarker(data) && validOriginApp(data)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 64
+        && data.description is string && data.description.size() > 0 && data.description.size() <= 1024
+        && data.owner_uid is string && data.owner_uid.size() > 0
+        && data.author.keys().hasOnly(['uid', 'name', 'handle', 'verified']) && data.author.uid == data.owner_uid
+        && data.author.handle is string && data.author.handle.matches('^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$')
+        && data.author.name is string && data.author.name.size() > 0 && data.author.verified is bool
+        && data.stats.keys().hasOnly(['updated_at']) && data.stats.updated_at is string
+        && data.tags is list && data.tags.size() >= 1 && data.tags.size() <= 10
+        && data.instructions is string && data.instructions.size() > 0 && data.instructions.size() <= 102400
+        && data.members is list && data.members.size() >= 2 && data.members.size() <= 20;
+    }
+    function councilMemberPin(ref, owner) {
+      let coll = ref.kind == 'agent' ? 'agent_versions' : 'skill_versions';
+      let pin = get(/databases/$(database)/documents/$(coll)/$(ref.id + '@' + ref.version)).data;
+      return liveApproved(pin) && pin.owner_uid == owner && pin.id == ref.id && pin.version == ref.version;
+    }
+    function councilCheckMember(ref, mode, owner) {
+      let coll = ref.kind == 'agent' ? 'agents' : 'skills';
+      let current = get(/databases/$(database)/documents/$(coll)/$(ref.id)).data;
+      return (liveApproved(current) && councilMemberPin(ref, current.owner_uid))
+        || (mode == 'submission' && current.visibility == 'public' && current.review_status == 'pending' && current.owner_uid == owner && current.version == ref.version)
+        || (mode == 'friends' && current.visibility == 'friends' && current.owner_uid == owner && current.version == ref.version);
+    }
+    function councilCertifiedMember(member, data) {
+      return councilMemberShape(member) && (data.mode == "private"
+        || councilCheckMember(member.ref, data.mode, data.owner_uid));
+    }
+    function councilCheckGroup(data, start) {
+      let m = data.members;
+      return councilCertifiedMember(m[start], data)
+        && (m.size() <= start + 1 || councilCertifiedMember(m[start + 1], data))
+        && (m.size() <= start + 2 || councilCertifiedMember(m[start + 2], data))
+        && (m.size() <= start + 3 || councilCertifiedMember(m[start + 3], data))
+        && (m.size() <= start + 4 || councilCertifiedMember(m[start + 4], data));
+    }
+    // Five pins use at most ten lookups. Separate group commits support the
+    // full roster with Firestore's per-write and atomic-operation limits.
+    match /councils/{id}/member_checks/{uid}/groups/{group} {
+      function validCheck() {
+        let data = request.resource.data;
+        return signedIn() && request.auth.uid == uid && councilSlug(id) && group in ['0', '1', '2', '3']
+          && data.keys().hasOnly(['owner_uid', 'mode', 'members', 'checked_at']) && data.checked_at == request.time
+          && ((data.mode == 'approval')
+            || (data.owner_uid == uid && (data.mode == 'private'
+              || (data.mode in ['submission', 'friends'] && verifiedEmail()))))
+          && data.members is list && data.members.size() <= 20 && data.members.size() > int(group) * 5
+          && councilCheckGroup(data, int(group) * 5);
+      }
+      allow create, update: if validCheck();
+    }
+    function councilCheckedGroup(data, mode, group) {
+      let check = get(councilCheckPath(data.id, group)).data;
+      return check.mode == mode && check.owner_uid == data.owner_uid && check.members == data.members
+        && check.checked_at >= request.time - duration.value(60, 's');
+    }
+    function councilChecked(data, mode) {
+      return councilCheckedGroup(data, mode, '0')
+        && (data.members.size() <= 5 || councilCheckedGroup(data, mode, '1'))
+        && (data.members.size() <= 10 || councilCheckedGroup(data, mode, '2'))
+        && (data.members.size() <= 15 || councilCheckedGroup(data, mode, '3'));
+    }
+    function councilSharing(data) {
+      return data.visibility == 'private'
+        ? (data.members.size() <= 8 ? councilSmallRoster(data.members) : councilChecked(data, 'private'))
+        : verifiedEmail() && councilChecked(data, data.visibility == 'friends' ? 'friends' : 'submission');
+    }
+    function councilOwns(data) { return signedIn() && data.owner_uid == request.auth.uid; }
+    function councilSnapshot(data) { return getAfter(councilPinPath(data)).data == data; }
+    function councilOwnerUpdate(id) {
+      let a = request.resource.data;
+      let b = resource.data;
+      return councilOwns(b) && a.owner_uid == b.owner_uid && a.author == b.author
+        && a.get('saved_from_chat', false) == b.get('saved_from_chat', false)
+        && a.get('origin_app', '') == b.get('origin_app', '') && a.review_status == 'pending'
+        && (!liveApproved(b) || (a.visibility != 'public'
+          && a.diff(b).affectedKeys().hasOnly(['visibility', 'review_status'])))
+        && !existsAfter(councilEditPath(id)) && validCouncil(a, id) && councilSharing(a);
+    }
+    function councilReview(id) {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.visibility == 'public'
+        && after.diff(before).affectedKeys().hasOnly(['review_status'])
+        && after.review_status in ['pending', 'approved', 'rejected']
+        && (after.review_status != 'approved' || (councilMayApprove(after.owner_uid)
+          && councilChecked(after, 'approval') && councilSnapshot(after)))
+        && (after.review_status == 'approved' || !existsAfter(councilEditPath(id)));
+    }
+
+    function councilAuthorUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.visibility == 'public'
+        && after.diff(before).affectedKeys().hasOnly(['author'])
+        && after.author.diff(before.author).affectedKeys().hasOnly(['verified'])
+        && after.author.verified is bool;
+    }
+    function councilApproveEdit(id) {
+      let before = resource.data;
+      let after = request.resource.data;
+      let edit = get(councilEditPath(id)).data;
+      return liveApproved(before) && councilMayApprove(before.owner_uid)
+        && !existsAfter(councilEditPath(id))
+        && liveApproved(after) && edit.version != before.version && edit.owner_uid == before.owner_uid
+        && after.diff(edit).affectedKeys().hasOnly(['review_status', 'author'])
+        && after.author.diff(edit.author).affectedKeys().hasOnly(['verified'])
+        && after.author.verified == before.author.verified
+        && councilChecked(after, 'approval') && councilSnapshot(after);
+    }
+    match /councils/{id} {
+      allow get: if (signedIn() && !exists(councilPath(id))) || readableAgent(resource.data);
+      allow list: if boundedSkills() && readableAgent(resource.data);
+      allow create: if signedIn() && ownIdentity(request.resource.data)
+        && request.resource.data.author.name == get(userPath(request.auth.uid)).data.display_name
+        && request.resource.data.author.verified == false && request.resource.data.review_status == 'pending'
+        && validCouncil(request.resource.data, id) && councilSharing(request.resource.data);
+      allow update: if ((!liveApproved(resource.data) && !liveApproved(request.resource.data))
+          || councilExportMarked('councils', id))
+        && (councilOwnerUpdate(id) || (isAdmin() && (councilReview(id) || councilAuthorUpdate() || councilApproveEdit(id))));
+    }
+    match /council_edits/{id} {
+      function validEdit() {
+        let live = get(councilPath(id)).data;
+        let edit = request.resource.data;
+        return councilOwns(live) && verifiedEmail() && liveApproved(live) && validCouncil(edit, id)
+          && edit.owner_uid == live.owner_uid && edit.author == live.author && edit.version != live.version
+          && edit.get('saved_from_chat', false) == live.get('saved_from_chat', false)
+          && edit.get('origin_app', '') == live.get('origin_app', '')
+          && edit.visibility == 'public' && edit.review_status == 'pending' && councilSharing(edit);
+      }
+      allow get: if councilOwns(get(councilPath(id)).data) || isAdmin();
+      allow list: if boundedSkills() && (councilOwns(resource.data) || isAdmin());
+      allow create: if validEdit();
+      allow update: if validEdit() || (isAdmin() && request.resource.data.review_status == 'rejected'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['review_status']));
+      allow delete: if councilOwns(get(councilPath(id)).data) || (isAdmin() &&
+        (!liveApproved(getAfter(councilPath(id)).data) ||
+          (getAfter(councilPath(id)).data.diff(resource.data).affectedKeys().hasOnly(['review_status', 'author'])
+            && getAfter(councilPath(id)).data.author.diff(resource.data.author).affectedKeys().hasOnly(['verified'])
+            && councilMayApprove(resource.data.owner_uid))));
+    }
+    match /council_versions/{pin} {
+      allow create: if isAdmin() && councilExportMarked('council_versions', pin)
+        && pin == request.resource.data.id + '@' + request.resource.data.version
+        && liveApproved(request.resource.data) && councilMayApprove(request.resource.data.owner_uid)
+        && getAfter(councilPath(request.resource.data.id)).data == request.resource.data;
+    }
+
   }
 }

@@ -26,6 +26,7 @@ import './edits.emulator'
 import './versions.emulator'
 import './export.emulator'
 import './skills.emulator'
+import './councils.emulator'
 import './connector.emulator'
 import './preferences.emulator'
 

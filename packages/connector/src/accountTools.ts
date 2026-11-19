@@ -1,3 +1,10 @@
+import {
+  councilManifestSchema,
+  validateCouncilRecord,
+} from '../../../src/lib/councilSchema'
+import { lintCouncil } from '../../../src/services/councilSafety'
+import { formatItemRef } from '../../../src/lib/skillSchema'
+import type { ItemRef } from '../../../src/types/skill'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import {
@@ -27,7 +34,7 @@ import {
   type OriginApp,
 } from '../../../src/lib/portability'
 
-const kind = z.enum(['agent', 'skill'])
+const kind = z.enum(['agent', 'skill', 'council'])
 const visibility = z.enum(['public', 'friends', 'private'])
 const empty = z.strictObject({})
 const listArgs = z.strictObject({
@@ -53,6 +60,20 @@ const skillInput = skillManifestSchema.partial({
 })
 const saveAgentArgs = z.strictObject({ manifest: agentInput })
 const saveSkillArgs = z.strictObject({ skill: skillInput })
+const saveCouncilArgs = z.strictObject({
+  manifest: councilManifestSchema
+    .omit({ origin_app: true })
+    .partial({ author: true, visibility: true, stats: true }),
+  member_items: z
+    .array(
+      z.discriminatedUnion('kind', [
+        saveAgentArgs.extend({ kind: z.literal('agent') }),
+        saveSkillArgs.extend({ kind: z.literal('skill') }),
+      ]),
+    )
+    .max(20)
+    .optional(),
+})
 const cursorSchema = z.strictObject({
   kind,
   after: agentIdSchema.optional(),
@@ -114,14 +135,14 @@ export const accountTools = [
     'list_my_items',
     'List my items',
     READ,
-    'List only your own items and their review status. With no kind filter, pages cover agents first and then skills. Follow next_cursor until it is null, including after an empty page.',
+    'List only your own items and their review status. With no kind filter, pages cover agents, then skills, then councils. Follow next_cursor until it is null, including after an empty page.',
     listArgs,
   ),
   tool(
     'get_item',
     'Get an AgentLemon item',
     READ,
-    'Read a full agent blueprint or skill you can access. Accepts an ID and an optional exact version.',
+    'Read a full agent blueprint, skill or council you can access. Accepts an ID and an optional exact version.',
     getArgs,
   ),
   tool(
@@ -138,9 +159,20 @@ export const accountTools = [
     saveDescription,
     saveSkillArgs,
   ),
+  tool(
+    'save_council',
+    'Save a private council',
+    WRITE,
+    'Call only on the user’s explicit request after showing the council and any new member content. Include exact member pins in manifest and supply any missing member blueprints or skills in member_items. Saves missing members and the council privately in one commit.',
+    saveCouncilArgs,
+  ),
 ]
 export const accountToolNames = new Set(accountTools.map(({ name }) => name))
-export const writeToolNames = new Set(['save_agent', 'save_skill'])
+export const writeToolNames = new Set([
+  'save_agent',
+  'save_skill',
+  'save_council',
+])
 
 interface Context {
   access: Access
@@ -162,9 +194,12 @@ async function profile({ db, access }: Context) {
   return doc ? profileSchema.parse(doc.fields) : null
 }
 
-function itemCollection(itemKind: 'agent' | 'skill') {
-  return itemKind === 'agent' ? 'agents' : 'skills'
-}
+const collections = {
+  agent: 'agents',
+  skill: 'skills',
+  council: 'councils',
+} as const
+const itemCollection = (kind: keyof typeof collections) => collections[kind]
 
 async function listItems(input: unknown, { db, access }: Context) {
   const args = listArgs.parse(input)
@@ -181,7 +216,7 @@ async function listItems(input: unknown, { db, access }: Context) {
   const itemKind = cursor?.kind ?? args.kind ?? 'agent'
   // The skill rules cap each query at 20. A single query per page keeps the
   // read budget predictable and works without a cross-collection index.
-  const limit = Math.min(args.limit ?? 20, itemKind === 'skill' ? 20 : 25)
+  const limit = Math.min(args.limit ?? 20, itemKind === 'agent' ? 25 : 20)
   const items = await db.list(
     itemCollection(itemKind),
     access.uid,
@@ -191,7 +226,7 @@ async function listItems(input: unknown, { db, access }: Context) {
     cursor?.after,
   )
   const last = items.at(-1)
-  const next = (kind: 'agent' | 'skill', after?: unknown) =>
+  const next = (kind: z.infer<typeof cursorSchema>['kind'], after?: unknown) =>
     JSON.stringify({
       kind,
       after,
@@ -201,8 +236,8 @@ async function listItems(input: unknown, { db, access }: Context) {
   const next_cursor =
     items.length === limit
       ? next(itemKind, last?.id)
-      : !args.kind && itemKind === 'agent'
-        ? next('skill')
+      : !args.kind && itemKind !== 'council'
+        ? next(itemKind === 'agent' ? 'skill' : 'council')
         : null
   const sanitizedItems = items.map((item) => {
     const base = { kind: itemKind, ...item } as Record<string, unknown> & {
@@ -238,6 +273,28 @@ async function getItem(
   { db, publicAgent, publicSkill, publicOrigins }: Context,
 ) {
   const { kind, id, version } = getArgs.parse(input)
+  if (kind === 'council') {
+    const doc = await readableItem(db, 'councils/' + id)
+    const parsed = validateCouncilRecord(doc?.fields)
+    if (
+      !parsed.ok ||
+      parsed.value.id !== id ||
+      (version && parsed.value.version !== version)
+    )
+      throw new Error('This council or version is unavailable to your account.')
+    const { review_status } = parsed.value
+    const council = councilManifestSchema.strip().parse(parsed.value)
+    return jsonResult({
+      notice: BLUEPRINT_NOTICE,
+      kind,
+      council,
+      review_status,
+      portability: createPortabilityBlock(
+        council.instructions,
+        council.origin_app as OriginApp | undefined,
+      ),
+    })
+  }
   let item = await (kind === 'agent' ? publicAgent : publicSkill)(
     id,
     version,
@@ -412,6 +469,161 @@ async function saveItem(
   })
 }
 
+async function readableItem(db: Firestore, path: string) {
+  return db.get(path).catch((error: unknown) => {
+    if (error instanceof FirestoreError && error.status === 403) return null
+    throw error
+  })
+}
+
+async function saveCouncil(input: unknown, context: Context) {
+  const { access, db } = context
+  if (!identity(access.idToken).verified)
+    throw new Error(
+      'Confirm your AgentLemon email address before saving items.',
+    )
+  const person = await profile(context)
+  if (!person)
+    throw new Error('Choose your AgentLemon username before saving items.')
+  const { manifest, member_items = [] } = saveCouncilArgs.parse(input)
+  const time = context.now()
+  const origin = clientOriginApp(context.grant?.app)
+  const result = validateCouncilRecord({
+    ...manifest,
+    visibility: 'private',
+    owner_uid: access.uid,
+    author: {
+      uid: access.uid,
+      name: person.display_name,
+      handle: person.handle,
+      verified: false,
+    },
+    review_status: 'pending',
+    saved_from_chat: true,
+    origin_app: origin,
+    stats: { updated_at: new Date(time).toISOString() },
+  })
+  if (!result.ok)
+    throw new Error(
+      result.issues
+        .map(({ path, message }) => path + ': ' + message)
+        .join(', '),
+    )
+  const council = result.value
+  const pins = new Set(council.members.map(({ ref }) => formatItemRef(ref)))
+  const supplied = new Map<string, (typeof member_items)[number]>()
+  for (const { kind, ...input } of member_items) {
+    const item = 'manifest' in input ? input.manifest : input.skill
+    const ref = formatItemRef({ kind, id: item.id, version: item.version })
+    if (!pins.has(ref) || supplied.has(ref))
+      throw new Error('Unexpected or repeated payload for ' + ref)
+    supplied.set(ref, { kind, ...input } as (typeof member_items)[number])
+  }
+  const prepare = async ({ kind, id, version }: ItemRef) => {
+    const path = itemCollection(kind) + '/' + id
+    const existing = await readableItem(db, path)
+    if (
+      existing?.fields.owner_uid === access.uid &&
+      existing.fields.version === version
+    )
+      return
+    const published = await (
+      kind === 'agent' ? context.publicAgent : context.publicSkill
+    )(id, version).catch(() => null)
+    if (
+      published?.id === id &&
+      published.version === version &&
+      published.visibility === 'public'
+    )
+      return
+    const pin = formatItemRef({ kind, id, version })
+    if (existing)
+      throw new Error(
+        'The exact version is unavailable and the ID is already in use: ' + pin,
+      )
+    const payload = supplied.get(pin)
+    if (!payload)
+      throw new Error(
+        'Provide the full member content or an available exact pin for ' + pin,
+      )
+    const fields = prepareChatSave(
+      payload.kind,
+      payload.kind === 'agent'
+        ? { manifest: payload.manifest }
+        : { skill: payload.skill },
+      access.uid,
+      person,
+      time,
+      origin,
+    ).record
+    return { path, fields }
+  }
+  const writes: { path: string; fields: object }[] = []
+  const missing = []
+  for (let start = 0; start < council.members.length; start += 4) {
+    const prepared = await Promise.all(
+      council.members.slice(start, start + 4).map(({ ref }) => prepare(ref)),
+    )
+    for (const item of prepared)
+      if (item) {
+        if (writes.some(({ path }) => path === item.path))
+          throw new Error(
+            'Multiple unpublished versions share the same member ID.',
+          )
+        writes.push(item)
+        missing.push(item.path)
+      }
+  }
+  const findings =
+    encoder.encode(council.instructions).byteLength <= INLINE_LINT_BYTES
+      ? lintCouncil(council).findings
+      : null
+  if (council.members.length > 8) {
+    const prefix =
+      'councils/' + council.id + '/member_checks/' + access.uid + '/groups/'
+    await Promise.all(
+      Array.from(
+        { length: Math.ceil(council.members.length / 5) },
+        (_, group) =>
+          db.setWithRequestTime(
+            prefix + group,
+            {
+              owner_uid: access.uid,
+              mode: 'private',
+              members: council.members,
+            },
+            'checked_at',
+          ),
+      ),
+    )
+  }
+  try {
+    await db.createItems([
+      ...writes,
+      { path: 'councils/' + council.id, fields: council },
+    ])
+  } catch (error) {
+    if (error instanceof FirestoreError && error.conflict)
+      throw new Error(
+        'A council or missing member ID is already in use. Refresh the exact pins and retry.',
+        { cause: error },
+      )
+    throw error
+  }
+  return jsonResult({
+    id: council.id,
+    kind: 'council',
+    visibility: 'private',
+    url: SITE_ORIGIN + '/me',
+    members_saved: missing,
+    findings,
+    ...(findings === null && {
+      lint_note: 'AgentLemon will lint the council before sharing.',
+    }),
+    next_step: 'To share the council, open My items and choose its visibility.',
+  })
+}
+
 export async function runAccountTool(
   name: string,
   args: unknown,
@@ -440,6 +652,8 @@ export async function runAccountTool(
       return saveItem('agent', args, context)
     case 'save_skill':
       return saveItem('skill', args, context)
+    case 'save_council':
+      return saveCouncil(args, context)
     default:
       throw new Error('Unknown account tool.')
   }

@@ -1,3 +1,4 @@
+import { hostedCouncilReader } from '../../mcp-server/src/councils'
 /**
  * AgentLemon remote connector: the request handler.
  * The Worker entry point is worker.ts, which may export nothing but handlers.
@@ -206,9 +207,9 @@ export function createConnector(options: ConnectorOptions = {}) {
       let authorization: Awaited<ReturnType<typeof oauth.authenticate>> = null
       if (oauthConfig) {
         try {
-          // A 200 KiB text skill can grow when represented as escaped JSON.
+          // A council can include 20 missing member payloads of up to 200 KiB each.
           parsedBody = JSON.parse(
-            await boundedText(request.body, 2 * 1024 * 1024),
+            await boundedText(request.body, 8 * 1024 * 1024),
           )
         } catch {
           return failure(400, 'Invalid JSON.', -32700)
@@ -274,6 +275,7 @@ export function createConnector(options: ConnectorOptions = {}) {
             }
           : undefined,
         loadOrigins,
+        hostedCouncilReader(CATALOG_URL, fetchCatalog, loadOrigins),
       )
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,

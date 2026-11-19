@@ -1,3 +1,4 @@
+import { CouncilReviewQueue } from '@/components/councils/CouncilReviewQueue'
 import { useEffect, useState } from 'react'
 import RequireAccount from '@/components/RequireAccount'
 import { PageHold, PageShell } from '@/components/PageShell'
@@ -9,7 +10,7 @@ export default function ReviewPage() {
   return (
     <RequireAccount
       title="Review queue"
-      purpose="Reviewers sign in here to approve or reject agents and skills submitted for public listing."
+      purpose="Reviewers sign in here to approve or reject agents, skills, and councils submitted for public listing."
       reason="Sign in to open the review queue."
     >
       <ReviewerOnly />
@@ -18,7 +19,7 @@ export default function ReviewPage() {
 }
 
 type Access = 'checking' | 'admin' | 'not-admin' | 'error'
-type Items = 'agents' | 'skills'
+type Items = 'agents' | 'skills' | 'councils'
 
 function ReviewerOnly() {
   const [access, setAccess] = useState<Access>('checking')
@@ -67,6 +68,7 @@ function ReviewerOnly() {
           [
             ['agents', 'Agents'],
             ['skills', 'Skills'],
+            ['councils', 'Councils'],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -94,6 +96,9 @@ function ReviewerOnly() {
       </div>
       <div hidden={items !== 'skills'}>
         {seen.has('skills') && <SkillReviewQueue />}
+      </div>
+      <div hidden={items !== 'councils'}>
+        {seen.has('councils') && <CouncilReviewQueue />}
       </div>
     </PageShell>
   )

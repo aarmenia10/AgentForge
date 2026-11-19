@@ -1,3 +1,4 @@
+import { readCouncilExport } from './councilExport'
 import { isDeepStrictEqual } from 'node:util'
 import type { DocumentSnapshot, Firestore } from 'firebase-admin/firestore'
 import type { AgentManifest, AgentRecord } from '../src/types/agent'
@@ -101,13 +102,23 @@ export async function readFirestoreExport(
 ) {
   // Capture receipts BEFORE reading data. Writes during a run are either
   // reflected here or remain queued for the next successful publication.
-  const [agents, versions, skills, skillVersions] = await Promise.all([
-    pendingChanges(db, 'agents'),
-    pendingChanges(db, 'agent_versions'),
-    pendingChanges(db, 'skills'),
-    pendingChanges(db, 'skill_versions'),
-  ])
-  const receipts = [...agents, ...versions, ...skills, ...skillVersions]
+  const [agents, versions, skills, skillVersions, councils, councilVersions] =
+    await Promise.all([
+      pendingChanges(db, 'agents'),
+      pendingChanges(db, 'agent_versions'),
+      pendingChanges(db, 'skills'),
+      pendingChanges(db, 'skill_versions'),
+      pendingChanges(db, 'councils'),
+      pendingChanges(db, 'council_versions'),
+    ])
+  const receipts = [
+    ...agents,
+    ...versions,
+    ...skills,
+    ...skillVersions,
+    ...councils,
+    ...councilVersions,
+  ]
   const skillExport = await readSkillExport(
     db,
     skills,
@@ -116,6 +127,23 @@ export async function readFirestoreExport(
     log,
     previous,
   )
+  async function complete(
+    inventory: Pick<PublicExport, 'catalog' | 'files' | 'origins'>,
+  ) {
+    const output = { ...inventory, ...skillExport }
+    return {
+      ...output,
+      ...(await readCouncilExport(
+        db,
+        output,
+        councils,
+        councilVersions,
+        log,
+        previous,
+      )),
+      receipts,
+    }
+  }
   if (!previous) {
     const live = new Map<string, unknown>()
     const excluded = new Set<string>()
@@ -138,13 +166,11 @@ export async function readFirestoreExport(
     const snapshots = history.docs
       .map((doc) => recordData(doc, true, log))
       .filter(Boolean)
-    return {
+    return complete({
       catalog,
       files: buildVersionFiles(catalog, snapshots, seeds, allow, log),
       origins: buildOrigins(catalog, snapshots, allow, log),
-      ...skillExport,
-      receipts,
-    }
+    })
   }
 
   const catalog = new Map(previous.catalog.map((agent) => [agent.id, agent]))
@@ -252,13 +278,11 @@ export async function readFirestoreExport(
     const id = at > 0 ? key.slice(0, at) : key
     if (!catalog.has(id)) delete origins[key]
   }
-  return {
+  return complete({
     catalog: [...catalog.values()].sort((a, b) =>
       a.id.localeCompare(b.id, 'en'),
     ),
     files,
     origins: sortOrigins(origins),
-    ...skillExport,
-    receipts,
-  }
+  })
 }

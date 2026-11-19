@@ -536,9 +536,10 @@ test('MCP gates every account tool and whole batches before dispatch, and decora
     'get_item',
     'save_agent',
     'save_skill',
+    'save_council',
   ]
   assert.deepEqual(
-    tools.slice(-5).map(({ name }: { name: string }) => name),
+    tools.slice(-account.length).map(({ name }: { name: string }) => name),
     account,
   )
   for (const tool of tools) {
@@ -638,6 +639,7 @@ test('account calls stay within the Firestore budget, overwrite nothing, and pre
       'get_item',
       'save_agent',
       'save_skill',
+      'save_council',
     ],
   })
   await invoke('list_my_items', {}, ['query'])

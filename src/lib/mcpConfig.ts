@@ -4,7 +4,7 @@ import type { AgentManifest } from '@/types/agent'
 export const MCP_SERVER_PACKAGE = 'agentlemon-registry'
 
 /** Must match packages/mcp-server/package.json. A test enforces it. */
-export const MCP_SERVER_VERSION = '0.3.2'
+export const MCP_SERVER_VERSION = '0.3.3'
 
 /**
  * What `npx` installs. The server is distributed as a tarball on our own

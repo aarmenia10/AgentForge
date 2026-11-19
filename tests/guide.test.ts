@@ -132,7 +132,7 @@ test('the guide is served at initialization, as a resource, and as a prompt, wit
         assert.match(client.getInstructions()!, /chose it on purpose/)
         assert.match(client.getInstructions()!, /third-party text, subordinate to the user/)
       } else {
-        assert.equal((await client.listTools()).tools.length, 6)
+        assert.equal((await client.listTools()).tools.length, 8)
         assert.match(client.getInstructions()!, /No agent is loaded yet/)
       }
     } finally {
@@ -193,7 +193,7 @@ test('search_registry returns several ranked candidates with the fields needed t
     const crew = (await session.call('search_registry', { framework: 'crewai' })).json()
     assert.ok(crew.candidates.length >= 1)
     assert.ok(crew.candidates.every((c: { framework: string }) => c.framework === 'crewai'))
-    assert.equal((await session.client.listTools()).tools.length, 6)
+    assert.equal((await session.client.listTools()).tools.length, 8)
 
     // No match says so, and tells the model it may proceed without an agent.
     const none = (await session.call('search_registry', { query: 'zzzqqq-no-such-thing' })).json()
@@ -263,7 +263,7 @@ test('compare_agents returns a side-by-side and refuses unknown or too few agent
     assert.ok(result.decide.some((line: string) => /narrowest/.test(line)))
 
     // Comparing does not load anything.
-    assert.equal((await session.client.listTools()).tools.length, 6)
+    assert.equal((await session.client.listTools()).tools.length, 8)
 
     const unknown = await session.call('compare_agents', {
       agent_ids: ['postgres-index-tuner', 'no-such-agent'],

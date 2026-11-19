@@ -340,6 +340,93 @@ test('real Auth and Firestore REST enforce account isolation, private create-onl
     assert.ok(
       !('saved_from_chat' in skillManifestSchema.strip().parse(skillRecord)),
     )
+
+    const missing = { ...seed, id: 'council-only-member' }
+    const council = {
+      council_schema_version: 1,
+      id: 'chat-council',
+      version: '1.0.0',
+      name: 'Chat council',
+      description: 'Check and summarize a report.',
+      tags: ['writing'],
+      instructions: 'Check the report and summarize the results.',
+      members: [
+        {
+          ref: { kind: 'agent', id: missing.id, version: missing.version },
+          role: 'Check',
+          order: 1,
+        },
+        {
+          ref: {
+            kind: 'skill',
+            id: privateSkill.id,
+            version: privateSkill.version,
+          },
+          role: 'Summarize',
+          order: 2,
+        },
+      ],
+    }
+    const savedCouncil = await toolBody(
+      await call(aliceTokens.access_token, 'save_council', {
+        manifest: council,
+        member_items: [{ kind: 'agent', manifest: missing }],
+      }),
+    )
+    assert.deepEqual(savedCouncil.members_saved, ['agents/' + missing.id])
+    const chatCouncil = (
+      await getDoc(doc(aliceDb, 'councils', council.id))
+    ).data()!
+    assert.equal(chatCouncil.visibility, 'private')
+    assert.equal(chatCouncil.saved_from_chat, true)
+    assert.equal(chatCouncil.origin_app, existing.origin_app)
+    const newId = 'never-created'
+    const overwrite = {
+      ...council,
+      members: [
+        {
+          ...council.members[0],
+          ref: { ...council.members[0].ref, id: newId },
+        },
+        council.members[1],
+      ],
+    }
+    await assert.rejects(
+      toolBody(
+        await call(aliceTokens.access_token, 'save_council', {
+          manifest: overwrite,
+          member_items: [
+            { kind: 'agent', manifest: { ...missing, id: newId } },
+          ],
+        }),
+      ),
+      /already in use/,
+    )
+    assert.equal((await getDoc(doc(aliceDb, 'agents', newId))).exists(), false)
+
+    const newMembers = Array.from({ length: 20 }, (_, i) => ({
+      ...seed,
+      id: 'from-chat-member-' + i,
+    }))
+    const largeCouncil = {
+      ...council,
+      id: 'large-chat-council',
+      members: newMembers.map(({ id, version }) => ({
+        ref: { kind: 'agent', id, version },
+        role: 'Check part of the report',
+        order: 1,
+      })),
+    }
+    const largeSave = await toolBody(
+      await call(aliceTokens.access_token, 'save_council', {
+        manifest: largeCouncil,
+        member_items: newMembers.map((manifest) => ({
+          kind: 'agent',
+          manifest,
+        })),
+      }),
+    )
+    assert.equal(largeSave.members_saved.length, 20)
     const accountSkills = await toolBody(
       await call(aliceTokens.access_token, 'list_my_items', {
         kind: 'skill',
