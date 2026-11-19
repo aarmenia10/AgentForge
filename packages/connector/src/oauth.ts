@@ -5,7 +5,12 @@ import {
   SITE_ORIGIN,
   WRITE,
 } from '../../../src/services/connectorConfig'
-import { exchange, firestore, type Fetch } from './firebase'
+import {
+  exchange,
+  FirebaseExchangeError,
+  firestore,
+  type Fetch,
+} from './firebase'
 import { active, changeGrants, readGrants } from './grants'
 import {
   ABSOLUTE,
@@ -302,7 +307,7 @@ export function createOAuth(options: OAuthOptions = {}) {
     if (!env.TOKEN_KEYS || !env.FIREBASE_TOKEN_API_KEY?.trim()) return null
     try {
       const codec = tokenCodec(envKeyRing(env), now, options.random)
-      return { codec, key: env.FIREBASE_TOKEN_API_KEY }
+      return { codec, key: env.FIREBASE_TOKEN_API_KEY.trim() }
     } catch {
       return null
     }
@@ -462,12 +467,18 @@ export function createOAuth(options: OAuthOptions = {}) {
       const scopes = flow.scopes.filter((scope) =>
         (input.scopes as unknown[]).includes(scope),
       )
+      let reason = 'UNKNOWN'
       const user = await exchange(fetcher, key, input.refresh_token).catch(
-        () => null,
+        (error: unknown) => {
+          if (error instanceof FirebaseExchangeError) reason = error.code
+          return null
+        },
       )
       if (!user)
         return answer(
-          { error: 'Firebase sign-in could not be verified. Sign in again.' },
+          {
+            error: `Firebase sign-in could not be verified (${reason}). Sign in again.`,
+          },
           400,
         )
       const consentTime = now()
