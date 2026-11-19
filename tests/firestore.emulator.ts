@@ -27,6 +27,7 @@ import './versions.emulator'
 import './export.emulator'
 import './skills.emulator'
 import './connector.emulator'
+import './preferences.emulator'
 
 test('real Firestore transactions and rules enforce atomic stars and per-user ownership', async () => {
   const env = await initializeTestEnvironment({

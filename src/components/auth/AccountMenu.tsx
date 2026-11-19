@@ -7,6 +7,7 @@ import {
   MailWarning,
   Plus,
   Settings,
+  Sparkles,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -43,6 +44,7 @@ function checkAdmin(uid: string): Promise<boolean> {
 
 const MENU_LINKS: readonly { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/me', label: 'My items', icon: LayoutGrid },
+  { to: '/suggestions', label: 'Suggestions', icon: Sparkles },
   { to: '/studio', label: 'New agent', icon: Plus },
   { to: '/skills/new', label: 'New skill', icon: FilePlus2 },
   { to: '/friends', label: 'Friends', icon: Users },

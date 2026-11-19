@@ -1,9 +1,10 @@
 import { X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from '@/router/Router'
+import { Link, useRoute } from '@/router/Router'
 import { ConnectorCard } from '../ConnectorCard'
 import { UsernameForm, type SavedProfile } from '../profile/UsernameForm'
+import { PreferencesStep } from './PreferencesStep'
 import { primaryButton, secondaryButton, textLink } from '../studio/parts'
 
 interface WelcomeDialogProps {
@@ -23,6 +24,7 @@ export function WelcomeDialog({
   avatarUrl,
   onClose,
 }: WelcomeDialogProps) {
+  const { go } = useRoute()
   const [saved, setSaved] = useState<SavedProfile | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -86,7 +88,7 @@ export function WelcomeDialog({
               Welcome to AgentLemon
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Two things worth doing now. Both are optional, and you can find
+              Three things worth doing now. All are optional, and you can find
               them later in Settings.
             </p>
           </div>
@@ -142,6 +144,18 @@ export function WelcomeDialog({
                 />
               </>
             )}
+          </section>
+
+          <section aria-labelledby={`${titleId}-3`}>
+            <StepHeading id={`${titleId}-3`} n={3}>
+              4 quick questions (about 20 seconds)
+            </StepHeading>
+            <PreferencesStep
+              onDone={(savedAnswers) => {
+                onClose()
+                if (savedAnswers) go('/suggestions')
+              }}
+            />
           </section>
         </div>
 
