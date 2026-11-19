@@ -205,7 +205,10 @@ async function listItems(input: unknown, { db, access }: Context) {
         ? next('skill')
         : null
   const sanitizedItems = items.map((item) => {
-    const base = { kind: itemKind, ...item }
+    const base = { kind: itemKind, ...item } as Record<string, unknown> & {
+      kind: typeof itemKind
+      visibility?: unknown
+    }
     if (base.visibility === 'private') {
       const rest = { ...base }
       delete (rest as Record<string, unknown>).review_status
