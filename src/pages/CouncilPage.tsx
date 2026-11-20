@@ -157,6 +157,13 @@ export default function CouncilPage() {
       openSignIn({ reason: 'Sign in to save a private copy of the council.' })
       return
     }
+    if (!user?.emailVerified) {
+      setNotice('')
+      setError(
+        'Confirm your email address before saving a council. Settings can send the link again.',
+      )
+      return
+    }
     void act(async () => {
       await (
         await store()

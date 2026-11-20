@@ -38,12 +38,20 @@ check(
   'guide is in the instructions',
 )
 
-const tools = (await client.listTools()).tools.map((tool) => tool.name)
-check(
-  tools.join(',') ===
-    'search_registry,compare_agents,search_skills,get_skill,get_skill_file,get_agent',
-  `tools: ${tools.join(', ')}`,
-)
+// The old version can keep answering for a few seconds after an upload, so
+// wait for the expected tool list before testing the new behavior.
+const expectedTools =
+  'search_registry,compare_agents,search_skills,get_skill,get_skill_file,search_councils,get_council,get_agent'
+let tools = []
+for (let attempt = 0; attempt < 12; attempt++) {
+  const fresh = new Client({ name: 'connector-smoke', version: '1.0.0' })
+  await fresh.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`)))
+  tools = (await fresh.listTools()).tools.map((tool) => tool.name)
+  await fresh.close()
+  if (tools.join(',') === expectedTools) break
+  await new Promise((resolve) => setTimeout(resolve, 5000))
+}
+check(tools.join(',') === expectedTools, `tools: ${tools.join(', ')}`)
 
 const parse = (result) => JSON.parse(result.content[0].text)
 const search = parse(
@@ -119,7 +127,7 @@ if (account.status === 503) {
   check(
     account.status === 401 &&
       account.headers.get('WWW-Authenticate') ===
-        `Bearer error="invalid_token", resource_metadata="${base}${resourcePath}", scope="items:read"`,
+        `Bearer error="invalid_token", resource_metadata="${base}${resourcePath}", scope="items:read items:write"`,
     'account tool challenges before sign-in',
   )
 }
