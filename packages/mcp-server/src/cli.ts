@@ -6,6 +6,7 @@ import {
   loadOrigins,
   agentResolver,
   localSkillReader,
+  localCouncilReader,
 } from './catalog'
 import { createRegistryServer } from './server'
 
@@ -39,6 +40,7 @@ try {
       active,
       localSkillReader(source),
       origins,
+      localCouncilReader(source, origins),
     )
     const shutdown = () => {
       void server.close().finally(() => process.exit(0))

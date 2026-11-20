@@ -31,6 +31,22 @@
         { "fieldPath": "visibility", "order": "ASCENDING" },
         { "fieldPath": "review_status", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "councils",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "visibility", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "councils",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "review_status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -47,6 +63,36 @@
     {
       "collectionGroup": "skill_versions",
       "fieldPath": "files",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "councils",
+      "fieldPath": "instructions",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "councils",
+      "fieldPath": "members",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "council_edits",
+      "fieldPath": "instructions",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "council_edits",
+      "fieldPath": "members",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "council_versions",
+      "fieldPath": "instructions",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "council_versions",
+      "fieldPath": "members",
       "indexes": []
     }
   ]

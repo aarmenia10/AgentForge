@@ -95,6 +95,8 @@ test('hourly export reads only dirty documents and acknowledges only published r
       assert.deepEqual(observed.queries.sort(), [
         'export_sources/agent_versions/changes',
         'export_sources/agents/changes',
+        'export_sources/council_versions/changes',
+        'export_sources/councils/changes',
         'export_sources/skill_versions/changes',
         'export_sources/skills/changes',
       ])

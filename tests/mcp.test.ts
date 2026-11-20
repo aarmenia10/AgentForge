@@ -57,9 +57,9 @@ test('MCP session supports search, prompts, schemas, resources, switching and in
     assert.match(client.getInstructions()!, /Never use the first plausible search result/)
     assert.deepEqual(
       (await client.listTools()).tools.map((t) => t.name),
-      ['search_registry', 'compare_agents', 'search_skills', 'get_skill', 'get_skill_file', 'switch_agent', 'agent_python_regex_deobfuscator'],
+      ['search_registry', 'compare_agents', 'search_skills', 'get_skill', 'get_skill_file', 'search_councils', 'get_council', 'switch_agent', 'agent_python_regex_deobfuscator'],
     )
-    assert.equal((await client.listTools()).tools.length, 7)
+    assert.equal((await client.listTools()).tools.length, 9)
     assert.equal((await client.listPrompts()).prompts[0].name, 'active_agent')
     assert.match(
       JSON.stringify(await client.getPrompt({ name: 'active_agent' })),
@@ -162,7 +162,7 @@ test('built Node executable speaks real stdio MCP and loads its bundled catalog 
   const client = new Client({ name: 'stdio-test', version: '1.0.0' })
   try {
     await client.connect(transport)
-    assert.equal((await client.listTools()).tools.length, 7)
+    assert.equal((await client.listTools()).tools.length, 9)
     assert.match(
       client.getInstructions()!,
       /forensic financial-statement analyst/,

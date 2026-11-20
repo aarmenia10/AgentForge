@@ -1,3 +1,4 @@
+import { councilTools, hostedCouncilReader } from './councils'
 import { skillTools, hostedSkillReader } from './skills'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import {
@@ -42,10 +43,11 @@ export function createRegistryServer(
   initial?: AgentManifest,
   readSkill = hostedSkillReader(),
   origins: Readonly<Record<string, OriginApp>> = {},
+  readCouncil = hostedCouncilReader(undefined, undefined, origins),
 ) {
   let active = initial ?? (selector ? selectAgent(catalog, selector) : undefined)
   const server = new Server(
-    { name: 'agentlemon-registry', version: '0.3.2' },
+    { name: 'agentlemon-registry', version: '0.3.3' },
     {
       capabilities: {
         tools: { listChanged: true },
@@ -72,6 +74,7 @@ export function createRegistryServer(
     const tools: Tool[] = [
       ...discoveryTools(LOAD_TOOL),
       ...skillTools,
+      ...councilTools,
       {
         name: 'switch_agent',
         description:
@@ -107,6 +110,8 @@ export function createRegistryServer(
       if (discovery) return discovery
       const skill = await readSkill(name, args)
       if (skill) return skill
+      const council = await readCouncil(name, args)
+      if (council) return council
       if (name === 'switch_agent' || name === 'get_agent') {
         const rawTarget =
           args && typeof args === 'object' && 'agent_id' in args

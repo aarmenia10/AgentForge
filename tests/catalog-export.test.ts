@@ -1,3 +1,4 @@
+import { emptyCouncilExport } from '../scripts/councilExport'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFile, writeFile, mkdtemp, rm, access } from 'node:fs/promises'
@@ -45,7 +46,12 @@ test('hourly checkpoint must match this UTC day, release, catalog and all histor
       record,
       { ...record, version: '0.0.1' },
     ])
-    const output = { catalog, files, ...emptySkillExport() }
+    const output = {
+      catalog,
+      files,
+      ...emptySkillExport(),
+      ...emptyCouncilExport(),
+    }
     const digest = JSON.stringify({ sha256: exportDigest(output) }) + '\n'
     await writeFile(hosted, digest)
     assert.equal(await readCheckpoint(checkpoint, hosted), undefined)
@@ -353,6 +359,7 @@ test('origins.json holds only public approved versions; private and friends orig
     catalog,
     files: buildVersionFiles(catalog, snapshots),
     ...emptySkillExport(),
+    ...emptyCouncilExport(),
     origins,
   }
   const output2 = {
