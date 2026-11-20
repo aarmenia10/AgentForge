@@ -88,8 +88,12 @@ test('council rules gate a 20-member roster, snapshots, proposals, and hourly ta
         writes.set(db.doc('agent_versions/' + member.id + '@1.0.0'), member)
     }
     await writes.commit()
-    // A private save may be made before verification, sharing may not.
-    await unconfirmed.create(draft)
+    // Every council save needs a confirmed email, like agents and skills.
+    await assert.rejects(unconfirmed.create(draft))
+    await owner.create(draft)
+    await assertFails(
+      updateDoc(doc(client('council-outsider'), path), { name: 'Taken over' }),
+    )
     const record = (await owner.get(draft.id))!
     await assertFails(
       setDoc(doc(ownerDb, path), { ...record, origin_app: 'codex' }),

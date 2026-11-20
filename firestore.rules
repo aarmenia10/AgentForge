@@ -559,7 +559,7 @@ service cloud.firestore {
     function councilOwnerUpdate(id) {
       let a = request.resource.data;
       let b = resource.data;
-      return councilOwns(b) && a.owner_uid == b.owner_uid && a.author == b.author
+      return councilOwns(b) && verifiedEmail() && a.owner_uid == b.owner_uid && a.author == b.author
         && a.get('saved_from_chat', false) == b.get('saved_from_chat', false)
         && a.get('origin_app', '') == b.get('origin_app', '') && a.review_status == 'pending'
         && (!liveApproved(b) || (a.visibility != 'public'
@@ -600,7 +600,7 @@ service cloud.firestore {
     match /councils/{id} {
       allow get: if (signedIn() && !exists(councilPath(id))) || readableAgent(resource.data);
       allow list: if boundedSkills() && readableAgent(resource.data);
-      allow create: if signedIn() && ownIdentity(request.resource.data)
+      allow create: if verifiedEmail() && ownIdentity(request.resource.data)
         && request.resource.data.author.name == get(userPath(request.auth.uid)).data.display_name
         && request.resource.data.author.verified == false && request.resource.data.review_status == 'pending'
         && validCouncil(request.resource.data, id) && councilSharing(request.resource.data);
