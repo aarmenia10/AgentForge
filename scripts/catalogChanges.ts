@@ -8,6 +8,8 @@ export const sources = [
   'agent_versions',
   'skills',
   'skill_versions',
+  'votes',
+  'comments',
   'councils',
   'council_versions',
 ] as const

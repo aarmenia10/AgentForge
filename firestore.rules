@@ -101,6 +101,12 @@ service cloud.firestore {
       let path = /databases/$(database)/documents/export_sources/$(source)/changes/$(id);
       return existsAfter(path) && (!exists(path) || getAfter(path).data.revision != get(path).data.revision);
     }
+    // A vote marker is valid only while the caller's own vote document is
+    // created, changed, or deleted in the same commit.
+    function ownVoteChanged(path) {
+      return existsAfter(path) != exists(path)
+        || (exists(path) && getAfter(path).data != get(path).data);
+    }
     match /export_sources/{source}/changes/{id} {
       // Coalesce commits for one document. The exporter alone reads these.
       function validChange() {
@@ -116,7 +122,21 @@ service cloud.firestore {
               && (getAfter(skillPath(id)).data != get(skillPath(id)).data || isAdmin()))
           || (source == 'skill_versions' && isAdmin()
               && !exists(/databases/$(database)/documents/skill_versions/$(id))
-              && existsAfter(/databases/$(database)/documents/skill_versions/$(id))));
+              && existsAfter(/databases/$(database)/documents/skill_versions/$(id)))
+          || (source == 'votes' && id.matches('^agents_[a-z0-9]+(-[a-z0-9]+)*$')
+              && exists(agentPath(id.split('_')[1]))
+              && liveApproved(get(agentPath(id.split('_')[1])).data)
+              && ownVoteChanged(agentVotePath(id.split('_')[1], request.auth.uid)))
+          || (source == 'votes' && id.matches('^skills_[a-z0-9]+(-[a-z0-9]+)*$')
+              && exists(skillPath(id.split('_')[1]))
+              && liveApproved(get(skillPath(id.split('_')[1])).data)
+              && ownVoteChanged(skillVotePath(id.split('_')[1], request.auth.uid)))
+          || (source == 'comments' && id.matches('^agents_[a-z0-9]+(-[a-z0-9]+)*$')
+              && exists(agentPath(id.split('_')[1]))
+              && liveApproved(get(agentPath(id.split('_')[1])).data))
+          || (source == 'comments' && id.matches('^skills_[a-z0-9]+(-[a-z0-9]+)*$')
+              && exists(skillPath(id.split('_')[1]))
+              && liveApproved(get(skillPath(id.split('_')[1])).data)));
       }
       function validCouncilChange() {
         let data = request.resource.data;
@@ -272,16 +292,84 @@ service cloud.firestore {
           && getAfter(agentPath(agentId)).data.version == resource.data.version)
         || !liveApproved(getAfter(agentPath(agentId)).data)));
     }
-    function starPath(agentId) { return /databases/$(database)/documents/agents/$(agentId)/stars/$(request.auth.uid); }
-    function validStarDelta(agentId) {
+    function noBlockedWords(body) {
+      return !body.matches('(?is).*\\b(word1|badword|spamword|hateword|slurword|hardcoreword)\\b.*');
+    }
+    function validComment(data) {
+      return data.keys().hasOnly(['author_uid', 'author_handle', 'body', 'created_at', 'deleted'])
+        && data.author_uid == request.auth.uid
+        && validHandle(data.author_handle)
+        && exists(userPath(request.auth.uid))
+        && data.author_handle == get(userPath(request.auth.uid)).data.handle
+        && data.body is string && data.body.size() >= 1 && data.body.size() <= 1000
+        && data.created_at == request.time
+        && data.deleted == false;
+    }
+    function validReport(data) {
+      return data.keys().hasOnly(['reason', 'note', 'created_at', 'updated_at'])
+        && data.reason in ['spam', 'harmful', 'misleading', 'other']
+        && (data.note == null || (data.note is string && data.note.size() <= 500))
+        && data.created_at is timestamp
+        && data.updated_at == request.time;
+    }
+    function agentVotePath(agentId, uid) { return /databases/$(database)/documents/agents/$(agentId)/votes/$(uid); }
+    function skillVotePath(skillId, uid) { return /databases/$(database)/documents/skills/$(skillId)/votes/$(uid); }
+    function validVote(data) {
+      return data.keys().hasOnly(['value', 'created_at', 'updated_at'])
+        && data.value in ['up', 'down']
+        && (data.created_at == request.time || (resource != null && data.created_at == resource.data.created_at))
+        && data.updated_at == request.time;
+    }
+    function validAgentVoteDelta(agentId) {
       let before = get(agentPath(agentId)).data;
       let after = getAfter(agentPath(agentId)).data;
-      let delta = exists(starPath(agentId)) ? -1 : 1;
+      let hadStar = exists(starPath(agentId));
+      let hadVote = exists(agentVotePath(agentId, request.auth.uid));
+      let hasVoteAfter = existsAfter(agentVotePath(agentId, request.auth.uid));
+      let oldIsUp = hadVote ? get(agentVotePath(agentId, request.auth.uid)).data.value == 'up' : hadStar;
+      let newIsUp = hasVoteAfter && getAfter(agentVotePath(agentId, request.auth.uid)).data.value == 'up';
+      let delta = (newIsUp ? 1 : 0) - (oldIsUp ? 1 : 0);
       return after.diff(before).affectedKeys().hasOnly(['stats'])
         && after.stats.diff(before.stats).affectedKeys().hasOnly(['stars'])
         && after.stats.stars is int && after.stats.stars >= 0
         && after.stats.stars == before.stats.stars + delta
-        && existsAfter(starPath(agentId)) != exists(starPath(agentId));
+        && !existsAfter(starPath(agentId));
+    }
+    function validSkillVoteDelta(skillId) {
+      let before = get(skillPath(skillId)).data;
+      let after = getAfter(skillPath(skillId)).data;
+      let hadVote = exists(skillVotePath(skillId, request.auth.uid));
+      let hasVoteAfter = existsAfter(skillVotePath(skillId, request.auth.uid));
+      let oldVal = hadVote ? get(skillVotePath(skillId, request.auth.uid)).data.value : null;
+      let newVal = hasVoteAfter ? getAfter(skillVotePath(skillId, request.auth.uid)).data.value : null;
+      let upDelta = (newVal == 'up' ? 1 : 0) - (oldVal == 'up' ? 1 : 0);
+      let downDelta = (newVal == 'down' ? 1 : 0) - (oldVal == 'down' ? 1 : 0);
+      let oldUp = before.stats.get('thumbs_up', 0);
+      let oldDown = before.stats.get('thumbs_down', 0);
+      return after.diff(before).affectedKeys().hasOnly(['stats'])
+        && after.stats.diff(before.stats).affectedKeys().hasOnly(['thumbs_up', 'thumbs_down'])
+        && after.stats.get('thumbs_up', 0) == oldUp + upDelta
+        && after.stats.get('thumbs_down', 0) == oldDown + downDelta
+        && after.stats.get('thumbs_up', 0) >= 0
+        && after.stats.get('thumbs_down', 0) >= 0;
+    }
+    function starPath(agentId) { return /databases/$(database)/documents/agents/$(agentId)/stars/$(request.auth.uid); }
+    function validStarDelta(agentId) {
+      let before = get(agentPath(agentId)).data;
+      let after = getAfter(agentPath(agentId)).data;
+      // Stars are legacy: a star can only be removed, which lowers the count by one.
+      return after.diff(before).affectedKeys().hasOnly(['stats'])
+        && after.stats.diff(before.stats).affectedKeys().hasOnly(['stars'])
+        && after.stats.stars is int && after.stats.stars >= 0
+        && after.stats.stars == before.stats.stars - 1
+        && exists(starPath(agentId)) && !existsAfter(starPath(agentId));
+    }
+    function isAgentVoteDelta() {
+      // Only a change of stats.stars alone is a vote. A stats-only edit that
+      // touches updated_at (an owner saving unchanged content) is not.
+      let diff = request.resource.data.diff(resource.data).affectedKeys();
+      return diff.size() == 1 && diff.hasOnly(['stats'])
+        && request.resource.data.stats.diff(resource.data.stats).affectedKeys().hasOnly(['stars']);
     }
     match /agents/{agentId} {
       // Public browsing still uses Hosting; these reads serve account views and stars.
@@ -293,24 +381,72 @@ service cloud.firestore {
         && request.resource.data.stats.stars == 0 && request.resource.data.stats.views == 0
         && request.resource.data.shared_with == []
         && validAgent(request.resource.data, agentId);
-      allow update: if ((!liveApproved(resource.data) && !liveApproved(request.resource.data))
-          || exportMarked('agents', agentId))
-        && ((signedIn()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats'])
-          && readableAgent(resource.data) && validStarDelta(agentId))
-        || ownerEdit(agentId) || adminEdit(agentId) || approveEdit(agentId));
+      allow update: if isAgentVoteDelta()
+        ? (signedIn() && readableAgent(resource.data)
+          && (validStarDelta(agentId) || validAgentVoteDelta(agentId))
+          && (!liveApproved(resource.data) || exportMarked('votes', 'agents_' + agentId) || exportMarked('agents', agentId)))
+        : (((!liveApproved(resource.data) && !liveApproved(request.resource.data))
+            || exportMarked('agents', agentId))
+          && (ownerEdit(agentId) || adminEdit(agentId) || approveEdit(agentId)));
       allow delete: if false;
       match /stars/{userId} {
         allow get: if signedIn() && request.auth.uid == userId
           && readableAgent(get(agentPath(agentId)).data);
-        allow create: if signedIn() && request.auth.uid == userId
-          && readableAgent(get(agentPath(agentId)).data)
-          && request.resource.data.keys().hasOnly(['user_id', 'created_at'])
-          && request.resource.data.user_id == userId
-          && request.resource.data.created_at == request.time
-          && validStarDelta(agentId);
+        // Thumbs replaced stars (P3-13). New stars would double count beside votes.
+        allow create: if false;
         allow delete: if signedIn() && request.auth.uid == userId
           && readableAgent(get(agentPath(agentId)).data) && validStarDelta(agentId);
+      }
+      match /votes/{userId} {
+        function canVote() {
+          let agent = get(agentPath(agentId)).data;
+          return signedIn() && request.auth.uid == userId
+            && (liveApproved(agent) || (agent.visibility == 'friends' && currentFriend(agent.owner_uid)));
+        }
+        allow get: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(agentPath(agentId)).data);
+        allow create: if canVote()
+          && validVote(request.resource.data)
+          && validAgentVoteDelta(agentId)
+          && (!liveApproved(get(agentPath(agentId)).data) || exportMarked('votes', 'agents_' + agentId));
+        allow update: if canVote()
+          && validVote(request.resource.data)
+          && resource.data.value != request.resource.data.value
+          && validAgentVoteDelta(agentId)
+          && (!liveApproved(get(agentPath(agentId)).data) || exportMarked('votes', 'agents_' + agentId));
+        allow delete: if canVote()
+          && validAgentVoteDelta(agentId)
+          && (!liveApproved(get(agentPath(agentId)).data) || exportMarked('votes', 'agents_' + agentId));
+      }
+      match /comments/{commentId} {
+        allow get: if readableAgent(get(agentPath(agentId)).data);
+        allow list: if bounded() && readableAgent(get(agentPath(agentId)).data);
+        allow create: if signedIn() && verifiedEmail()
+          && readableAgent(get(agentPath(agentId)).data)
+          && request.auth.uid != get(agentPath(agentId)).data.owner_uid
+          && validComment(request.resource.data)
+          && noBlockedWords(request.resource.data.body)
+          && (!liveApproved(get(agentPath(agentId)).data) || exportMarked('comments', 'agents_' + agentId));
+        allow update: if (isAdmin() || (signedIn() && request.auth.uid == resource.data.author_uid))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted'])
+          && request.resource.data.deleted == true
+          && (!liveApproved(get(agentPath(agentId)).data) || exportMarked('comments', 'agents_' + agentId));
+        allow delete: if false;
+      }
+      match /reports/{userId} {
+        allow get: if isAdmin() || (signedIn() && request.auth.uid == userId);
+        allow list: if isAdmin() && bounded();
+        allow create: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(agentPath(agentId)).data)
+          && request.auth.uid != get(agentPath(agentId)).data.owner_uid
+          && validReport(request.resource.data)
+          && request.resource.data.created_at == request.time;
+        allow update: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(agentPath(agentId)).data)
+          && request.auth.uid != get(agentPath(agentId)).data.owner_uid
+          && validReport(request.resource.data)
+          && request.resource.data.created_at == resource.data.created_at;
+        allow delete: if false;
       }
     }
     match /skill_versions/{versionId} {
@@ -332,17 +468,20 @@ service cloud.firestore {
               files[i + 4].kind, files[i + 5].kind, files[i + 6].kind, files[i + 7].kind,
               files[i + 8].kind, files[i + 9].kind].hasOnly(kinds);
     }
-    function validSkillFiles(files, shared) {
-      let n = files.size();
+    function tenFilesGroup(files, n, kinds) {
       let fill = {'kind': 'reference'};
       let padded = files.concat([fill, fill, fill, fill, fill, fill, fill, fill, fill]);
-      let kinds = shared ? ['instructions', 'reference'] : ['instructions', 'reference', 'script'];
-      return n >= 1 && n <= 50
-        && tenSkillFiles(padded, 0, kinds)
+      return tenSkillFiles(padded, 0, kinds)
         && (n <= 10 || tenSkillFiles(padded, 10, kinds))
         && (n <= 20 || tenSkillFiles(padded, 20, kinds))
         && (n <= 30 || tenSkillFiles(padded, 30, kinds))
         && (n <= 40 || tenSkillFiles(padded, 40, kinds));
+    }
+    function validSkillFiles(files, shared) {
+      let n = files.size();
+      let kinds = shared ? ['instructions', 'reference'] : ['instructions', 'reference', 'script'];
+      return n >= 1 && n <= 50
+        && (n <= 2 ? (files[0].kind in kinds && (n == 1 || files[1].kind in kinds)) : tenFilesGroup(files, n, kinds));
     }
     function validSkill(data, skillId) {
       return data.keys().hasOnly(['skill_schema_version', 'visibility', 'id', 'name', 'version', 'description', 'author', 'tags', 'files', 'stats', 'owner_uid', 'review_status', 'saved_from_chat', 'origin_app'])
@@ -363,8 +502,14 @@ service cloud.firestore {
         && data.author.handle is string && data.author.handle.matches('^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$')
         && data.author.verified is bool
         && data.tags is list && data.tags.size() > 0
-        && data.stats is map && data.stats.keys().hasOnly(['updated_at']) && data.stats.updated_at is string
+        && data.stats is map
+        && data.stats.keys().hasOnly(['updated_at', 'thumbs_up', 'thumbs_down'])
+        && data.stats.updated_at is string
         && data.files is list && validSkillFiles(data.files, data.visibility != 'private');
+    }
+    // Vote counts change only through votes, never through an owner edit or an approval.
+    function keepsSkillCounts(after, live) {
+      return after.stats.diff(live.stats).affectedKeys().hasOnly(['updated_at']);
     }
     function ownerSkillEdit(skillId) {
       let before = resource.data;
@@ -376,6 +521,7 @@ service cloud.firestore {
         && after.owner_uid == before.owner_uid
         && after.author.verified == before.author.verified
         && after.review_status == 'pending'
+        && keepsSkillCounts(after, before)
         && (ownIdentity(after) || (after.author == before.author
           && after.diff(before).affectedKeys().hasOnly(['visibility', 'review_status'])))
         && validSkill(after, skillId);
@@ -408,6 +554,7 @@ service cloud.firestore {
         && after.author.diff(edit.author).affectedKeys().hasOnly(['verified'])
         && after.author.verified == live.author.verified
         && after.stats.updated_at == edit.stats.updated_at
+        && keepsSkillCounts(after, live)
         && skillSnapshotted(after)
         && validSkill(after, skillId);
     }
@@ -419,7 +566,8 @@ service cloud.firestore {
         return ownsLive() && liveApproved(live) && validSkill(edit, skillId)
           && ownIdentity(edit) && edit.visibility == 'public' && edit.review_status == 'pending'
           && edit.version != live.version && edit.owner_uid == live.owner_uid
-          && edit.author.verified == live.author.verified;
+          && edit.author.verified == live.author.verified
+          && keepsSkillCounts(edit, live);
       }
       allow get: if (signedIn() && get(skillPath(skillId)).data.owner_uid == request.auth.uid) || isAdmin();
       allow list: if boundedSkills() && ((signedIn() && resource.data.owner_uid == request.auth.uid) || isAdmin());
@@ -436,6 +584,10 @@ service cloud.firestore {
           && getAfter(skillPath(skillId)).data.version == resource.data.version)
         || !liveApproved(getAfter(skillPath(skillId)).data)));
     }
+    function isSkillVoteDelta() {
+      let diff = request.resource.data.diff(resource.data).affectedKeys();
+      return diff.size() == 1 && diff.hasOnly(['stats']);
+    }
     match /skills/{skillId} {
       // Public browsing uses Hosting. Account queries are bounded separately.
       allow get: if (signedIn() && !exists(skillPath(skillId))) || readableAgent(resource.data);
@@ -443,11 +595,73 @@ service cloud.firestore {
       allow create: if verifiedEmail() && ownIdentity(request.resource.data)
         && request.resource.data.review_status == 'pending'
         && request.resource.data.author.verified == false
+        && request.resource.data.stats.get('thumbs_up', 0) == 0
+        && request.resource.data.stats.get('thumbs_down', 0) == 0
         && validSkill(request.resource.data, skillId);
-      allow update: if ((!liveApproved(resource.data) && !liveApproved(request.resource.data))
-          || exportMarked('skills', skillId))
-        && (ownerSkillEdit(skillId) || adminSkillEdit(skillId) || approveSkillEdit(skillId));
+      allow update: if (((!liveApproved(resource.data) && !liveApproved(request.resource.data))
+            || exportMarked('skills', skillId))
+           && (ownerSkillEdit(skillId) || adminSkillEdit(skillId) || approveSkillEdit(skillId)))
+        || (signedIn()
+             && readableAgent(resource.data)
+             && isSkillVoteDelta()
+             && validSkillVoteDelta(skillId)
+             && (!liveApproved(resource.data) || exportMarked('votes', 'skills_' + skillId)));
       allow delete: if false;
+      match /votes/{userId} {
+        function canVote() {
+          let skill = get(skillPath(skillId)).data;
+          return signedIn() && request.auth.uid == userId
+            && (liveApproved(skill) || (skill.visibility == 'friends' && currentFriend(skill.owner_uid)));
+        }
+        allow get: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(skillPath(skillId)).data);
+        allow create: if canVote()
+          && validVote(request.resource.data)
+          && validSkillVoteDelta(skillId)
+          && (!liveApproved(get(skillPath(skillId)).data) || exportMarked('votes', 'skills_' + skillId));
+        allow update: if canVote()
+          && validVote(request.resource.data)
+          && resource.data.value != request.resource.data.value
+          && validSkillVoteDelta(skillId)
+          && (!liveApproved(get(skillPath(skillId)).data) || exportMarked('votes', 'skills_' + skillId));
+        allow delete: if canVote()
+          && validSkillVoteDelta(skillId)
+          && (!liveApproved(get(skillPath(skillId)).data) || exportMarked('votes', 'skills_' + skillId));
+      }
+      match /comments/{commentId} {
+        allow get: if readableAgent(get(skillPath(skillId)).data);
+        allow list: if bounded() && readableAgent(get(skillPath(skillId)).data);
+        allow create: if signedIn() && verifiedEmail()
+          && readableAgent(get(skillPath(skillId)).data)
+          && request.auth.uid != get(skillPath(skillId)).data.owner_uid
+          && validComment(request.resource.data)
+          && noBlockedWords(request.resource.data.body)
+          && (!liveApproved(get(skillPath(skillId)).data) || exportMarked('comments', 'skills_' + skillId));
+        allow update: if (isAdmin() || (signedIn() && request.auth.uid == resource.data.author_uid))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted'])
+          && request.resource.data.deleted == true
+          && (!liveApproved(get(skillPath(skillId)).data) || exportMarked('comments', 'skills_' + skillId));
+        allow delete: if false;
+      }
+      match /reports/{userId} {
+        allow get: if isAdmin() || (signedIn() && request.auth.uid == userId);
+        allow list: if isAdmin() && bounded();
+        allow create: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(skillPath(skillId)).data)
+          && request.auth.uid != get(skillPath(skillId)).data.owner_uid
+          && validReport(request.resource.data)
+          && request.resource.data.created_at == request.time;
+        allow update: if signedIn() && request.auth.uid == userId
+          && readableAgent(get(skillPath(skillId)).data)
+          && request.auth.uid != get(skillPath(skillId)).data.owner_uid
+          && validReport(request.resource.data)
+          && request.resource.data.created_at == resource.data.created_at;
+        allow delete: if false;
+      }
+    }
+    match /{path=**}/reports/{userId} {
+      allow get: if isAdmin() || (signedIn() && request.auth.uid == userId);
+      allow list: if isAdmin() && bounded();
     }
     function councilPath(id) { return /databases/$(database)/documents/councils/$(id); }
     function councilEditPath(id) { return /databases/$(database)/documents/council_edits/$(id); }

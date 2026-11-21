@@ -33,8 +33,11 @@ export interface SkillFile {
 }
 
 export interface SkillStats {
-  /** ISO 8601 timestamp. Vote counts arrive with P3-13. */
+  /** ISO 8601 timestamp. */
   updated_at: string
+  /** Vote counts (P3-13). Absent means zero. Only votes change them. */
+  thumbs_up?: number
+  thumbs_down?: number
 }
 
 export interface SkillManifest {

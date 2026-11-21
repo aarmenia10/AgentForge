@@ -15,6 +15,8 @@ import type { OriginApp } from '../src/lib/portability'
 import type { LinterAllowance } from './catalogSafety'
 import { readSkillExport } from './skillExport'
 import { pendingChanges } from './catalogChanges'
+import { readRatingsExport } from './ratingsExport'
+import { getBlockedWordsSync } from '../src/lib/blockedWords'
 
 type Log = (notice: ExportNotice) => void
 
@@ -102,15 +104,25 @@ export async function readFirestoreExport(
 ) {
   // Capture receipts BEFORE reading data. Writes during a run are either
   // reflected here or remain queued for the next successful publication.
-  const [agents, versions, skills, skillVersions, councils, councilVersions] =
-    await Promise.all([
-      pendingChanges(db, 'agents'),
-      pendingChanges(db, 'agent_versions'),
-      pendingChanges(db, 'skills'),
-      pendingChanges(db, 'skill_versions'),
-      pendingChanges(db, 'councils'),
-      pendingChanges(db, 'council_versions'),
-    ])
+  const [
+    agents,
+    versions,
+    skills,
+    skillVersions,
+    councils,
+    councilVersions,
+    votes,
+    comments,
+  ] = await Promise.all([
+    pendingChanges(db, 'agents'),
+    pendingChanges(db, 'agent_versions'),
+    pendingChanges(db, 'skills'),
+    pendingChanges(db, 'skill_versions'),
+    pendingChanges(db, 'councils'),
+    pendingChanges(db, 'council_versions'),
+    pendingChanges(db, 'votes'),
+    pendingChanges(db, 'comments'),
+  ])
   const receipts = [
     ...agents,
     ...versions,
@@ -118,10 +130,19 @@ export async function readFirestoreExport(
     ...skillVersions,
     ...councils,
     ...councilVersions,
+    ...votes,
+    ...comments,
   ]
+  // A vote changes the live counters but writes only a `votes` marker, so the
+  // marked item is refreshed here as well. Otherwise catalog.json and
+  // skills.json would keep stale counts until the next full export.
+  const votedIds = (kind: 'agents' | 'skills') =>
+    votes
+      .filter(({ id }) => id.startsWith(kind + '_'))
+      .map((vote) => ({ ...vote, id: vote.id.slice(kind.length + 1) }))
   const skillExport = await readSkillExport(
     db,
-    skills,
+    [...skills, ...votedIds('skills')],
     skillVersions,
     allow,
     log,
@@ -138,6 +159,16 @@ export async function readFirestoreExport(
         output,
         councils,
         councilVersions,
+        log,
+        previous,
+      )),
+      ...(await readRatingsExport(
+        db,
+        output.catalog,
+        output.skillIndex,
+        votes,
+        comments,
+        getBlockedWordsSync(),
         log,
         previous,
       )),
@@ -178,7 +209,11 @@ export async function readFirestoreExport(
   const origins: Record<string, OriginApp> = { ...(previous.origins ?? {}) }
   const seedById = new Map(seeds.map((seed) => [seed.id, seed]))
   const rebuiltHistory = new Set<string>()
-  for (const { id } of agents) {
+  const changedAgents = new Set([
+    ...agents.map(({ id }) => id),
+    ...votedIds('agents').map(({ id }) => id),
+  ])
+  for (const id of changedAgents) {
     const seed = seedById.get(id)
     const before = catalog.get(id)
     const state = seed

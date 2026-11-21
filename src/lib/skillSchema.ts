@@ -365,7 +365,13 @@ function shapes(strict: boolean) {
     handle: authorHandleSchema,
     verified: z.boolean(),
   })
-  const stats = obj({ updated_at: z.iso.datetime({ offset: true }) })
+  // Vote counts (P3-13) are optional so a record that has never been voted on
+  // stays valid; both the strict and the loose shape accept them.
+  const stats = obj({
+    updated_at: z.iso.datetime({ offset: true }),
+    thumbs_up: z.number().int().nonnegative().optional(),
+    thumbs_down: z.number().int().nonnegative().optional(),
+  })
   const tags = z
     .array(agentIdSchema)
     .min(1)

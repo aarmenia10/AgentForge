@@ -30,16 +30,15 @@ async function renderWithProviders(node: () => ReactNode) {
   )
 }
 
-test('the detail view has a star button with the count, a help line, and an author link', async () => {
+test('the detail view has vote buttons with the count, a help line, and an author link', async () => {
   const { AgentDetailModal } =
     await import('../src/components/detail/AgentDetailModal')
   const agent = SEED_AGENTS[0]
   const markup = await renderWithProviders(() =>
     createElement(AgentDetailModal, { agent, onClose: () => {} }),
   )
-  const button =
-    /<button[^>]*aria-label="Star this agent, [^"]+ stars"[^>]*>/.exec(markup)
-  assert.ok(button, 'star button present')
+  const button = /<button[^>]*aria-label="Thumbs up, [^"]+"[^>]*>/.exec(markup)
+  assert.ok(button, 'thumbs up button present')
   // README 7.1: an icon and a number, never a pill.
   assert.doesNotMatch(button[0], /rounded-full|bg-amber/)
   // Signed out: no pressed state, because nothing is known yet.
@@ -59,13 +58,12 @@ test('cards show the star count only and link the author to their profile', asyn
   assert.match(markup, new RegExp(`href="/u/${agent.author.handle}"`))
 })
 
-test('the star state is read only through a dynamic import', () => {
+test('the vote state is read only through a dynamic import', () => {
   const source = readFileSync(
-    resolve(ROOT, 'src/components/detail/AgentDetailModal.tsx'),
+    resolve(ROOT, 'src/components/ratings/VoteButtons.tsx'),
     'utf8',
   )
   assert.doesNotMatch(source, /^\s*import[^(]*['"]firebase/m)
-  assert.match(source, /import\('firebase\/firestore'\)/)
+  assert.match(source, /import\('@\/lib\/firebase'\)/)
   assert.match(source, /openSignIn\(\{ reason: /)
-  assert.match(source, /agentRepository\.toggleStar\(/)
 })

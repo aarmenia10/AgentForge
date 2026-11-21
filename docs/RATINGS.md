@@ -1,6 +1,19 @@
+<!-- `public/blocked-words.json` is a PLACEHOLDER list (word1, badword, and similar). It is
+     not an approved list. The owner supplies the real one before comments go live; do not
+     invent one. The first six entries are mirrored in `noBlockedWords` in `firestore.rules`,
+     and a test keeps the two in step. -->
+
 # P3-13 Ratings Design — Thumbs, Comments, Reports
 
-Design document for the ratings system (votes, comments, and reports) on AgentLemon. No code lives here. The build task follows this document.
+> **The blocked-words list is a placeholder.** `public/blocked-words.json` holds stand-in entries only. It awaits the owner's approved list, and comments must not go live before it is replaced.
+>
+> **As built (2026-11-20 rework of PR #28).** Where this design and the code differ, the code and the README decision log win. The differences:
+>
+> - Agents keep thumbs up in `stats.stars`. Thumbs down and comments live only in `public/ratings/<kind>/<id>.json`. Agent entries in `catalog.json` and agent version files gain no field. Skills carry `stats.thumbs_up` and `stats.thumbs_down`, and `skills.json` may repeat them.
+> - New stars are refused. A legacy star can still be deleted, and a vote converts it. Agent thumbs down are counted with an aggregation query (one billed read per 1,000 votes).
+> - Export marker ids are `agents_<id>` and `skills_<id>`. A marker needs a public approved parent, and a vote marker needs the caller's own vote document to change in the same commit.
+> - Comments are readable only where the item is readable (bounded lists), need a profile, and must carry the profile's exact username. The static file keeps the newest 50 non-deleted comments, oldest first. This needs the composite index on `comments` in `firestore.indexes.json`.
+> - Owner edits and edit approvals keep a skill's live vote counts.
 
 **Scope:** agents and skills. Councils reuse the same sub-collections when P3-14 lands; this document notes where.
 

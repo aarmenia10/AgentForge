@@ -69,6 +69,56 @@ test('a record adds owner_uid and review_status, and nothing else', () => {
   )
 })
 
+test('F1: stats may carry thumbs_up and thumbs_down in a record, a manifest, and the public readers', () => {
+  const stats = {
+    updated_at: '2026-11-18T00:00:00Z',
+    thumbs_up: 3,
+    thumbs_down: 0,
+  }
+  const record: SkillRecord = {
+    ...skill({ stats }),
+    owner_uid: 'u1',
+    review_status: 'approved',
+  }
+  // A voted skill is a valid record, so it is not dropped from skills.json.
+  const parsed = validateSkillRecord(record)
+  assert.equal(parsed.ok, true, JSON.stringify(parsed.issues))
+  if (parsed.ok) assert.deepEqual(parsed.value.stats, stats)
+  assert.equal(validateSkillManifest(skill({ stats })).ok, true)
+  // Either count may be absent: a skill nobody voted on stays valid.
+  assert.equal(
+    validateSkillRecord({
+      ...record,
+      stats: { ...stats, thumbs_down: undefined },
+    }).ok,
+    true,
+  )
+  assert.equal(
+    validateSkillRecord({ ...record, stats: { updated_at: stats.updated_at } })
+      .ok,
+    true,
+  )
+  // The public readers keep the counts and still ignore unknown stats fields.
+  const read = parsePublicSkillIndex({
+    skill_schema_version: 1,
+    skills: [{ ...indexEntry(), stats: { ...stats, later_field: 1 } }],
+  })
+  assert.equal(read.skills[0].stats.thumbs_up, 3)
+  // Counts are non-negative integers.
+  for (const bad of [-1, 1.5, '2', null])
+    assert.equal(
+      validateSkillRecord({ ...record, stats: { ...stats, thumbs_up: bad } })
+        .ok,
+      false,
+      `thumbs_up ${String(bad)} is rejected`,
+    )
+  assert.equal(
+    validateSkillRecord({ ...record, stats: { ...stats, stars: 1 } }).ok,
+    false,
+    'the strict shape still rejects other stats fields',
+  )
+})
+
 test('unknown fields fail the strict validator', () => {
   assert.deepEqual(codes({ ...skill(), extra: true }), ['shape'])
   const files = skill().files.map((f) => ({ ...f, sha: 'x' }))

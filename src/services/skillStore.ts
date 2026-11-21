@@ -130,8 +130,15 @@ export function createSkillStore(db: Firestore, uid: string): SkillStore {
           review_status: 'pending',
           ...(previous?.saved_from_chat && { saved_from_chat: true }),
           ...(previous?.origin_app && { origin_app: previous.origin_app }),
+          // Vote counts belong to the live skill; an edit carries them over.
           stats: {
             updated_at: new Date().toISOString(),
+            ...(previous?.stats.thumbs_up !== undefined && {
+              thumbs_up: previous.stats.thumbs_up,
+            }),
+            ...(previous?.stats.thumbs_down !== undefined && {
+              thumbs_down: previous.stats.thumbs_down,
+            }),
           },
         },
         manifest.id,
@@ -368,6 +375,16 @@ export function createSkillStore(db: Firestore, uid: string): SkillStore {
           ...proposed,
           review_status: 'approved',
           author: { ...proposed.author, verified: current.author.verified },
+          // Votes may have arrived since the edit was written: keep the live counts.
+          stats: {
+            updated_at: proposed.stats.updated_at,
+            ...(current.stats.thumbs_up !== undefined && {
+              thumbs_up: current.stats.thumbs_up,
+            }),
+            ...(current.stats.thumbs_down !== undefined && {
+              thumbs_down: current.stats.thumbs_down,
+            }),
+          },
         }
         snapshot(tx, next, create)
         tx.set(ref(id), next)

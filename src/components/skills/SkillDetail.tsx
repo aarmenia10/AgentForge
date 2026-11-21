@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useAuth } from '@/auth/AuthProvider'
 import {
   AuthorLink,
   CodeBlock,
@@ -7,6 +8,10 @@ import {
   VERIFIED_AUTHOR_LABEL,
 } from '@/components/ui'
 import { Notice, smallButton, VisibilityLabel } from '@/components/studio/parts'
+import { VoteButtons } from '@/components/ratings/VoteButtons'
+import { CommentsSection } from '@/components/ratings/CommentsSection'
+import { ReportDialog } from '@/components/ratings/ReportDialog'
+import { fetchRatings, type RatingData } from '@/lib/blockedWords'
 import { formatRelativeTime } from '@/lib/format'
 import { MCP_CONNECTOR_URL } from '@/lib/mcpConfig'
 import { formatBytes, skillBytes } from '@/lib/skillRepository'
@@ -39,9 +44,13 @@ export function SkillDetail({
   heading?: Heading
   showAuthor?: boolean
 }) {
+  const { status, user } = useAuth()
+  const uid = status === 'signed-in' && user ? user.uid : null
   const [files, setFiles] = useState<SkillFile[] | null>(null)
   const [error, setError] = useState(false)
   const [openPath, setOpenPath] = useState<string | null>(null)
+  const [rating, setRating] = useState<RatingData | null>(null)
+  const [showReport, setShowReport] = useState(false)
   const H = heading
   const panel = useId()
   const isPublic = skill.visibility === 'public'
@@ -56,6 +65,18 @@ export function SkillDetail({
     }
     // Loaded once per mounted skill; the caller keys this component.
   }, [])
+
+  useEffect(() => {
+    let active = true
+    fetchRatings('skill', skill.id)
+      .then((r) => {
+        if (active) setRating(r)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [skill.id])
 
   const instructions =
     files?.find((f) => f.path === SKILL_INSTRUCTIONS_PATH) ?? null
@@ -86,6 +107,35 @@ export function SkillDetail({
           </Row>
           <Row term="Who can see it">
             <VisibilityLabel visibility={skill.visibility} />
+          </Row>
+          <Row term="Ratings">
+            <div className="flex items-center gap-3">
+              <VoteButtons
+                kind="skill"
+                itemId={skill.id}
+                initialThumbsUp={
+                  rating?.thumbs_up ??
+                  ((skill.stats as unknown as Record<string, unknown>)
+                    .thumbs_up as number | undefined) ??
+                  0
+                }
+                initialThumbsDown={
+                  rating?.thumbs_down ??
+                  ((skill.stats as unknown as Record<string, unknown>)
+                    .thumbs_down as number | undefined) ??
+                  0
+                }
+              />
+              {uid && uid !== skill.author.uid && (
+                <button
+                  type="button"
+                  onClick={() => setShowReport(true)}
+                  className="text-xs text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400"
+                >
+                  Report
+                </button>
+              )}
+            </div>
           </Row>
           <Row term="Updated">{formatRelativeTime(skill.stats.updated_at)}</Row>
           <Row term="Size">
@@ -223,6 +273,28 @@ export function SkillDetail({
           </>
         )}
       </section>
+
+      <section className="space-y-3 pt-4 border-t border-slate-900/10 dark:border-white/10">
+        <H className="text-lg font-semibold text-slate-900 dark:text-white">
+          Comments
+        </H>
+        <CommentsSection
+          kind="skill"
+          itemId={skill.id}
+          initialComments={rating?.comments ?? []}
+          authorUid={skill.author.uid}
+        />
+      </section>
+
+      {showReport && (
+        <ReportDialog
+          kind="skill"
+          itemId={skill.id}
+          targetType="item"
+          targetId={skill.id}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   )
 }

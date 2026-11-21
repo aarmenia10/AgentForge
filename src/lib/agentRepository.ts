@@ -20,8 +20,6 @@ export interface AgentRepository {
   publishAgent(manifest: AgentManifest): Promise<void>
   /** Remove a manifest. Caller must be the authenticated author. */
   deleteAgent(id: string): Promise<void>
-  /** Toggle the signed-in user's star. Resolves to the new star count. */
-  toggleStar(id: string, userId: string): Promise<number>
   /** Fire-and-forget view counter. Must never throw into the UI. */
   recordView(id: string): Promise<void>
 }
@@ -35,11 +33,10 @@ export const seedAgentRepository: AgentRepository = {
   getAgent: async (id) => SEED_AGENTS.find((agent) => agent.id === id) ?? null,
   publishAgent: notImplemented('publishAgent'),
   deleteAgent: notImplemented('deleteAgent'),
-  toggleStar: notImplemented('toggleStar'),
   recordView: async () => {},
 }
 
-/** Static reads, authenticated Firestore stars. Publishing awaits the author flow. */
+/** Static reads. Votes live in `src/services/ratings.ts`. Publishing awaits the author flow. */
 export function createFirestoreAgentRepository(): AgentRepository {
   let cached = structuredClone([...SEED_AGENTS])
   let pending: Promise<AgentManifest[]> | undefined
@@ -68,10 +65,6 @@ export function createFirestoreAgentRepository(): AgentRepository {
       (await listAgents()).find((agent) => agent.id === id) ?? null,
     publishAgent: notImplemented('publishAgent'),
     deleteAgent: notImplemented('deleteAgent'),
-    toggleStar: async (id, userId) => {
-      const { toggleStarAgent } = await import('../services/firestore')
-      return toggleStarAgent(id, userId)
-    },
     // No per-page-view writes on Spark.
     recordView: async () => {},
   }

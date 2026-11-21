@@ -18,10 +18,8 @@ import {
 import { Firestore, setLogFunction } from 'firebase-admin/firestore'
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import { createAgentStore } from '../src/services/agentStore'
-import {
-  markExportChange,
-  toggleStarInFirestore,
-} from '../src/services/firestore'
+import { markExportChange } from '../src/services/firestore'
+import { toggleUp } from './voteHelper'
 import { createProfileStore } from '../src/services/profileStore'
 import {
   exportDigest,
@@ -95,10 +93,12 @@ test('hourly export reads only dirty documents and acknowledges only published r
       assert.deepEqual(observed.queries.sort(), [
         'export_sources/agent_versions/changes',
         'export_sources/agents/changes',
+        'export_sources/comments/changes',
         'export_sources/council_versions/changes',
         'export_sources/councils/changes',
         'export_sources/skill_versions/changes',
         'export_sources/skills/changes',
+        'export_sources/votes/changes',
       ])
     await writeVersionFiles(directory, observed.result.files)
     previous = observed.result
@@ -158,7 +158,7 @@ test('hourly export reads only dirty documents and acknowledges only published r
     forged.update(doc(ownerDb, 'agents', id), { 'author.verified': true })
     markExportChange(forged, ownerDb, 'agents', id)
     await assertFails(forged.commit())
-    await toggleStarInFirestore(ownerDb, id, 'alice')
+    await toggleUp(ownerDb, id, 'alice')
     const stale = await build()
     assert.equal(stale.catalog.find((a) => a.id === id)?.stats.stars, 1)
     // A second commit races acknowledgement of the first; even an old marker
@@ -200,8 +200,12 @@ test('hourly export reads only dirty documents and acknowledges only published r
     result = await publish([agentMarker, live])
     assert.ok(!result.catalog.some((a) => a.id === id))
     await assert.rejects(access(join(directory, pin)))
-    await toggleStarInFirestore(ownerDb, seed.id, 'alice')
-    result = await publish([marker('agents', seed.id), 'agents/' + seed.id])
+    await toggleUp(ownerDb, seed.id, 'alice')
+    // A vote marks the item under `votes`, and the export still refreshes it.
+    result = await publish([
+      marker('votes', 'agents_' + seed.id),
+      'agents/' + seed.id,
+    ])
     assert.equal(result.catalog.find((a) => a.id === seed.id)?.stats.stars, 1)
     await admin.reviewAgent(seed.id, 'rejected')
     result = await publish([marker('agents', seed.id), 'agents/' + seed.id])

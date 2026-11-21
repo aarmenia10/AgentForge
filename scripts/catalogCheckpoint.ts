@@ -25,7 +25,7 @@ export async function saveCheckpoint(path: string, result: PublicExport) {
   await writeFile(
     path,
     JSON.stringify({
-      format: 3,
+      format: 4,
       councilIndex: result.councilIndex,
       councilVersions: [...result.councilFiles.values()],
       skillIndex: result.skillIndex,
@@ -35,6 +35,9 @@ export async function saveCheckpoint(path: string, result: PublicExport) {
       catalog: result.catalog,
       versions: [...result.files.values()],
       ...(result.origins !== undefined ? { origins: result.origins } : {}),
+      ...(result.ratingsFiles !== undefined
+        ? { ratings: [...result.ratingsFiles.entries()] }
+        : {}),
     }),
   )
 }
@@ -51,7 +54,7 @@ export async function readCheckpoint(
     ])
     const data = JSON.parse(stored)
     if (
-      data.format !== 3 ||
+      data.format !== 4 ||
       data.scope !== scope() ||
       data.day !== runDay ||
       !Array.isArray(data.versions)
@@ -71,7 +74,20 @@ export async function readCheckpoint(
         throw new Error('Invalid version inventory')
       files.set(key, manifest)
     }
-    const skillIndex = parsePublicSkillIndex(data.skillIndex)
+    const rawSkills = data.skillIndex?.skills ?? []
+    const parsedSkills = parsePublicSkillIndex(data.skillIndex)
+    const skillIndex = {
+      ...parsedSkills,
+      skills: parsedSkills.skills.map((entry, i) => ({
+        ...entry,
+        ...(rawSkills[i]?.thumbs_up !== undefined
+          ? { thumbs_up: rawSkills[i].thumbs_up }
+          : {}),
+        ...(rawSkills[i]?.thumbs_down !== undefined
+          ? { thumbs_down: rawSkills[i].thumbs_down }
+          : {}),
+      })),
+    }
     const skillOwners = new Map(
       skillIndex.skills.map((entry) => [entry.id, entry.author.uid]),
     )
@@ -140,6 +156,8 @@ export async function readCheckpoint(
       }
       origins = sortOrigins(parsed)
     }
+    const ratingsFiles: PublicExport['ratingsFiles'] | undefined =
+      data.ratings !== undefined ? new Map(data.ratings) : undefined
     const result: PublicExport = {
       catalog,
       files,
@@ -148,6 +166,7 @@ export async function readCheckpoint(
       councilIndex,
       councilFiles,
       ...(origins !== undefined ? { origins } : {}),
+      ...(ratingsFiles !== undefined ? { ratingsFiles } : {}),
     }
     if (live !== JSON.stringify({ sha256: exportDigest(result) }) + '\n')
       throw new Error('Hosting digest mismatch')
