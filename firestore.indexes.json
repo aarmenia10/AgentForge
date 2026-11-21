@@ -33,19 +33,6 @@
       ]
     },
     {
-      "collectionGroup": "comments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "deleted", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "reports",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [{ "fieldPath": "created_at", "order": "DESCENDING" }]
-    },
-    {
       "collectionGroup": "councils",
       "queryScope": "COLLECTION",
       "fields": [
@@ -63,6 +50,15 @@
     }
   ],
   "fieldOverrides": [
+    {
+      "collectionGroup": "reports",
+      "fieldPath": "created_at",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
     {
       "collectionGroup": "skills",
       "fieldPath": "files",
