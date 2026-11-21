@@ -9,6 +9,8 @@ import type { ExportNotice } from './export-catalog'
 
 /** Comments kept in each static ratings file (README decision, P3-13). */
 export const COMMENTS_SHOWN = 50
+/** How many of the newest comments one export reads to find COMMENTS_SHOWN live ones. */
+export const COMMENTS_SCANNED = 100
 
 export interface RatingComment {
   id: string
@@ -97,16 +99,20 @@ async function fetchItemRating(
     .doc(item.id)
     .collection('comments')
   // The newest comments, so a busy item keeps showing new ones. They are
-  // listed oldest first below.
+  // listed oldest first below. Deleted comments are skipped here rather than
+  // in the query, so the export needs only the automatic single-field index
+  // on created_at (a composite index would not exist yet on the first deploy).
   const commentsSnap = await commentsCol
-    .where('deleted', '==', false)
     .orderBy('created_at', 'desc')
-    .limit(COMMENTS_SHOWN)
+    .limit(COMMENTS_SCANNED)
     .get()
 
   const comments: RatingComment[] = []
+  let live = 0
   for (const doc of commentsSnap.docs) {
     const data = doc.data()
+    if (data.deleted !== false) continue
+    if (live++ >= COMMENTS_SHOWN) break
     const body = typeof data.body === 'string' ? data.body : ''
     if (!noBlockedWordsClient(body, blockedWords)) {
       log({ id: doc.id, reason: 'blocked-word comment' })
