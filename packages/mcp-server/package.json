@@ -1,6 +1,6 @@
 {
   "name": "agentlemon-registry",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "description": "Local MCP registry: discover and load AgentLemon prompt blueprints",
   "type": "module",
   "license": "MIT",

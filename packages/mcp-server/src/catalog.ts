@@ -1,3 +1,4 @@
+import { createCouncilReader, hostedCouncilReader } from './councils'
 import { readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import {
@@ -125,5 +126,23 @@ export function localSkillReader(source = DEFAULT_CATALOG_URL) {
         'utf8',
       ),
     ),
+  )
+}
+
+export function localCouncilReader(
+  source = DEFAULT_CATALOG_URL,
+  origins: Record<string, OriginApp> = {},
+) {
+  if (/^https?:\/\//.test(source))
+    return hostedCouncilReader(source, undefined, origins)
+  return createCouncilReader(
+    async (path) =>
+      JSON.parse(
+        await readFile(
+          resolve(dirname(resolve(source)), decodeURIComponent(path)),
+          'utf8',
+        ),
+      ),
+    origins,
   )
 }

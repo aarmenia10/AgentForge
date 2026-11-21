@@ -1,3 +1,5 @@
+import { emptyCouncilExport, type CouncilExport } from './councilExport'
+import type { CouncilManifest } from '../src/types/council'
 import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
@@ -217,7 +219,7 @@ export function buildVersionFiles(
 
 export async function writeVersionFiles(
   directory: string,
-  files: ReadonlyMap<string, AgentManifest | SkillManifest>,
+  files: ReadonlyMap<string, AgentManifest | SkillManifest | CouncilManifest>,
 ) {
   // Regenerate only the dedicated output directory so removed agents and
   // blocked snapshots cannot survive from an earlier build.
@@ -284,7 +286,8 @@ export function buildOrigins(
   return sortOrigins(origins)
 }
 
-export interface PublicExport extends SkillExport, RatingsExport {
+export interface PublicExport
+  extends SkillExport, CouncilExport, RatingsExport {
   catalog: AgentManifest[]
   files: Map<string, AgentManifest>
   origins?: Record<string, OriginApp>
@@ -295,6 +298,8 @@ export function exportDigest({
   files,
   skillIndex,
   skillFiles,
+  councilIndex,
+  councilFiles,
   origins,
   ratingsFiles,
 }: PublicExport) {
@@ -312,6 +317,11 @@ export function exportDigest({
     ([a], [b]) => a.localeCompare(b, 'en'),
   ))
     digest.update(path).update(JSON.stringify(rating))
+  digest.update('councils.json').update(JSON.stringify(councilIndex))
+  for (const [path, council] of [...councilFiles].sort(([a], [b]) =>
+    a.localeCompare(b, 'en'),
+  ))
+    digest.update(path).update(JSON.stringify(council))
   digest
     .update('origins.json')
     .update(JSON.stringify(sortOrigins(origins ?? {})))
@@ -404,6 +414,7 @@ export async function exportCatalog() {
   }
   const output = result ?? {
     ...emptySkillExport(),
+    ...emptyCouncilExport(),
     ...emptyRatingsExport(),
     ratingsFiles: seedRatings,
     catalog: seeds,
@@ -415,6 +426,19 @@ export async function exportCatalog() {
   await writeVersionFiles(resolve(publicDir, 'agents'), output.files)
   await writeSkillFiles(publicDir, output)
   await writeRatingsFiles(publicDir, output)
+  await writeVersionFiles(
+    resolve(publicDir, 'councils'),
+    new Map(
+      [...output.councilFiles].map(([path, council]) => [
+        decodeURIComponent(path.slice('councils/'.length)),
+        council,
+      ]),
+    ),
+  )
+  await writeFile(
+    resolve(publicDir, 'councils.json'),
+    JSON.stringify(output.councilIndex, null, 2) + '\n',
+  )
   await writeFile(
     resolve(publicDir, 'origins.json'),
     `${JSON.stringify(sortOrigins(output.origins ?? {}), null, 2)}\n`,

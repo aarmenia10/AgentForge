@@ -1,3 +1,9 @@
+import {
+  councilVersionPath,
+  parsePublicCouncilIndex,
+  parsePublicCouncilVersion,
+} from '../src/lib/councilSchema'
+import { memberIsPublished } from './councilExport'
 import { readFile, writeFile } from 'node:fs/promises'
 import { manifestSchema, parsePublicCatalog } from '../src/lib/manifestSchema'
 import {
@@ -19,7 +25,9 @@ export async function saveCheckpoint(path: string, result: PublicExport) {
   await writeFile(
     path,
     JSON.stringify({
-      format: 2,
+      format: 4,
+      councilIndex: result.councilIndex,
+      councilVersions: [...result.councilFiles.values()],
       skillIndex: result.skillIndex,
       skillVersions: [...result.skillFiles.values()],
       scope: scope(),
@@ -46,7 +54,7 @@ export async function readCheckpoint(
     ])
     const data = JSON.parse(stored)
     if (
-      data.format !== 2 ||
+      data.format !== 4 ||
       data.scope !== scope() ||
       data.day !== runDay ||
       !Array.isArray(data.versions)
@@ -100,6 +108,40 @@ export async function readCheckpoint(
       )
     )
       throw new Error('Missing current skill version')
+    const options = {
+      isMemberApproved: memberIsPublished({
+        catalog,
+        files,
+        skillIndex,
+        skillFiles,
+      }),
+    }
+    const councilIndex = parsePublicCouncilIndex(data.councilIndex, options)
+    const councilOwners = new Map(
+      councilIndex.councils.map((entry) => [entry.id, entry.author.uid]),
+    )
+    const councilFiles: PublicExport['councilFiles'] = new Map()
+    for (const value of data.councilVersions) {
+      const council = parsePublicCouncilVersion(
+        value,
+        value.id,
+        value.version,
+        options,
+      )
+      const path = councilVersionPath(council.id, council.version)
+      if (
+        councilOwners.get(council.id) !== council.author.uid ||
+        councilFiles.has(path)
+      )
+        throw new Error('Invalid council version inventory')
+      councilFiles.set(path, council)
+    }
+    if (
+      councilIndex.councils.some(
+        ({ id, version }) => !councilFiles.has(councilVersionPath(id, version)),
+      )
+    )
+      throw new Error('Missing current council version')
     const rawOrigins = data.origins
     let origins: Record<string, OriginApp> | undefined
     if (rawOrigins && typeof rawOrigins === 'object') {
@@ -121,6 +163,8 @@ export async function readCheckpoint(
       files,
       skillIndex,
       skillFiles,
+      councilIndex,
+      councilFiles,
       ...(origins !== undefined ? { origins } : {}),
       ...(ratingsFiles !== undefined ? { ratingsFiles } : {}),
     }

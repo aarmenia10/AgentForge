@@ -32,7 +32,7 @@ export const COUNCIL_NAME_MAX = 64
 export const COUNCIL_DESCRIPTION_MAX = 1024
 export const COUNCIL_MAX_TAGS = 10
 export const COUNCIL_ROLE_MAX = 200
-export const COUNCIL_ORIGIN_APP_MAX = 64
+const councilOriginSchema = z.enum(['claude', 'chatgpt', 'other'])
 export const COUNCIL_MAX_INSTRUCTIONS_BYTES = 100 * 1024 // 100 KB (102,400 bytes)
 export const COUNCIL_MAX_TOTAL_BYTES = 200 * 1024 // 200 KB (204,800 bytes)
 
@@ -128,7 +128,7 @@ function makeAuthorSchema(strict: boolean) {
 function makeMemberSchema(strict: boolean) {
   const obj = strict ? z.strictObject : z.object
   return obj({
-    ref: itemRefSchema,
+    ref: strict ? itemRefSchema : itemRefSchema.strip(),
     role: z
       .string()
       .min(1, 'Member role must not be blank')
@@ -158,7 +158,7 @@ export const councilStatsSchema = makeStatsSchema(true)
 export const councilManifestSchema = z.strictObject({
   council_schema_version: z.literal(COUNCIL_SCHEMA_VERSION),
   visibility: visibilitySchema,
-  id: agentIdSchema,
+  id: agentIdSchema.max(1500),
   version: versionSchema,
   name: text.max(
     COUNCIL_NAME_MAX,
@@ -180,18 +180,7 @@ export const councilManifestSchema = z.strictObject({
       (items) => new Set(items).size === items.length,
       'Tags must be unique',
     ),
-  origin_app: z
-    .string()
-    .min(1, 'origin_app must not be blank')
-    .max(
-      COUNCIL_ORIGIN_APP_MAX,
-      `origin_app exceeds ${COUNCIL_ORIGIN_APP_MAX} characters`,
-    )
-    .regex(
-      /^[a-z0-9_-]+$/,
-      'origin_app must consist of lowercase letters, digits, hyphens or underscores',
-    )
-    .optional(),
+  origin_app: councilOriginSchema.optional(),
   instructions: z.string(),
   members: z.array(councilMemberSchema),
   stats: councilStatsSchema,
@@ -212,13 +201,13 @@ const looseStatsSchema = makeStatsSchema(false)
 const looseManifestSchema = z.object({
   council_schema_version: z.literal(COUNCIL_SCHEMA_VERSION),
   visibility: visibilitySchema,
-  id: agentIdSchema,
+  id: agentIdSchema.max(1500),
   version: versionSchema,
   name: z.string().min(1),
   description: z.string().min(1),
   author: looseAuthorSchema,
   tags: z.array(z.string()),
-  origin_app: z.string().optional(),
+  origin_app: councilOriginSchema.optional(),
   instructions: z.string().min(1),
   members: z.array(looseMemberSchema),
   stats: looseStatsSchema,
@@ -227,13 +216,13 @@ const looseManifestSchema = z.object({
 const looseIndexEntrySchema = z.object({
   council_schema_version: z.literal(COUNCIL_SCHEMA_VERSION),
   visibility: visibilitySchema,
-  id: agentIdSchema,
+  id: agentIdSchema.max(1500),
   version: versionSchema,
   name: z.string().min(1),
   description: z.string().min(1),
   author: looseAuthorSchema,
   tags: z.array(z.string()),
-  origin_app: z.string().optional(),
+  origin_app: councilOriginSchema.optional(),
   members: z.array(looseMemberSchema),
   stats: looseStatsSchema,
   instructions_bytes: z.number().int().nonnegative(),

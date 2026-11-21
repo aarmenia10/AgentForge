@@ -1,3 +1,4 @@
+import { MyCouncils } from '@/components/councils/MyCouncils'
 import RequireAccount from '@/components/RequireAccount'
 import { PageShell } from '@/components/PageShell'
 import { MyAgents } from '@/components/me/MyAgents'
@@ -11,8 +12,8 @@ export default function MePage() {
   return (
     <RequireAccount
       title="My items"
-      purpose="Sign in to see the agents and skills you publish, and the ones friends share with you."
-      reason="Sign in to see your agents and skills."
+      purpose="Sign in to see the agents, skills, and councils you publish, and the ones friends share with you."
+      reason="Sign in to see your agents, skills, and councils."
     >
       <PageShell title="My items">
         <div className="mt-2 space-y-10 text-sm">
@@ -44,6 +45,20 @@ export default function MePage() {
             </div>
             <MySkills />
           </section>
+          <section aria-labelledby="me-councils" className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2
+                id="me-councils"
+                className="text-lg font-semibold text-slate-900 dark:text-white"
+              >
+                Your councils
+              </h2>
+              <Link to="/councils" className={primaryButton}>
+                Browse councils
+              </Link>
+            </div>
+            <MyCouncils />
+          </section>
           <section aria-labelledby="me-shared" className="space-y-3">
             <h2
               id="me-shared"
@@ -52,12 +67,15 @@ export default function MePage() {
               Shared with me
             </h2>
             <p>
-              Agents and skills your friends share with friends. Open a friend
-              to see theirs.
+              Agents, skills, and councils your friends share with friends. Open
+              a friend to see theirs.
             </p>
             <SharedWithMe
               friendExtra={(uid, name) => (
-                <FriendSkills uid={uid} name={name} />
+                <>
+                  <FriendSkills uid={uid} name={name} />
+                  <MyCouncils key={uid} owner={uid} />
+                </>
               )}
             />
           </section>

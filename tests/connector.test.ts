@@ -55,6 +55,8 @@ test('connector speaks MCP statelessly: tools, guide, and get_agent', async () =
         'search_skills',
         'get_skill',
         'get_skill_file',
+        'search_councils',
+        'get_council',
         'get_agent',
       ],
     )

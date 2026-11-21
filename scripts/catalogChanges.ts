@@ -10,6 +10,8 @@ export const sources = [
   'skill_versions',
   'votes',
   'comments',
+  'councils',
+  'council_versions',
 ] as const
 type Source = (typeof sources)[number]
 export interface Receipt {

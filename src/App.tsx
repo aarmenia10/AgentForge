@@ -4,7 +4,7 @@ import { TopNav } from './components/TopNav'
 import { GitHubIcon } from './components/ui'
 import { DEFAULT_QUERY, type CatalogQuery } from './lib/catalog'
 import { HomePage } from './pages/HomePage'
-import { useRoute } from './router/Router'
+import { Link, useRoute } from './router/Router'
 import type { RouteName } from './router/routes'
 
 // Every page but the home page is its own chunk. None of them, and nothing
@@ -17,6 +17,9 @@ const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
   studio: lazy(() => import('./pages/StudioPage')),
   review: lazy(() => import('./pages/ReviewPage')),
   profile: lazy(() => import('./pages/ProfilePage')),
+  councils: lazy(() => import('./pages/CouncilsPage')),
+  council: lazy(() => import('./pages/CouncilPage')),
+  'council-member': lazy(() => import('./pages/CouncilMemberPage')),
   skills: lazy(() => import('./pages/SkillsPage')),
   'skill-upload': lazy(() => import('./pages/SkillUploadPage')),
   skill: lazy(() => import('./pages/SkillPage')),
@@ -26,7 +29,7 @@ const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
 
 /** The shell: nav, the routed page, the footer. */
 export default function App() {
-  const { route } = useRoute()
+  const { route, location } = useRoute()
   // Lives here, not in HomePage, because the nav's search box drives it. It
   // also means a search survives a trip to another page and back.
   const [query, setQuery] = useState<CatalogQuery>(DEFAULT_QUERY)
@@ -63,7 +66,7 @@ export default function App() {
         <Suspense fallback={<PageHold />}>
           {/* Keyed so each arrival mounts fresh, e.g. /u/a to /u/b. */}
           <Page
-            key={`${route.name}:${route.params.handle ?? route.params.id ?? ''}`}
+            key={`${route.name}:${route.params.handle ?? route.params.id ?? ''}:${route.params.kind ?? ''}:${route.params.version ?? ''}:${route.name === 'council' ? location.search : ''}`}
           />
         </Suspense>
       ) : (
@@ -73,6 +76,7 @@ export default function App() {
       <footer className="border-t border-slate-900/5 py-8 dark:border-white/10">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 text-sm text-slate-500 sm:px-6 dark:text-slate-400">
           <p>AgentLemon is open source under the MIT license.</p>
+          <Link to="/councils" className="hover:text-teal-600 dark:hover:text-teal-300">Councils</Link>
           <a
             href="https://github.com/aarmenia10/AgentForge"
             target="_blank"

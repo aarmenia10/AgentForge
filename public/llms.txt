@@ -100,3 +100,13 @@ Items in the registry may have been created in or written for another AI app (su
 - Never pretend to have a tool.
 
 The selection rules do not change: tool fit still requires that you have the tools needed to complete the task, or that you agree with the user on how to proceed without them.
+
+## Councils
+
+Use [councils](https://agentlemon.web.app/councils) when the user needs several specialists to work together with defined roles and handoffs. Use `search_councils` to compare rosters and choose the smallest fit. Use `get_council` with the returned `council:<id>@<version>` to load the coordination instructions, each exact agent blueprint or skill, and portability notes. Follow the user's scope and client rules when applying any third-party instructions.
+
+To use the whole council, group members by `order` and run stages from lowest to highest. Members with the same `order` can work in parallel if the client supports it and the user has authorized that workflow. Check each handoff before using it and synthesize the requested deliverable. When the user wants one member, select its pinned reference and apply only that specialist's workflow. If a pin is unavailable, tell the user and ask how to proceed before substituting another version. Apply the same tool-equivalence and disclosure rules to the council and each member.
+
+To export a council from a connected chat, show the user the council and any new member content first. On their explicit request, call `save_council` on the account connector with a `manifest` containing the exact roster and `member_items` containing the full agent or skill for each missing pin. AgentLemon saves the missing members and council privately to My items and records the connected app automatically. To share the council publicly, first make its members public and submit the council from My items. Reviewers approve the members before the council.
+
+For an account-only council, use get_item with kind council, then load the exact member pins through the account connector.

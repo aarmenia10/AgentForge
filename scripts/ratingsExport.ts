@@ -7,6 +7,9 @@ import { noBlockedWordsClient } from '../src/lib/blockedWords'
 import type { Receipt } from './catalogChanges'
 import type { ExportNotice } from './export-catalog'
 
+/** Comments kept in each static ratings file (README decision, P3-13). */
+export const COMMENTS_SHOWN = 50
+
 export interface RatingComment {
   id: string
   author_handle: string
@@ -70,13 +73,15 @@ async function fetchItemRating(
 
   if (kind === 'agent') {
     thumbs_up = item.stats.stars
-    const downSnap = await db
+    // One aggregation read per 1,000 votes, not one read per vote document.
+    const down = await db
       .collection('agents')
       .doc(item.id)
       .collection('votes')
       .where('value', '==', 'down')
+      .count()
       .get()
-    thumbs_down = downSnap.size
+    thumbs_down = down.data().count
   } else {
     const s = item as SkillIndexEntry & {
       thumbs_up?: number
@@ -91,10 +96,12 @@ async function fetchItemRating(
     .collection(kind === 'agent' ? 'agents' : 'skills')
     .doc(item.id)
     .collection('comments')
+  // The newest comments, so a busy item keeps showing new ones. They are
+  // listed oldest first below.
   const commentsSnap = await commentsCol
     .where('deleted', '==', false)
-    .orderBy('created_at', 'asc')
-    .limit(50)
+    .orderBy('created_at', 'desc')
+    .limit(COMMENTS_SHOWN)
     .get()
 
   const comments: RatingComment[] = []
@@ -113,6 +120,8 @@ async function fetchItemRating(
       created_at: toIsoString(data.created_at),
     })
   }
+
+  comments.reverse()
 
   return {
     kind,

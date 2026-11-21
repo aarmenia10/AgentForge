@@ -20,7 +20,7 @@ import {
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import { createAgentStore } from '../src/services/agentStore'
 import { createProfileStore } from '../src/services/profileStore'
-import { toggleStarInFirestore } from '../src/services/firestore'
+import { toggleUp } from './voteHelper'
 import type { AgentRecord } from '../src/types/agent'
 
 test('versioned edits and self-approval enforce atomic, exact promotion', async (t) => {
@@ -183,7 +183,7 @@ test('versioned edits and self-approval enforce atomic, exact promotion', async 
     await t.test(
       'approval requires exact edit content and deletion in the same atomic batch',
       async () => {
-        await toggleStarInFirestore(otherDb, id, 'bob')
+        await toggleUp(otherDb, id, 'bob')
         const edit = (await admin.getPendingEdit(id))!
         const live = (await admin.getAgentRecord(id))!
         const promoted: AgentRecord = {

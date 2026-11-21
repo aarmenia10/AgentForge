@@ -18,7 +18,6 @@ import {
   COUNCIL_MAX_TOTAL_BYTES,
   COUNCIL_MIN_MEMBERS,
   COUNCIL_NAME_MAX,
-  COUNCIL_ORIGIN_APP_MAX,
   COUNCIL_ROLE_MAX,
   COUNCIL_SCHEMA_VERSION,
   type CouncilIssueCode,
@@ -188,27 +187,14 @@ test('council tags limits: 1 to 10 unique lowercase slugs', () => {
   )
 })
 
-test('origin_app limits: valid slug, invalid characters, length', () => {
-  assert.equal(
-    validateCouncilManifest(sampleCouncil({ origin_app: 'claude' })).ok,
-    true,
-  )
-  assert.equal(
-    validateCouncilManifest(sampleCouncil({ origin_app: 'chat_gpt-v1' })).ok,
-    true,
-  )
-  assert.ok(
-    issueCodes(sampleCouncil({ origin_app: 'Claude with spaces' })).includes(
-      'shape',
-    ),
-  )
-  assert.ok(
-    issueCodes(
-      sampleCouncil({
-        origin_app: 'a'.repeat(COUNCIL_ORIGIN_APP_MAX + 1),
-      }),
-    ).includes('shape'),
-  )
+test('origin_app accepts only the three portability values', () => {
+  for (const origin_app of ['claude', 'chatgpt', 'other'])
+    assert.equal(
+      validateCouncilManifest(sampleCouncil({ origin_app })).ok,
+      true,
+    )
+  for (const origin_app of ['codex', 'chat_gpt-v1', 'Claude with spaces', ''])
+    assert.ok(issueCodes(sampleCouncil({ origin_app })).includes('shape'))
 })
 
 test('member count limits: min 2, max 20', () => {

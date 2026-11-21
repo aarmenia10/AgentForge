@@ -68,88 +68,131 @@ export async function castVote(
   const voteRef = doc(itemRef, 'votes', userId)
   const starRef = kind === 'agent' ? doc(itemRef, 'stars', userId) : null
 
-  return runTransaction(db, async (tx) => {
-    const itemSnap = await tx.get(itemRef)
-    if (!itemSnap.exists()) throw new Error(`${kind} does not exist: ${itemId}`)
+  // What the last attempt read. Rules can reject a stale transition with
+  // permission-denied before Firestore reports ABORTED (two tabs voting at
+  // once), so a denial is retried only when fresh reads prove the state moved.
+  let observed: { counts: string; vote: unknown; star: boolean } | undefined
+  const counts = (snap: { get(field: string): unknown }) =>
+    JSON.stringify([
+      snap.get('stats.stars'),
+      snap.get('stats.thumbs_up'),
+      snap.get('stats.thumbs_down'),
+    ])
+  const attempt = () =>
+    runTransaction(db, async (tx) => {
+      const itemSnap = await tx.get(itemRef)
+      if (!itemSnap.exists())
+        throw new Error(`${kind} does not exist: ${itemId}`)
 
-    const voteSnap = await tx.get(voteRef)
-    const starSnap = starRef ? await tx.get(starRef) : null
-
-    const hadStar = starSnap ? starSnap.exists() : false
-    const hadVote = voteSnap.exists()
-    const rawVote = hadVote ? (voteSnap.get('value') as VoteValue) : null
-    const oldVal: VoteValue | null = rawVote ?? (hadStar ? 'up' : null)
-
-    const isRetraction = oldVal === value
-    const newVal: VoteValue | null = isRetraction ? null : value
-
-    if (isRetraction) {
-      tx.delete(voteRef)
-    } else {
-      tx.set(voteRef, {
-        value: newVal,
-        created_at: hadVote ? voteSnap.get('created_at') : serverTimestamp(),
-        updated_at: serverTimestamp(),
-      })
-    }
-
-    if (hadStar && starRef) {
-      tx.delete(starRef)
-    }
-
-    let nextThumbsUp: number
-    let nextThumbsDown: number
-
-    if (kind === 'agent') {
-      const currentStars = (itemSnap.get('stats.stars') as number) ?? 0
-      const oldIsUp = oldVal === 'up'
-      const newIsUp = newVal === 'up'
-      const delta = (newIsUp ? 1 : 0) - (oldIsUp ? 1 : 0)
-      nextThumbsUp = Math.max(0, currentStars + delta)
-      nextThumbsDown = 0 // agents store stars only
-
-      if (delta !== 0) {
-        tx.update(itemRef, { 'stats.stars': increment(delta) })
+      const voteSnap = await tx.get(voteRef)
+      const starSnap = starRef ? await tx.get(starRef) : null
+      observed = {
+        counts: counts(itemSnap),
+        vote: voteSnap.exists() ? voteSnap.get('value') : null,
+        star: starSnap ? starSnap.exists() : false,
       }
-    } else {
-      const currentUp = (itemSnap.get('stats.thumbs_up') as number) ?? 0
-      const currentDown = (itemSnap.get('stats.thumbs_down') as number) ?? 0
-      const upDelta = (newVal === 'up' ? 1 : 0) - (oldVal === 'up' ? 1 : 0)
-      const downDelta =
-        (newVal === 'down' ? 1 : 0) - (oldVal === 'down' ? 1 : 0)
-      nextThumbsUp = Math.max(0, currentUp + upDelta)
-      nextThumbsDown = Math.max(0, currentDown + downDelta)
 
-      const updates: Record<string, unknown> = {}
-      if (upDelta !== 0) updates['stats.thumbs_up'] = increment(upDelta)
-      if (downDelta !== 0) updates['stats.thumbs_down'] = increment(downDelta)
-      if (Object.keys(updates).length > 0) {
-        tx.update(itemRef, updates)
+      const hadStar = starSnap ? starSnap.exists() : false
+      const hadVote = voteSnap.exists()
+      const rawVote = hadVote ? (voteSnap.get('value') as VoteValue) : null
+      const oldVal: VoteValue | null = rawVote ?? (hadStar ? 'up' : null)
+
+      const isRetraction = oldVal === value
+      const newVal: VoteValue | null = isRetraction ? null : value
+
+      if (isRetraction) {
+        tx.delete(voteRef)
+      } else {
+        tx.set(voteRef, {
+          value: newVal,
+          created_at: hadVote ? voteSnap.get('created_at') : serverTimestamp(),
+          updated_at: serverTimestamp(),
+        })
       }
-    }
 
-    if (
-      itemSnap.get('visibility') === 'public' &&
-      itemSnap.get('review_status') === 'approved'
-    ) {
-      tx.set(
-        doc(
-          db,
-          'export_sources',
-          'votes',
-          'changes',
-          exportMarkerId(kind, itemId),
-        ),
-        { revision: crypto.randomUUID() },
+      if (hadStar && starRef) {
+        tx.delete(starRef)
+      }
+
+      let nextThumbsUp: number
+      let nextThumbsDown: number
+
+      if (kind === 'agent') {
+        const currentStars = (itemSnap.get('stats.stars') as number) ?? 0
+        const oldIsUp = oldVal === 'up'
+        const newIsUp = newVal === 'up'
+        const delta = (newIsUp ? 1 : 0) - (oldIsUp ? 1 : 0)
+        nextThumbsUp = Math.max(0, currentStars + delta)
+        nextThumbsDown = 0 // agents store stars only
+
+        if (delta !== 0) {
+          tx.update(itemRef, { 'stats.stars': increment(delta) })
+        }
+      } else {
+        const currentUp = (itemSnap.get('stats.thumbs_up') as number) ?? 0
+        const currentDown = (itemSnap.get('stats.thumbs_down') as number) ?? 0
+        const upDelta = (newVal === 'up' ? 1 : 0) - (oldVal === 'up' ? 1 : 0)
+        const downDelta =
+          (newVal === 'down' ? 1 : 0) - (oldVal === 'down' ? 1 : 0)
+        nextThumbsUp = Math.max(0, currentUp + upDelta)
+        nextThumbsDown = Math.max(0, currentDown + downDelta)
+
+        const updates: Record<string, unknown> = {}
+        if (upDelta !== 0) updates['stats.thumbs_up'] = increment(upDelta)
+        if (downDelta !== 0) updates['stats.thumbs_down'] = increment(downDelta)
+        if (Object.keys(updates).length > 0) {
+          tx.update(itemRef, updates)
+        }
+      }
+
+      if (
+        itemSnap.get('visibility') === 'public' &&
+        itemSnap.get('review_status') === 'approved'
+      ) {
+        tx.set(
+          doc(
+            db,
+            'export_sources',
+            'votes',
+            'changes',
+            exportMarkerId(kind, itemId),
+          ),
+          { revision: crypto.randomUUID() },
+        )
+      }
+
+      return {
+        thumbs_up: nextThumbsUp,
+        thumbs_down: nextThumbsDown,
+        userVote: newVal,
+      }
+    })
+
+  for (let tries = 0; ; tries++) {
+    try {
+      return await attempt()
+    } catch (error) {
+      if (
+        tries >= 2 ||
+        !observed ||
+        (error as { code?: string }).code !== 'permission-denied'
       )
+        throw error
+      const { getDoc } = await fs()
+      const [item, vote, star] = await Promise.all([
+        getDoc(itemRef),
+        getDoc(voteRef),
+        starRef ? getDoc(starRef) : null,
+      ])
+      if (
+        !item.exists() ||
+        (counts(item) === observed.counts &&
+          (vote.exists() ? vote.get('value') : null) === observed.vote &&
+          (star ? star.exists() : false) === observed.star)
+      )
+        throw error
     }
-
-    return {
-      thumbs_up: nextThumbsUp,
-      thumbs_down: nextThumbsDown,
-      userVote: newVal,
-    }
-  })
+  }
 }
 
 /**

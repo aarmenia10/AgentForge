@@ -77,23 +77,11 @@ export function VoteButtons({
     const nextVote: VoteValue | null = isRetraction ? null : targetValue
 
     // Optimistic calculation
-    let optimisticUp: number
-    let optimisticDown = prevDown
-
-    if (kind === 'agent') {
-      const oldIsUp = prevVote === 'up'
-      const newIsUp = nextVote === 'up'
-      optimisticUp = Math.max(
-        0,
-        prevUp + ((newIsUp ? 1 : 0) - (oldIsUp ? 1 : 0)),
-      )
-    } else {
-      const upDelta = (nextVote === 'up' ? 1 : 0) - (prevVote === 'up' ? 1 : 0)
-      const downDelta =
-        (nextVote === 'down' ? 1 : 0) - (prevVote === 'down' ? 1 : 0)
-      optimisticUp = Math.max(0, prevUp + upDelta)
-      optimisticDown = Math.max(0, prevDown + downDelta)
-    }
+    const upDelta = (nextVote === 'up' ? 1 : 0) - (prevVote === 'up' ? 1 : 0)
+    const downDelta =
+      (nextVote === 'down' ? 1 : 0) - (prevVote === 'down' ? 1 : 0)
+    const optimisticUp = Math.max(0, prevUp + upDelta)
+    const optimisticDown = Math.max(0, prevDown + downDelta)
 
     setThumbsUp(optimisticUp)
     setThumbsDown(optimisticDown)
@@ -105,10 +93,13 @@ export function VoteButtons({
       const { getFirebaseServices } = await import('@/lib/firebase')
       const { db } = getFirebaseServices()
       const result = await castVote(db, kind, itemId, uid, targetValue)
+      // An agent's down count is not stored on the agent (only the exporter
+      // counts it), so the transaction cannot return it: keep the local one.
+      const down = kind === 'agent' ? optimisticDown : result.thumbs_down
       setThumbsUp(result.thumbs_up)
-      setThumbsDown(result.thumbs_down)
+      setThumbsDown(down)
       setUserVote(result.userVote)
-      onVoteChange?.(result.thumbs_up, result.thumbs_down)
+      onVoteChange?.(result.thumbs_up, down)
     } catch (err) {
       setThumbsUp(prevUp)
       setThumbsDown(prevDown)

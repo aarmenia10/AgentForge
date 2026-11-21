@@ -1,3 +1,4 @@
+import { readCouncilExport } from './councilExport'
 import { isDeepStrictEqual } from 'node:util'
 import type { DocumentSnapshot, Firestore } from 'firebase-admin/firestore'
 import type { AgentManifest, AgentRecord } from '../src/types/agent'
@@ -103,31 +104,77 @@ export async function readFirestoreExport(
 ) {
   // Capture receipts BEFORE reading data. Writes during a run are either
   // reflected here or remain queued for the next successful publication.
-  const [agents, versions, skills, skillVersions, votes, comments] =
-    await Promise.all([
-      pendingChanges(db, 'agents'),
-      pendingChanges(db, 'agent_versions'),
-      pendingChanges(db, 'skills'),
-      pendingChanges(db, 'skill_versions'),
-      pendingChanges(db, 'votes'),
-      pendingChanges(db, 'comments'),
-    ])
+  const [
+    agents,
+    versions,
+    skills,
+    skillVersions,
+    councils,
+    councilVersions,
+    votes,
+    comments,
+  ] = await Promise.all([
+    pendingChanges(db, 'agents'),
+    pendingChanges(db, 'agent_versions'),
+    pendingChanges(db, 'skills'),
+    pendingChanges(db, 'skill_versions'),
+    pendingChanges(db, 'councils'),
+    pendingChanges(db, 'council_versions'),
+    pendingChanges(db, 'votes'),
+    pendingChanges(db, 'comments'),
+  ])
   const receipts = [
     ...agents,
     ...versions,
     ...skills,
     ...skillVersions,
+    ...councils,
+    ...councilVersions,
     ...votes,
     ...comments,
   ]
+  // A vote changes the live counters but writes only a `votes` marker, so the
+  // marked item is refreshed here as well. Otherwise catalog.json and
+  // skills.json would keep stale counts until the next full export.
+  const votedIds = (kind: 'agents' | 'skills') =>
+    votes
+      .filter(({ id }) => id.startsWith(kind + '_'))
+      .map((vote) => ({ ...vote, id: vote.id.slice(kind.length + 1) }))
   const skillExport = await readSkillExport(
     db,
-    skills,
+    [...skills, ...votedIds('skills')],
     skillVersions,
     allow,
     log,
     previous,
   )
+  async function complete(
+    inventory: Pick<PublicExport, 'catalog' | 'files' | 'origins'>,
+  ) {
+    const output = { ...inventory, ...skillExport }
+    return {
+      ...output,
+      ...(await readCouncilExport(
+        db,
+        output,
+        councils,
+        councilVersions,
+        log,
+        previous,
+      )),
+      ...(await readRatingsExport(
+        db,
+        output.catalog,
+        output.skillIndex,
+        votes,
+        comments,
+        getBlockedWordsSync(),
+        log,
+        previous,
+      )),
+      receipts,
+    }
+  }
   if (!previous) {
     const live = new Map<string, unknown>()
     const excluded = new Set<string>()
@@ -150,24 +197,11 @@ export async function readFirestoreExport(
     const snapshots = history.docs
       .map((doc) => recordData(doc, true, log))
       .filter(Boolean)
-    const ratingsExport = await readRatingsExport(
-      db,
-      catalog,
-      skillExport.skillIndex,
-      votes,
-      comments,
-      getBlockedWordsSync(),
-      log,
-      previous,
-    )
-    return {
+    return complete({
       catalog,
       files: buildVersionFiles(catalog, snapshots, seeds, allow, log),
       origins: buildOrigins(catalog, snapshots, allow, log),
-      ...skillExport,
-      ...ratingsExport,
-      receipts,
-    }
+    })
   }
 
   const catalog = new Map(previous.catalog.map((agent) => [agent.id, agent]))
@@ -175,7 +209,11 @@ export async function readFirestoreExport(
   const origins: Record<string, OriginApp> = { ...(previous.origins ?? {}) }
   const seedById = new Map(seeds.map((seed) => [seed.id, seed]))
   const rebuiltHistory = new Set<string>()
-  for (const { id } of agents) {
+  const changedAgents = new Set([
+    ...agents.map(({ id }) => id),
+    ...votedIds('agents').map(({ id }) => id),
+  ])
+  for (const id of changedAgents) {
     const seed = seedById.get(id)
     const before = catalog.get(id)
     const state = seed
@@ -275,25 +313,11 @@ export async function readFirestoreExport(
     const id = at > 0 ? key.slice(0, at) : key
     if (!catalog.has(id)) delete origins[key]
   }
-  const sortedCatalog = [...catalog.values()].sort((a, b) =>
-    a.id.localeCompare(b.id, 'en'),
-  )
-  const ratingsExport = await readRatingsExport(
-    db,
-    sortedCatalog,
-    skillExport.skillIndex,
-    votes,
-    comments,
-    getBlockedWordsSync(),
-    log,
-    previous,
-  )
-  return {
-    catalog: sortedCatalog,
+  return complete({
+    catalog: [...catalog.values()].sort((a, b) =>
+      a.id.localeCompare(b.id, 'en'),
+    ),
     files,
     origins: sortOrigins(origins),
-    ...skillExport,
-    ...ratingsExport,
-    receipts,
-  }
+  })
 }

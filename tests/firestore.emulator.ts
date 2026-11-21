@@ -19,18 +19,20 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { SEED_AGENTS } from '../src/data/seedAgents'
-import { toggleStarInFirestore } from '../src/services/firestore'
+import { toggleUp } from './voteHelper'
 import './profiles.emulator'
 import './visibility.emulator'
 import './edits.emulator'
 import './versions.emulator'
 import './export.emulator'
 import './skills.emulator'
+import './councils.emulator'
 import './connector.emulator'
 import './preferences.emulator'
 import './ratings.emulator'
+import './ratings-export.emulator'
 
-test('real Firestore transactions and rules enforce atomic stars and per-user ownership', async () => {
+test('real Firestore transactions and rules enforce atomic up votes and per-user ownership', async () => {
   const env = await initializeTestEnvironment({
     projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
@@ -50,12 +52,9 @@ test('real Firestore transactions and rules enforce atomic stars and per-user ow
     const alice = env.authenticatedContext('alice').firestore()
     const bob = env.authenticatedContext('bob').firestore()
     const anonymous = env.unauthenticatedContext().firestore()
-    assert.equal(await toggleStarInFirestore(alice, id, 'alice'), 1)
-    assert.equal(await toggleStarInFirestore(alice, id, 'alice'), 0)
-    await Promise.all([
-      toggleStarInFirestore(alice, id, 'alice'),
-      toggleStarInFirestore(bob, id, 'bob'),
-    ])
+    assert.equal(await toggleUp(alice, id, 'alice'), 1)
+    assert.equal(await toggleUp(alice, id, 'alice'), 0)
+    await Promise.all([toggleUp(alice, id, 'alice'), toggleUp(bob, id, 'bob')])
     assert.equal((await getDoc(doc(alice, path))).get('stats.stars'), 2)
     await env.withSecurityRulesDisabled(async (context) => {
       const db = context.firestore()
@@ -119,14 +118,14 @@ test('real Firestore transactions and rules enforce atomic stars and per-user ow
     }
     // Two concurrent toggles of one user's record must serialize and cancel out.
     await Promise.all([
-      toggleStarInFirestore(alice, id, 'alice'),
-      toggleStarInFirestore(alice, id, 'alice'),
+      toggleUp(alice, id, 'alice'),
+      toggleUp(alice, id, 'alice'),
     ])
     assert.equal((await getDoc(doc(alice, path))).get('stats.stars'), 2)
     await assertSucceeds(getDoc(doc(alice, `${path}/stars/alice`)))
     await assertFails(getDoc(doc(bob, `${path}/stars/alice`)))
-    await assertFails(toggleStarInFirestore(anonymous, id, 'anonymous'))
-    await assertFails(toggleStarInFirestore(bob, id, 'alice'))
+    await assertFails(toggleUp(anonymous, id, 'anonymous'))
+    await assertFails(toggleUp(bob, id, 'alice'))
     await assertFails(
       updateDoc(doc(alice, path), { 'stats.stars': increment(1) }),
     )
@@ -143,7 +142,7 @@ test('real Firestore transactions and rules enforce atomic stars and per-user ow
     })
     await assertFails(forged.commit())
     await assert.rejects(
-      toggleStarInFirestore(alice, 'missing-agent', 'alice'),
+      toggleUp(alice, 'missing-agent', 'alice'),
       /does not exist/,
     )
     assert.equal((await getDoc(doc(alice, path))).get('stats.stars'), 2)

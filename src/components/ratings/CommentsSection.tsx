@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatRelativeTime } from '@/lib/format'
 import { hasBlockedWord } from '@/lib/blockedWords'
+import { Link } from '@/router/Router'
+import {
+  readProfileMemory,
+  rememberProfile,
+} from '@/components/profile/profileMemory'
 import {
   deleteComment,
   postComment,
@@ -32,6 +37,9 @@ export function CommentsSection({
   const [submitting, setSubmitting] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  // 'loading' until the user's profile is known. Comments are posted under the
+  // profile's username only (rules check it), so no username means no form.
+  const [handle, setHandle] = useState<string | null | 'loading'>('loading')
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(
     null,
   )
@@ -52,6 +60,36 @@ export function CommentsSection({
         if (active) setIsAdmin(admin)
       })
       .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [uid])
+
+  useEffect(() => {
+    if (!uid) {
+      setHandle('loading')
+      return
+    }
+    const remembered = readProfileMemory(uid)?.handle
+    if (remembered) {
+      setHandle(remembered)
+      return
+    }
+    let active = true
+    Promise.all([import('@/lib/firebase'), import('firebase/firestore')])
+      .then(async ([{ getFirebaseServices }, { getDoc, doc }]) => {
+        const snapshot = await getDoc(
+          doc(getFirebaseServices().db, 'users', uid),
+        )
+        const found = snapshot.exists()
+          ? (snapshot.get('handle') as string)
+          : null
+        if (found) rememberProfile(uid, found)
+        if (active) setHandle(found)
+      })
+      .catch(() => {
+        if (active) setHandle(null)
+      })
     return () => {
       active = false
     }
@@ -98,14 +136,15 @@ export function CommentsSection({
       ])
       const { db } = getFirebaseServices()
       const userDoc = await getDoc(doc(db, 'users', uid))
-      const handle = userDoc.exists()
-        ? (userDoc.get('handle') as string)
-        : user?.displayName?.toLowerCase().replace(/[^a-z0-9-]/g, '') ||
-          'anonymous'
+      if (!userDoc.exists()) {
+        setHandle(null)
+        return
+      }
+      const ownHandle = userDoc.get('handle') as string
 
       const newComment = await postComment(db, kind, itemId, trimmed, {
         uid,
-        handle,
+        handle: ownHandle,
       })
       setComments((prev) => [...prev, newComment])
       setBody('')
@@ -144,9 +183,9 @@ export function CommentsSection({
       ) : (
         <ul className="space-y-3" aria-label="Comments">
           {comments.map((comment) => {
-            const canDelete =
-              uid && (comment.author_handle === user?.displayName || isAdmin)
-            const canReport = uid && comment.author_handle !== user?.displayName
+            const isOwn = Boolean(handle) && comment.author_handle === handle
+            const canDelete = uid && (isOwn || isAdmin)
+            const canReport = uid && !isOwn
 
             return (
               <li
@@ -206,6 +245,16 @@ export function CommentsSection({
       ) : isAuthor ? (
         <p className="pt-2 text-xs text-slate-500 dark:text-slate-400">
           Authors cannot comment on their own items.
+        </p>
+      ) : handle === null ? (
+        <p className="pt-2 text-sm text-slate-600 dark:text-slate-400">
+          Choose a username before commenting.{' '}
+          <Link
+            to="/settings"
+            className="font-medium text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Open Settings
+          </Link>
         </p>
       ) : (
         <form onSubmit={handlePost} className="space-y-2 pt-2">

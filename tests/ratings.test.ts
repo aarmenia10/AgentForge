@@ -1,11 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readdirSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
+  getBlockedWordsSync,
   noBlockedWordsClient,
   hasBlockedWord,
   HARD_CORE_BLOCKED_WORDS,
 } from '../src/lib/blockedWords'
 import { topRatedSort } from '../src/services/ratings'
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 test('B-01: clean text passes blocked words check', () => {
   assert.equal(noBlockedWordsClient('hello world'), true)
@@ -116,4 +122,45 @@ test('topRatedSort falls back to stats.stars for agents', () => {
     sorted.map((i) => i.id),
     ['agent-1', 'agent-2'],
   )
+})
+
+test('the rules hard-core list is the first entries of blocked-words.json, and matches whole words only', () => {
+  const rules = readFileSync(resolve(ROOT, 'firestore.rules'), 'utf8')
+  const pattern = /function noBlockedWords[\s\S]*?\\\\b\(([^)]*)\)\\\\b/.exec(
+    rules,
+  )
+  assert.ok(pattern, 'noBlockedWords has a whole-word alternation')
+  const inRules = pattern[1].split('|')
+  assert.deepEqual(inRules, [...HARD_CORE_BLOCKED_WORDS])
+  assert.deepEqual(
+    getBlockedWordsSync().slice(0, inRules.length),
+    inRules,
+    'the rules list is the front of the full list',
+  )
+  // Case-insensitive in the rules too.
+  assert.match(pattern[0], /\(\?is\)/)
+})
+
+test('stars cannot be created from any client code, and comments need a username', () => {
+  const root = resolve(ROOT, 'src')
+  const sources: string[] = []
+  const walk = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = resolve(directory, entry.name)
+      if (entry.isDirectory()) walk(path)
+      else if (/\.tsx?$/.test(entry.name)) sources.push(path)
+    }
+  }
+  walk(root)
+  for (const path of sources) {
+    const text = readFileSync(path, 'utf8')
+    assert.doesNotMatch(text, /toggleStar/, `${path} still toggles stars`)
+  }
+  const comments = readFileSync(
+    resolve(ROOT, 'src/components/ratings/CommentsSection.tsx'),
+    'utf8',
+  )
+  assert.match(comments, /Choose a username before commenting/)
+  // No made-up fallback handle: the profile's handle is the only one used.
+  assert.doesNotMatch(comments, /'anonymous'/)
 })

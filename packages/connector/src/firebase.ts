@@ -129,8 +129,32 @@ export function firestore(fetcher: Fetch, idToken: string, project = PROJECT) {
         ],
       })
     },
+    async setWithRequestTime(
+      path: string,
+      fields: object,
+      timestampField: string,
+    ) {
+      await call(':commit', {
+        writes: [
+          {
+            update: { name: root + '/' + path, fields: encodeFields(fields) },
+            updateTransforms: [
+              { fieldPath: timestampField, setToServerValue: 'REQUEST_TIME' },
+            ],
+          },
+        ],
+      })
+    },
+    async createItems(items: readonly { path: string; fields: object }[]) {
+      await call(':commit', {
+        writes: items.map(({ path, fields }) => ({
+          update: { name: root + '/' + path, fields: encodeFields(fields) },
+          currentDocument: { exists: false },
+        })),
+      })
+    },
     async list(
-      collection: 'agents' | 'skills',
+      collection: 'agents' | 'skills' | 'councils',
       uid: string,
       fields: string[],
       limit: number,

@@ -3,7 +3,11 @@
  * directly. Static files (`/catalog.json`, `/llms.txt`, `/mcp/*`) are served by
  * Hosting before the SPA rewrite and never reach this table.
  */
-import { agentIdSchema, authorHandleSchema } from '../lib/manifestSchema'
+import {
+  agentIdSchema,
+  authorHandleSchema,
+  versionSchema,
+} from '../lib/manifestSchema'
 
 export type RouteName =
   | 'home'
@@ -14,6 +18,9 @@ export type RouteName =
   | 'studio'
   | 'review'
   | 'profile'
+  | 'councils'
+  | 'council'
+  | 'council-member'
   | 'skills'
   | 'skill-upload'
   | 'skill'
@@ -47,6 +54,7 @@ const STATIC: Record<string, RouteName> = {
   '/studio': 'studio',
   '/review': 'review',
   '/skills': 'skills',
+  '/councils': 'councils',
   // Matched before /skills/<id>, so "new" can never be a skill's page.
   '/skills/new': 'skill-upload',
   '/suggestions': 'suggestions',
@@ -60,6 +68,26 @@ export function matchRoute(pathname: string): Route {
 
   const name = STATIC[path]
   if (name) return { name, params: {} }
+
+  const member = /^\/councils\/member\/(agent|skill)\/([^/]+)\/([^/]+)$/.exec(
+    path,
+  )
+  if (member) {
+    const id = agentIdSchema.safeParse(decodeSegment(member[2]))
+    const version = versionSchema.safeParse(decodeSegment(member[3]))
+    if (id.success && version.success)
+      return {
+        name: 'council-member',
+        params: { kind: member[1], id: id.data, version: version.data },
+      }
+    return notFound()
+  }
+  const council = /^\/councils\/([^/]+)$/.exec(path)
+  if (council) {
+    const id = agentIdSchema.safeParse(decodeSegment(council[1]))
+    if (id.success) return { name: 'council', params: { id: id.data } }
+    return notFound()
+  }
 
   const skill = /^\/skills\/([^/]+)$/.exec(path)
   if (skill) {
@@ -117,6 +145,11 @@ export function routeTitle(route: Route): string {
       return `Review queue · ${SITE}`
     case 'profile':
       return `@${route.params.handle} · ${SITE}`
+    case 'councils':
+      return 'Councils · ' + SITE
+    case 'council':
+    case 'council-member':
+      return route.params.id + ' · Councils · ' + SITE
     case 'skills':
       return `Skills · ${SITE}`
     case 'skill-upload':

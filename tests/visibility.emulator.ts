@@ -25,7 +25,7 @@ import { SEED_AGENTS } from '../src/data/seedAgents'
 import type { AgentRecord } from '../src/types/agent'
 import { createAgentStore } from '../src/services/agentStore'
 import { createProfileStore } from '../src/services/profileStore'
-import { toggleStarInFirestore } from '../src/services/firestore'
+import { toggleUp } from './voteHelper'
 
 test('visibility, review, admin authority, bounded views, and star rules', async (t) => {
   const env = await initializeTestEnvironment({
@@ -415,29 +415,20 @@ test('visibility, review, admin authority, bounded views, and star rules', async
       },
     )
     await t.test(
-      'atomic stars remain valid; unreadable agents and forged aggregate changes are denied',
+      'atomic up votes remain valid; unreadable agents, new stars and forged aggregate changes are denied',
       async () => {
-        assert.equal(await toggleStarInFirestore(bob, 'alice-public', 'bob'), 1)
-        assert.equal(await toggleStarInFirestore(bob, 'alice-public', 'bob'), 0)
-        assert.equal(
-          await toggleStarInFirestore(bob, 'alice-friends', 'bob'),
-          1,
-        )
-        await assertFails(toggleStarInFirestore(bob, 'alice-private', 'bob'))
-        assert.equal(
-          await toggleStarInFirestore(alice, 'alice-private', 'alice'),
-          1,
-        )
-        assert.equal(
-          await toggleStarInFirestore(alice, 'alice-private', 'alice'),
-          0,
-        )
+        assert.equal(await toggleUp(bob, 'alice-public', 'bob'), 1)
+        assert.equal(await toggleUp(bob, 'alice-public', 'bob'), 0)
+        assert.equal(await toggleUp(bob, 'alice-friends', 'bob'), 1)
+        await assertFails(toggleUp(bob, 'alice-private', 'bob'))
+        // Nobody votes on a private agent, its owner included.
+        await assertFails(toggleUp(alice, 'alice-private', 'alice'))
         await assertFails(
           getDocsFromServer(
             query(collection(bob, 'agents/alice-public/stars'), limit(10)),
           ),
         )
-        await assertFails(toggleStarInFirestore(anon, 'alice-public', 'anon'))
+        await assertFails(toggleUp(anon, 'alice-public', 'anon'))
         await assertFails(
           updateDoc(doc(bob, 'agents/alice-public'), {
             'stats.stars': increment(1),
@@ -471,7 +462,7 @@ test('visibility, review, admin authority, bounded views, and star rules', async
         await assertFails(
           getDocFromServer(doc(bob, 'agents/alice-friends/stars/bob')),
         )
-        await assertFails(toggleStarInFirestore(bob, 'alice-friends', 'bob'))
+        await assertFails(toggleUp(bob, 'alice-friends', 'bob'))
         const revoked = writeBatch(bob)
         revoked.delete(doc(bob, 'agents/alice-friends/stars/bob'))
         revoked.update(doc(bob, 'agents/alice-friends'), {
