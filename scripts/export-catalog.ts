@@ -421,7 +421,9 @@ export async function exportCatalog() {
     files: buildVersionFiles(seeds, [], SEED_AGENTS, allow, log),
     origins: {},
   }
-  const publicDir = fileURLToPath(new URL('../public/', import.meta.url))
+  const publicDir =
+    process.env.AGENTLEMON_CATALOG_OUTPUT_DIR ||
+    fileURLToPath(new URL('../public/', import.meta.url))
   await mkdir(publicDir, { recursive: true })
   await writeVersionFiles(resolve(publicDir, 'agents'), output.files)
   await writeSkillFiles(publicDir, output)
@@ -457,7 +459,7 @@ export async function exportCatalog() {
   )
   await rename(temporary, catalogPath)
   console.error(
-    `Exported ${output.catalog.length} approved public agents to public/catalog.json`,
+    `Exported ${output.catalog.length} approved public agents to ${catalogPath}`,
   )
 }
 

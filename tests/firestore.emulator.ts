@@ -1,8 +1,8 @@
-import { test } from 'node:test'
+import { after, before, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile, writeFile } from 'node:fs/promises'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
+import { createHash } from 'node:crypto'
+import { readdir, readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import {
   initializeTestEnvironment,
   assertFails,
@@ -19,6 +19,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { SEED_AGENTS } from '../src/data/seedAgents'
+import { createEmulatorCatalogExport } from './emulatorCatalogExport'
 import { toggleUp } from './voteHelper'
 import './profiles.emulator'
 import './visibility.emulator'
@@ -32,7 +33,38 @@ import './preferences.emulator'
 import './ratings.emulator'
 import './ratings-export.emulator'
 
-test('real Firestore transactions and rules enforce atomic up votes and per-user ownership', async () => {
+async function snapshotPublicFiles() {
+  const files = new Map<string, string>()
+  const entries = await readdir('public', {
+    recursive: true,
+    withFileTypes: true,
+  })
+  for (const entry of entries) {
+    if (!entry.isFile()) continue
+    const path = join(entry.parentPath, entry.name)
+    files.set(
+      path,
+      createHash('sha256')
+        .update(await readFile(path))
+        .digest('hex'),
+    )
+  }
+  return files
+}
+
+let publicBefore: Awaited<ReturnType<typeof snapshotPublicFiles>>
+before(async () => {
+  publicBefore = await snapshotPublicFiles()
+})
+after(async () => {
+  assert.deepEqual(
+    await snapshotPublicFiles(),
+    publicBefore,
+    'Firestore emulator tests changed files under public/',
+  )
+})
+
+test('real Firestore transactions and rules enforce atomic up votes and per-user ownership', async (t) => {
   const env = await initializeTestEnvironment({
     projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
@@ -81,41 +113,30 @@ test('real Firestore transactions and rules enforce atomic up votes and per-user
           ...patch,
         })
     })
-    const snapshot = await readFile('public/catalog.json', 'utf8')
-    try {
-      const result = await promisify(execFile)(
-        process.execPath,
-        ['--import', 'tsx', 'scripts/export-catalog.ts'],
-        {
-          env: {
-            ...process.env,
-            AGENTLEMON_CATALOG_SOURCE: 'firestore',
-            GOOGLE_CLOUD_PROJECT: 'demo-agentlemon',
-          },
-        },
-      )
-      const exported = JSON.parse(await readFile('public/catalog.json', 'utf8'))
-      assert.equal(exported.length, SEED_AGENTS.length)
-      assert.ok(result.stderr.includes('blocked-live'))
-      assert.ok(result.stderr.includes('invalid-live'))
-      assert.ok(result.stderr.includes('SL-01'))
-      assert.ok(!result.stderr.includes('Ignore all previous instructions'))
-      const seed = exported.find((a: { id: string }) => a.id === id)
-      assert.equal(seed.name, SEED_AGENTS[0].name)
-      assert.equal(seed.version, SEED_AGENTS[0].version)
-      assert.equal(seed.stats.views, 73)
-      assert.ok(!('saved_from_chat' in seed))
-      assert.equal((await getDoc(doc(alice, path))).get('stats.views'), 73)
-      assert.ok(
-        (await getDoc(doc(alice, `agents/${SEED_AGENTS[1].id}`))).exists(),
-      )
-      assert.equal(
-        exported.find((a: { id: string }) => a.id === id).stats.stars,
-        2,
-      )
-    } finally {
-      await writeFile('public/catalog.json', snapshot)
-    }
+    const { directory, run } = await createEmulatorCatalogExport(t)
+    const result = await run()
+    const exported = JSON.parse(
+      await readFile(join(directory, 'catalog.json'), 'utf8'),
+    )
+    assert.equal(exported.length, SEED_AGENTS.length)
+    assert.ok(result.stderr.includes('blocked-live'))
+    assert.ok(result.stderr.includes('invalid-live'))
+    assert.ok(result.stderr.includes('SL-01'))
+    assert.ok(!result.stderr.includes('Ignore all previous instructions'))
+    const seed = exported.find((a: { id: string }) => a.id === id)
+    assert.equal(seed.name, SEED_AGENTS[0].name)
+    assert.equal(seed.version, SEED_AGENTS[0].version)
+    assert.equal(seed.stats.views, 73)
+    assert.equal(seed.stats.stars, 2)
+    assert.ok(!('saved_from_chat' in seed))
+    const rating = JSON.parse(
+      await readFile(join(directory, 'ratings', 'agent', id + '.json'), 'utf8'),
+    )
+    assert.equal(rating.thumbs_up, 2)
+    assert.equal((await getDoc(doc(alice, path))).get('stats.views'), 73)
+    assert.ok(
+      (await getDoc(doc(alice, `agents/${SEED_AGENTS[1].id}`))).exists(),
+    )
     // Two concurrent toggles of one user's record must serialize and cancel out.
     await Promise.all([
       toggleUp(alice, id, 'alice'),
