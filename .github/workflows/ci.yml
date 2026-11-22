@@ -5,6 +5,11 @@ on:
     branches: [main, 'task/**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      scheduled:
+        description: Run as the hourly export (set by the connector's cron trigger; leave unticked for a manual run)
+        type: boolean
+        default: false
   schedule:
     - cron: '17 * * * *'
 
@@ -12,7 +17,9 @@ concurrency:
   group: ci-${{ github.ref }}
   # An hourly run waits for a deploy already in flight. If it cancelled one, it
   # would then skip its own deploy (catalog unchanged) and the push would be lost.
-  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+  # The connector's cron trigger starts the same hourly run with scheduled=true,
+  # so it must wait for a deploy in flight exactly as a schedule run does.
+  cancel-in-progress: ${{ github.event_name != 'schedule' && !inputs.scheduled }}
 
 permissions:
   contents: read
@@ -24,6 +31,9 @@ jobs:
     env:
       FIREBASE_PROJECT: agentforge-b10db
       AGENTLEMON_CATALOG_SOURCE: seed
+      # True for GitHub's own hourly schedule and for a dispatch with
+      # scheduled=true (the connector's cron). Steps test this, not event_name.
+      EXPORT_RUN_IS_SCHEDULED: ${{ github.event_name == 'schedule' || inputs.scheduled }}
     steps:
       - uses: actions/checkout@v4
 
@@ -83,7 +93,7 @@ jobs:
       # Seed/package tests above cannot see production data. A failed Firestore
       # export stops this job before Hosting can replace the last good snapshot.
       - name: Read deployed export state
-        if: steps.creds.outputs.present == 'true' && github.event_name == 'schedule'
+        if: steps.creds.outputs.present == 'true' && env.EXPORT_RUN_IS_SCHEDULED == 'true'
         run: |
           status=$(curl --silent --show-error --retry 3 -w '%{http_code}' "https://agentlemon.web.app/export-state.json?run=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -o "$RUNNER_TEMP/live-export-state.json")
           case "$status" in
@@ -92,7 +102,7 @@ jobs:
           esac
 
       - name: Restore public export checkpoint
-        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && github.event_name == 'schedule'
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && env.EXPORT_RUN_IS_SCHEDULED == 'true'
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/catalog-checkpoint.gpg
@@ -103,7 +113,7 @@ jobs:
       # out of those readers' reach, even in an older cache. Key rotation or
       # cache damage simply causes a full rebuild.
       - name: Open export checkpoint
-        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && github.event_name == 'schedule'
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && env.EXPORT_RUN_IS_SCHEDULED == 'true'
         working-directory: ${{ runner.temp }}
         run: |
           if test -f catalog-checkpoint.gpg && sha256sum < sa.json | gpg --batch --pinentry-mode loopback --passphrase-fd 0 --output checkpoint.tmp --decrypt catalog-checkpoint.gpg; then
@@ -116,14 +126,14 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
           GOOGLE_CLOUD_PROJECT: ${{ env.FIREBASE_PROJECT }}
           AGENTLEMON_CATALOG_SOURCE: firestore
-          CATALOG_CHECKPOINT: ${{ github.event_name == 'schedule' && format('{0}/catalog-checkpoint.json', runner.temp) || '' }}
+          CATALOG_CHECKPOINT: ${{ env.EXPORT_RUN_IS_SCHEDULED == 'true' && format('{0}/catalog-checkpoint.json', runner.temp) || '' }}
           CATALOG_LIVE_STATE: ${{ runner.temp }}/live-export-state.json
           CATALOG_RECEIPTS: ${{ runner.temp }}/export-receipts.json
         run: npm run build
 
       - name: Compare scheduled catalog and versions with live export
         id: catalog
-        if: steps.creds.outputs.present == 'true' && github.event_name == 'schedule'
+        if: steps.creds.outputs.present == 'true' && env.EXPORT_RUN_IS_SCHEDULED == 'true'
         run: |
           if cmp -s public/export-state.json "$RUNNER_TEMP/live-export-state.json"; then
             echo "unchanged=true" >> "$GITHUB_OUTPUT"
@@ -159,12 +169,12 @@ jobs:
         run: npm run build:catalog -- --acknowledge
 
       - name: Encrypt published export checkpoint
-        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && github.event_name == 'schedule'
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && env.EXPORT_RUN_IS_SCHEDULED == 'true'
         working-directory: ${{ runner.temp }}
         run: sha256sum < sa.json | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --cipher-algo AES256 --output catalog-checkpoint.gpg --symmetric catalog-checkpoint.json
 
       - name: Save published export checkpoint
-        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && github.event_name == 'schedule'
+        if: steps.creds.outputs.present == 'true' && vars.CATALOG_SOURCE == 'firestore' && env.EXPORT_RUN_IS_SCHEDULED == 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/catalog-checkpoint.gpg
