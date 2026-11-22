@@ -14,6 +14,16 @@ const WORK_ROLE_MAP: Record<string, Category[]> = {
   Student: ['coding', 'finance', 'research', 'devops', 'ops', 'creative'],
 }
 
+const USE_FOR_MAP: Record<string, Category[]> = {
+  School: ['research', 'creative'],
+  'My job': ['ops', 'finance'],
+  'Coding projects': ['coding', 'devops'],
+  Writing: ['creative'],
+  Research: ['research'],
+  Business: ['finance', 'ops'],
+  'Personal projects': ['creative', 'coding'],
+}
+
 const GOALS_MAP: Record<string, Category[]> = {
   'Find agents and skills to use': [
     'coding',
@@ -63,6 +73,10 @@ function inferCategories(prefs: UserPreferences): Set<Category> {
   const add = (cs: Category[]) => cs.forEach((c) => cats.add(c))
   if (prefs.work_role) {
     const mapped = WORK_ROLE_MAP[prefs.work_role]
+    if (mapped) add(mapped)
+  }
+  for (const use of prefs.use_for ?? []) {
+    const mapped = USE_FOR_MAP[use]
     if (mapped) add(mapped)
   }
   for (const goal of prefs.goals ?? []) {

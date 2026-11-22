@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 
 export interface UserPreferences {
   work_role?: string
+  use_for?: string[]
   goals?: string[]
   ai_apps?: string[]
   help_topics?: string[]

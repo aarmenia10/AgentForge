@@ -22,8 +22,9 @@ service cloud.firestore {
         && getAfter(handlePath(data.handle)).data.uid == uid;
     }
     function validPreferences(data) {
-      return data.keys().hasOnly(['work_role', 'goals', 'ai_apps', 'help_topics'])
+      return data.keys().hasOnly(['work_role', 'use_for', 'goals', 'ai_apps', 'help_topics'])
         && (!data.keys().hasAny(['work_role']) || (data.work_role is string && data.work_role.size() <= 60))
+        && (!data.keys().hasAny(['use_for']) || (data.use_for is list && data.use_for.size() <= 8))
         && (!data.keys().hasAny(['goals']) || (data.goals is list && data.goals.size() <= 7))
         && (!data.keys().hasAny(['ai_apps']) || (data.ai_apps is list && data.ai_apps.size() <= 7))
         && (!data.keys().hasAny(['help_topics']) || (data.help_topics is list && data.help_topics.size() <= 7));
