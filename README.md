@@ -535,6 +535,8 @@ What is being built right now. One row per claim. Add yours before you start and
 
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
+| test-public-hygiene | Aidan | Codex | `task/test-public-hygiene` | Catalog export output path and Firestore emulator tests | 2026-11-22 |
+
 
 ### 8.2 Ideas inbox
 
