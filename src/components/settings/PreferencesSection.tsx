@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { primaryButton } from '@/components/studio/parts'
 import type { UserPreferences } from '@/services/preferences'
 
-const WORK_ROLE_OPTIONS = [
-  'Software',
-  'Data or finance',
-  'Research or academia',
-  'Writing, marketing, or creative',
-  'Operations or business',
-  'Student',
+const USE_FOR_OPTIONS = [
+  'School',
+  'My job',
+  'Coding projects',
+  'Writing',
+  'Research',
+  'Business',
+  'Personal projects',
 ]
 
 const GOALS_OPTIONS = [
@@ -36,8 +37,8 @@ type LoadState =
 
 export function PreferencesSection() {
   const [load, setLoad] = useState<LoadState>({ state: 'loading' })
-  const [workRole, setWorkRole] = useState('')
-  const [workRoleOther, setWorkRoleOther] = useState('')
+  const [useFor, setUseFor] = useState<Set<string>>(new Set())
+  const [useForOther, setUseForOther] = useState('')
   const [goals, setGoals] = useState<Set<string>>(new Set())
   const [goalsOther, setGoalsOther] = useState('')
   const [aiApps, setAiApps] = useState<Set<string>>(new Set())
@@ -54,13 +55,17 @@ export function PreferencesSection() {
       .then((prefs) => {
         if (!active) return
         const p = prefs ?? {}
-        if (p.work_role) {
-          if (WORK_ROLE_OPTIONS.includes(p.work_role)) {
-            setWorkRole(p.work_role)
-          } else {
-            setWorkRole('Other')
-            setWorkRoleOther(p.work_role)
+        if (p.use_for) {
+          const uSet = new Set<string>()
+          for (const u of p.use_for) {
+            if (USE_FOR_OPTIONS.includes(u)) {
+              uSet.add(u)
+            } else {
+              uSet.add('Other')
+              setUseForOther(u)
+            }
           }
+          setUseFor(uSet)
         }
         if (p.goals) {
           const gSet = new Set<string>()
@@ -126,8 +131,9 @@ export function PreferencesSection() {
     setSaving(true)
     setSavedStatus(false)
     try {
-      const resolvedRole =
-        workRole === 'Other' ? workRoleOther.trim() || 'Other' : workRole
+      const resolvedUseFor = [...useFor].map((u) =>
+        u === 'Other' ? useForOther.trim() || 'Other' : u,
+      )
       const resolvedGoals = [...goals].map((g) =>
         g === 'Other' ? goalsOther.trim() || 'Other' : g,
       )
@@ -140,7 +146,7 @@ export function PreferencesSection() {
 
       const { savePreferences } = await import('@/services/preferences')
       await savePreferences({
-        ...(resolvedRole ? { work_role: resolvedRole } : {}),
+        ...(resolvedUseFor.length > 0 ? { use_for: resolvedUseFor } : {}),
         ...(resolvedGoals.length > 0 ? { goals: resolvedGoals } : {}),
         ...(resolvedAiApps.length > 0 ? { ai_apps: resolvedAiApps } : {}),
         ...(resolvedHelpTopics.length > 0
@@ -199,30 +205,30 @@ export function PreferencesSection() {
     <div className="space-y-6">
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-slate-900 dark:text-white">
-          What kind of work do you do?
+          What will you use AgentLemon for?
         </legend>
         <div className="flex flex-wrap gap-2">
-          {WORK_ROLE_OPTIONS.map((opt) => (
+          {USE_FOR_OPTIONS.map((opt) => (
             <OptionBtn
               key={opt}
               value={opt}
-              selected={workRole === opt}
-              onClick={() => setWorkRole(workRole === opt ? '' : opt)}
+              selected={useFor.has(opt)}
+              onClick={() => toggle(useFor, setUseFor, opt)}
             />
           ))}
           <OptionBtn
             value="Other"
-            selected={workRole === 'Other'}
-            onClick={() => setWorkRole(workRole === 'Other' ? '' : 'Other')}
+            selected={useFor.has('Other')}
+            onClick={() => toggle(useFor, setUseFor, 'Other')}
           />
         </div>
-        {workRole === 'Other' && (
+        {useFor.has('Other') && (
           <input
             type="text"
             maxLength={60}
-            placeholder="Describe your work"
-            value={workRoleOther}
-            onChange={(e) => setWorkRoleOther(e.target.value)}
+            placeholder="What else?"
+            value={useForOther}
+            onChange={(e) => setUseForOther(e.target.value)}
             className="mt-2 w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           />
         )}

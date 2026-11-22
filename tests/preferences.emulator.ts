@@ -32,6 +32,7 @@ test('preferences security rules enforce per-user privacy, field allowlist, and 
 
     const validData = {
       work_role: 'Software',
+      use_for: ['School', 'Coding projects'],
       goals: ['Find agents and skills to use', 'Share my own'],
       ai_apps: ['Claude', 'Cursor'],
       help_topics: ['Coding', 'DevOps'],
@@ -114,16 +115,23 @@ test('preferences security rules enforce per-user privacy, field allowlist, and 
       }),
     )
 
-    // 15. Access to any other doc under /private is denied
+    // 15. use_for list with more than 8 items is denied
+    await assertFails(
+      setDoc(doc(alice, 'users/alice/private/preferences'), {
+        use_for: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+      }),
+    )
+
+    // 16. Access to any other doc under /private is denied
     await assertFails(getDoc(doc(alice, 'users/alice/private/secrets')))
     await assertFails(
       setDoc(doc(alice, 'users/alice/private/secrets'), { secret: 'data' }),
     )
 
-    // 16. Listing the private collection is denied
+    // 17. Listing the private collection is denied
     await assertFails(getDocs(collection(alice, 'users/alice/private')))
 
-    // 17. Valid partial update succeeds
+    // 18. Valid partial update succeeds
     await assertSucceeds(
       updateDoc(doc(alice, 'users/alice/private/preferences'), {
         work_role: 'Data or finance',

@@ -6,8 +6,8 @@ interface PreferencesStepProps {
 }
 
 export function PreferencesStep({ onDone }: PreferencesStepProps) {
-  const [workRole, setWorkRole] = useState<string>('')
-  const [workRoleOther, setWorkRoleOther] = useState('')
+  const [useFor, setUseFor] = useState<Set<string>>(new Set())
+  const [useForOther, setUseForOther] = useState('')
   const [goals, setGoals] = useState<Set<string>>(new Set())
   const [goalsOther, setGoalsOther] = useState('')
   const [aiApps, setAiApps] = useState<Set<string>>(new Set())
@@ -32,8 +32,9 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
     setSaving(true)
     try {
       if (!skip) {
-        const resolveWorkRole =
-          workRole === 'Other' ? workRoleOther.trim() || 'Other' : workRole
+        const resolveUseFor = [...useFor].map((u) =>
+          u === 'Other' ? useForOther.trim() || 'Other' : u,
+        )
         const resolveGoals = [...goals].map((g) =>
           g === 'Other' ? goalsOther.trim() || 'Other' : g,
         )
@@ -45,7 +46,7 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
         )
         const { savePreferences } = await import('@/services/preferences')
         await savePreferences({
-          ...(resolveWorkRole ? { work_role: resolveWorkRole } : {}),
+          ...(resolveUseFor.length > 0 ? { use_for: resolveUseFor } : {}),
           ...(resolveGoals.length > 0 ? { goals: resolveGoals } : {}),
           ...(resolveAiApps.length > 0 ? { ai_apps: resolveAiApps } : {}),
           ...(resolveHelpTopics.length > 0
@@ -95,41 +96,42 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
         We use these to suggest relevant agents and skills. All optional.
       </p>
 
-      {/* Q1: work_role, single pick */}
+      {/* Q1: use_for, multi pick */}
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-slate-900 dark:text-white">
-          What kind of work do you do?
+          What will you use AgentLemon for?
         </legend>
         <div className="flex flex-wrap gap-2">
           {[
-            'Software',
-            'Data or finance',
-            'Research or academia',
-            'Writing, marketing, or creative',
-            'Operations or business',
-            'Student',
+            'School',
+            'My job',
+            'Coding projects',
+            'Writing',
+            'Research',
+            'Business',
+            'Personal projects',
           ].map((opt) => (
             <OptionButton
               key={opt}
               value={opt}
-              selected={workRole === opt}
-              onClick={() => setWorkRole(workRole === opt ? '' : opt)}
-              multi={false}
+              selected={useFor.has(opt)}
+              onClick={() => toggleMulti(useFor, setUseFor, opt)}
+              multi={true}
             />
           ))}
           <OptionButton
             value="Other"
-            selected={workRole === 'Other'}
-            onClick={() => setWorkRole(workRole === 'Other' ? '' : 'Other')}
-            multi={false}
+            selected={useFor.has('Other')}
+            onClick={() => toggleMulti(useFor, setUseFor, 'Other')}
+            multi={true}
           />
-          {workRole === 'Other' && (
+          {useFor.has('Other') && (
             <input
               type="text"
               maxLength={60}
-              placeholder="Describe your work"
-              value={workRoleOther}
-              onChange={(e) => setWorkRoleOther(e.target.value)}
+              placeholder="What else?"
+              value={useForOther}
+              onChange={(e) => setUseForOther(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             />
           )}
