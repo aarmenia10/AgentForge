@@ -97,6 +97,37 @@ test('computeSuggestions maps work_role Data or finance to finance', () => {
   assert.equal(result.skills[0].id, 'finance-skill')
 })
 
+test('computeSuggestions maps use_for answers to their categories', () => {
+  const schoolResult = computeSuggestions(
+    { use_for: ['School'] },
+    SAMPLE_AGENTS,
+    SAMPLE_SKILLS,
+  )
+  const schoolAgentIds = schoolResult.agents.slice(0, 2).map((a) => a.id)
+  assert.ok(schoolAgentIds.includes('research-agent'))
+  assert.ok(schoolAgentIds.includes('creative-agent'))
+  assert.equal(schoolResult.skills[0].id, 'creative-skill')
+
+  const codingResult = computeSuggestions(
+    { use_for: ['Coding projects'] },
+    SAMPLE_AGENTS,
+    SAMPLE_SKILLS,
+  )
+  const codingAgentIds = codingResult.agents.slice(0, 2).map((a) => a.id)
+  assert.ok(codingAgentIds.includes('coding-agent'))
+  assert.ok(codingAgentIds.includes('devops-agent'))
+})
+
+test('computeSuggestions still maps legacy work_role answers', () => {
+  const result = computeSuggestions(
+    { work_role: 'Data or finance' },
+    SAMPLE_AGENTS,
+    SAMPLE_SKILLS,
+  )
+  assert.equal(result.agents[0].id, 'finance-agent')
+  assert.equal(result.skills[0].id, 'finance-skill')
+})
+
 test('computeSuggestions maps help_topics Coding and Writing to coding and creative', () => {
   const result = computeSuggestions(
     { help_topics: ['Coding', 'Writing'] },
