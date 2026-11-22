@@ -360,9 +360,9 @@ test('R-14: a comment of 1,001 characters is denied, 1,000 is allowed', async ()
 test('R-15: a comment with a hard-core blocked word is denied, whole words only, any case', async () =>
   scenario(async ({ as }) => {
     for (const body of [
-      'Check out this word1 today',
-      'Here is a BADWORD',
-      'spamword.',
+      'You absolute retard today',
+      'Here is a RETARD',
+      'retards.',
     ])
       await assertFails(rawComment(as('bob'), 'bob', { body }))
   }))
@@ -371,7 +371,8 @@ test('R-16: a comment with only non-hard-core words, or a blocked word inside a 
   scenario(async ({ as }) => {
     for (const body of [
       'Useful for my pipeline',
-      'My password1 is safe and my sword1 is sharp',
+      'This is bullshit but allowed by the rules',
+      'A fire retardant coating from Scunthorpe',
     ])
       await assertSucceeds(rawComment(as('bob'), 'bob', { body }))
   }))

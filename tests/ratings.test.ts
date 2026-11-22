@@ -23,33 +23,34 @@ test('B-01: clean text passes blocked words check', () => {
 })
 
 test('B-02: blocked word is rejected', () => {
-  assert.equal(noBlockedWordsClient('buy now word1'), false)
-  assert.equal(hasBlockedWord('buy now word1'), true)
-  assert.equal(noBlockedWordsClient('this is a badword here'), false)
-  assert.equal(noBlockedWordsClient('spamword test'), false)
+  assert.equal(noBlockedWordsClient('this is bullshit'), false)
+  assert.equal(hasBlockedWord('this is bullshit'), true)
+  assert.equal(noBlockedWordsClient('what a retard here'), false)
+  assert.equal(noBlockedWordsClient('shit test'), false)
 })
 
 test('B-03: blocked words are case-insensitive', () => {
-  assert.equal(noBlockedWordsClient('WORD1'), false)
-  assert.equal(noBlockedWordsClient('BadWord'), false)
-  assert.equal(noBlockedWordsClient('SPAM'), false)
-  assert.equal(hasBlockedWord('Word1'), true)
+  assert.equal(noBlockedWordsClient('BULLSHIT'), false)
+  assert.equal(noBlockedWordsClient('ReTaRd'), false)
+  assert.equal(noBlockedWordsClient('Shit'), false)
+  assert.equal(hasBlockedWord('Porn'), true)
 })
 
 test('Whole-word boundaries accept innocent words containing blocked words', () => {
-  // Innocent words that contain "word1" or "badword" or "spam" or "scam" as substrings
-  assert.equal(noBlockedWordsClient('sword1 is a cool weapon'), true)
-  assert.equal(noBlockedWordsClient('my password1 is secure'), true)
-  assert.equal(noBlockedWordsClient('word1ing is not a word'), true)
-  assert.equal(noBlockedWordsClient('crossbadwords are interesting'), true)
-  assert.equal(noBlockedWordsClient('the spammer sent emails'), true)
-  assert.equal(noBlockedWordsClient('he was scammed by someone'), true)
+  // Innocent words that contain a blocked word as part of a longer word
+  assert.equal(noBlockedWordsClient('Scunthorpe is a town in England'), true)
+  assert.equal(noBlockedWordsClient('a fire retardant coating'), true)
+  assert.equal(noBlockedWordsClient('I read Dickens and had a cocktail'), true)
+  assert.equal(
+    noBlockedWordsClient('shiitake mushrooms and a classic assessment'),
+    true,
+  )
+  assert.equal(noBlockedWordsClient('spam and scam are not blocked'), true)
 
   // Explicit standalone blocked words must fail
-  assert.equal(noBlockedWordsClient('sword1 word1'), false)
-  assert.equal(noBlockedWordsClient('password1 badword'), false)
-  assert.equal(noBlockedWordsClient('word1'), false)
-  assert.equal(noBlockedWordsClient('badword'), false)
+  assert.equal(noBlockedWordsClient('a cocktail and a cock'), false)
+  assert.equal(noBlockedWordsClient('retardant retard'), false)
+  assert.equal(noBlockedWordsClient('porn'), false)
 })
 
 test('Hard-core blocked words list is non-empty and all match', () => {

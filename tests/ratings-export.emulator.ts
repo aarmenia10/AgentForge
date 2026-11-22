@@ -207,7 +207,7 @@ test('F9: the static file keeps the newest 50 comments, oldest first, and leaves
         // Comment 58 was deleted. Comment 59 has a blocked word. Both are among the newest.
         deleted: i === 58,
       })
-    await comments.doc('c59').update({ body: 'This one has a badword in it' })
+    await comments.doc('c59').update({ body: 'This one is bullshit' })
     const log: string[] = []
     const result = await readFirestoreExport(db, [], [], (n) =>
       log.push(n.id + ':' + n.reason),
