@@ -1,12 +1,32 @@
 import rawBlockedWords from '../../public/blocked-words.json'
 
 export const HARD_CORE_BLOCKED_WORDS = [
-  'word1',
-  'badword',
-  'spamword',
-  'hateword',
-  'slurword',
-  'hardcoreword',
+  'nigger',
+  'niggers',
+  'nigga',
+  'niggas',
+  'faggot',
+  'faggots',
+  'kike',
+  'kikes',
+  'spic',
+  'spics',
+  'chink',
+  'chinks',
+  'wetback',
+  'wetbacks',
+  'tranny',
+  'trannies',
+  'gook',
+  'gooks',
+  'raghead',
+  'ragheads',
+  'towelhead',
+  'towelheads',
+  'beaner',
+  'beaners',
+  'retard',
+  'retards',
 ] as const
 
 let cachedWords: string[] | null = null
@@ -46,7 +66,7 @@ function escapeRegex(str: string): string {
 /**
  * Checks whether the text contains any blocked word matching whole words only.
  * Case-insensitive. Word boundary match ensures innocent words containing
- * a blocked word substring (e.g. "password1", "sword1") are accepted.
+ * a blocked word substring (e.g. "Scunthorpe", "retardant") are accepted.
  *
  * Returns true if clean (no blocked words), false if a blocked word is found.
  */

@@ -5,7 +5,7 @@
 
 # P3-13 Ratings Design — Thumbs, Comments, Reports
 
-> **The blocked-words list is a placeholder.** `public/blocked-words.json` holds stand-in entries only. It awaits the owner's approved list, and comments must not go live before it is replaced.
+> **Blocked-words list:** the owner approved the list in `public/blocked-words.json` on 2026-11-22. Its first entries (slurs) are also compiled into the `noBlockedWords` rule; the rest (strong profanity and sexual words) are checked in the browser and the exporter. A test keeps the rules list equal to the front of the file.
 >
 > **As built (2026-11-20 rework of PR #28).** Where this design and the code differ, the code and the README decision log win. The differences:
 >
