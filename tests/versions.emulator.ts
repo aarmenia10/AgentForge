@@ -1,8 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, access } from 'node:fs/promises'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
+import { join } from 'node:path'
 import {
   initializeTestEnvironment,
   assertFails,
@@ -19,8 +18,9 @@ import { SEED_AGENTS } from '../src/data/seedAgents'
 import { createAgentStore } from '../src/services/agentStore'
 import { createProfileStore } from '../src/services/profileStore'
 import { agentResolver, loadCatalog } from '../packages/mcp-server/src/catalog'
+import { createEmulatorCatalogExport } from './emulatorCatalogExport'
 
-test('approved versions are atomic, exact, immutable and cannot be reused', async () => {
+test('approved versions are atomic, exact, immutable and cannot be reused', async (t) => {
   const env = await initializeTestEnvironment({
     projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
@@ -35,19 +35,10 @@ test('approved versions are atomic, exact, immutable and cannot be reused', asyn
   const admin = createAgentStore(adminDb, 'admin')
   const id = 'history-agent'
   const manifest = { ...SEED_AGENTS[0], id, version: '1.0.0' }
-  const exportLive = () =>
-    promisify(execFile)(
-      process.execPath,
-      ['--import', 'tsx', 'scripts/export-catalog.ts'],
-      {
-        env: {
-          ...process.env,
-          AGENTLEMON_CATALOG_SOURCE: 'firestore',
-          GOOGLE_CLOUD_PROJECT: 'demo-agentlemon',
-        },
-      },
-    )
   try {
+    const { directory, run: exportLive } = await createEmulatorCatalogExport(t)
+    const catalogPath = join(directory, 'catalog.json')
+    const versionsPath = join(directory, 'agents', id)
     await env.clearFirestore()
     await env.withSecurityRulesDisabled(async (c) =>
       setDoc(doc(c.firestore(), 'admins/admin'), {}),
@@ -121,21 +112,18 @@ test('approved versions are atomic, exact, immutable and cannot be reused', asyn
       )
     })
     await exportLive()
-    const catalog = await loadCatalog('public/catalog.json')
+    const catalog = await loadCatalog(catalogPath)
     assert.equal(catalog.find((agent) => agent.id === id)?.version, '1.1.0')
-    const historical = await agentResolver(
-      catalog,
-      'public/catalog.json',
-    )(`${id}@1.0.0`)
+    const historical = await agentResolver(catalog, catalogPath)(`${id}@1.0.0`)
     assert.equal(historical.name, manifest.name)
     assert.deepEqual(historical.prompt_blueprint, manifest.prompt_blueprint)
-    await access(`public/agents/${id}/1.1.0.json`)
+    await access(join(versionsPath, '1.1.0.json'))
     // Private drafts may reuse a version; approving changed content at that
     // version must still fail, even after another version was published.
     await owner.setAgentVisibility(id, 'private')
     await exportLive()
-    await assert.rejects(access(`public/agents/${id}/1.0.0.json`))
-    await assert.rejects(access(`public/agents/${id}/1.1.0.json`))
+    await assert.rejects(access(join(versionsPath, '1.0.0.json')))
+    await assert.rejects(access(join(versionsPath, '1.1.0.json')))
     await owner.updateAgent({
       ...manifest,
       visibility: 'private',
@@ -145,11 +133,6 @@ test('approved versions are atomic, exact, immutable and cannot be reused', asyn
     await assertFails(admin.reviewAgent(id, 'approved'))
     assert.equal((await owner.getAgentRecord(id))?.review_status, 'pending')
   } finally {
-    await promisify(execFile)(
-      process.execPath,
-      ['--import', 'tsx', 'scripts/export-catalog.ts'],
-      { env: { ...process.env, AGENTLEMON_CATALOG_SOURCE: 'seed' } },
-    )
     await env.cleanup()
   }
 })
