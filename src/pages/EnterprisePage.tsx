@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore'
 import { useAuth } from '@/auth/AuthProvider'
 import { PageShell } from '@/components/PageShell'
+import RequestDemo from '@/components/RequestDemo'
 import { getFirebaseServices } from '@/lib/firebase'
 
 const button =
@@ -36,6 +37,7 @@ export default function EnterprisePage() {
   )
   return (
     <PageShell title={demo ? 'Enterprise Demo' : 'AgentForce Enterprise'}>
+      <RequestDemo />
       <button className={`${button} mb-4`} onClick={() => setDemo(!demo)}>
         {demo ? 'Back to AgentForce Enterprise' : 'Enterprise Demo'}
       </button>
