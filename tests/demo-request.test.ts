@@ -6,6 +6,8 @@ import {
   validateRequest,
 } from '../functions/demo-request.js'
 
+import { isDemoFounder, normalizeDemoRequest } from '../src/lib/demoRequest'
+
 const sample = {
   requestId: '01234567-0123-0123-0123-012345678901',
   website: '',
@@ -61,4 +63,29 @@ test('email uses configured recipients and inquiry fields', async () => {
   await assert.rejects(
     sendEmail(data, config, 'test-id', async () => ({ ok: false })),
   )
+})
+
+
+test('public form normalizes fields and enforces the honeypot', () => {
+  assert.equal(normalizeDemoRequest({ ...sample, name: ' Jane ' }).name, 'Jane')
+  assert.throws(() => normalizeDemoRequest({ ...sample, website: 'spam' }))
+  assert.throws(() => normalizeDemoRequest({ ...sample, email: 'invalid' }))
+})
+
+test('only verified founder email addresses qualify', () => {
+  const user = {
+    uid: 'founder',
+    displayName: 'Founder',
+    avatarUrl: null,
+    emailVerified: true,
+    email: 'tcerto1234@gmail.com',
+  }
+  assert.equal(isDemoFounder(user), true)
+  assert.equal(
+    isDemoFounder({ ...user, email: 'aidanarmenia10@gmail.com' }),
+    true,
+  )
+  assert.equal(isDemoFounder({ ...user, emailVerified: false }), false)
+  assert.equal(isDemoFounder({ ...user, email: 'admin@example.com' }), false)
+  assert.equal(isDemoFounder(null), false)
 })

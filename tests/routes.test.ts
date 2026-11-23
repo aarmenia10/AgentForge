@@ -15,6 +15,7 @@ test('static pages match, with or without one trailing slash', () => {
     ['/friends/', 'friends'],
     ['/studio', 'studio'],
     ['/review', 'review'],
+    ['/admin/demo-requests', 'demo-requests'],
     ['/review/', 'review'],
     ['/suggestions', 'suggestions'],
     ['/suggestions/', 'suggestions'],

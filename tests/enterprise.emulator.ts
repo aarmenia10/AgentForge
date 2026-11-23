@@ -7,6 +7,9 @@ import {
 } from '@firebase/rules-unit-testing'
 import {
   Bytes,
+  collection,
+  deleteDoc,
+  getDocs,
   doc,
   getDoc,
   setDoc,
@@ -176,29 +179,76 @@ test('demo workspaces require verified invited and approved members', async () =
   }
 })
 
-test('demo inquiries are only readable by platform administrators', async () => {
+test('demo inquiries accept public creates and enforce verified founder access', async () => {
   const env = await initializeTestEnvironment({
     projectId: 'demo-agentlemon',
     firestore: { rules: await readFile('firestore.rules', 'utf8') },
   })
   try {
     await env.clearFirestore()
-    const path = 'enterprise_demo_requests/inquiry'
-    await env.withSecurityRulesDisabled(async (context) => {
-      const db = context.firestore()
-      await setDoc(doc(db, 'admins/platform-admin'), {})
-      await setDoc(doc(db, path), { company: 'Acme' })
-    })
-    const admin = env.authenticatedContext('platform-admin').firestore()
-    const employee = env.authenticatedContext('employee').firestore()
+    const account = (uid: string, email: string, verified = true) =>
+      env
+        .authenticatedContext(uid, { email, email_verified: verified })
+        .firestore()
+    const thomas = account('thomas', 'tcerto1234@gmail.com')
+    const aidan = account('aidan', 'aidanarmenia10@gmail.com')
+    const admin = account('platform-admin', 'admin@acme.example')
+    const unverified = account('unverified', 'tcerto1234@gmail.com', false)
     const anonymous = env.unauthenticatedContext().firestore()
-    await assertSucceeds(getDoc(doc(admin, path)))
-    for (const db of [admin, employee, anonymous]) {
-      await assertFails(setDoc(doc(db, path), { company: 'Other' }))
-      await assertFails(getDoc(doc(db, 'enterprise_demo_rate_limits/global')))
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'admins/platform-admin'), {})
+      await setDoc(
+        doc(context.firestore(), 'enterprise_demo_requests/legacy'),
+        { company: 'Legacy' },
+      )
+    })
+    const path = 'enterprise_demo_inbox/' + 'a'.repeat(64)
+    const sample = {
+      name: 'Jane Doe',
+      position: 'CEO',
+      company: 'Acme',
+      email: 'jane@acme.example',
+      size: '',
+      description: 'Private collaboration',
+      website: '',
+      submittedAt: serverTimestamp(),
+      status: 'New',
     }
-    for (const db of [employee, anonymous])
+    await assertSucceeds(setDoc(doc(anonymous, path), sample))
+    await assertFails(setDoc(doc(anonymous, path), sample))
+    for (const change of [
+      { notes: 'Not allowed' },
+      { status: 'Completed' },
+      { website: 'spam' },
+      { email: 'invalid' },
+      { company: ' ' },
+    ])
+      await assertFails(
+        setDoc(doc(anonymous, 'enterprise_demo_inbox/' + 'b'.repeat(64)), {
+          ...sample,
+          ...change,
+        }),
+      )
+    for (const db of [admin, unverified, anonymous]) {
       await assertFails(getDoc(doc(db, path)))
+      await assertFails(getDocs(collection(db, 'enterprise_demo_inbox')))
+      await assertFails(getDoc(doc(db, 'enterprise_demo_requests/legacy')))
+      await assertFails(updateDoc(doc(db, path), { status: 'Contacted' }))
+      await assertFails(deleteDoc(doc(db, path)))
+    }
+    for (const db of [thomas, aidan]) {
+      await assertSucceeds(getDoc(doc(db, path)))
+      await assertSucceeds(getDocs(collection(db, 'enterprise_demo_inbox')))
+      await assertSucceeds(getDoc(doc(db, 'enterprise_demo_requests/legacy')))
+      await assertSucceeds(
+        updateDoc(doc(db, path), {
+          status: 'Contacted',
+          notes: 'Follow up',
+        }),
+      )
+      await assertFails(updateDoc(doc(db, path), { company: 'Changed' }))
+    }
+    await assertSucceeds(deleteDoc(doc(aidan, path)))
   } finally {
     await env.cleanup()
   }
