@@ -942,5 +942,99 @@ service cloud.firestore {
       }
     }
 
+    // Demo tenants are owner-scoped, never domain-scoped or production tenants.
+    function demoOrg(workspace) {
+      return /databases/$(database)/documents/enterprise_demos/$(workspace);
+    }
+    function demoMember(workspace, uid) {
+      return /databases/$(database)/documents/enterprise_demos/$(workspace)/members/$(uid);
+    }
+    function demoInvite(workspace, email) {
+      return /databases/$(database)/documents/enterprise_demos/$(workspace)/invites/$(email);
+    }
+    function demoCompanyEmail(domain) {
+      return enterpriseEmail(domain)
+        && domain.matches('^[a-z0-9][a-z0-9.-]*[.][a-z]{2,}$')
+        && !(domain in ['gmail.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com', 'icloud.com', 'aol.com', 'proton.me', 'protonmail.com', 'mail.com', 'msn.com', 'yandex.com', 'gmx.com']);
+    }
+    function demoIdentity(workspace) {
+      return demoCompanyEmail(get(demoOrg(workspace)).data.domain);
+    }
+    function demoAdmin(workspace) {
+      return signedIn() && request.auth.uid == workspace
+        && demoIdentity(workspace)
+        && get(demoOrg(workspace)).data.email == request.auth.token.email;
+    }
+    function demoActive(workspace) {
+      return demoAdmin(workspace) || (demoIdentity(workspace)
+        && get(demoMember(workspace, request.auth.uid)).data.active == true
+        && get(demoMember(workspace, request.auth.uid)).data.email == request.auth.token.email);
+    }
+    match /enterprise_demos/{workspace} {
+      allow get: if (verifiedEmail() && request.auth.uid == workspace
+        && !exists(demoOrg(workspace))) || demoActive(workspace);
+      allow create: if signedIn() && request.auth.uid == workspace
+        && request.resource.data.keys().hasOnly(['owner', 'email', 'domain', 'name'])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && demoCompanyEmail(request.resource.data.domain)
+        && request.resource.data.name == request.resource.data.domain;
+      match /invites/{email} {
+        allow get: if demoAdmin(workspace) || (demoIdentity(workspace)
+          && email == request.auth.token.email.lower());
+        allow create, update: if demoAdmin(workspace)
+          && request.resource.data.keys().hasOnly(['email'])
+          && request.resource.data.email == email
+          && email.split('@').size() == 2
+          && email.split('@')[1] == get(demoOrg(workspace)).data.domain;
+        allow delete: if demoAdmin(workspace);
+      }
+      match /members/{uid} {
+        allow get: if demoIdentity(workspace) && (request.auth.uid == uid || demoAdmin(workspace));
+        allow list: if demoAdmin(workspace) && bounded();
+        allow create: if demoAdmin(workspace) && uid != workspace
+          && request.resource.data.keys().hasOnly(['role', 'active', 'email'])
+          && request.resource.data.email == get(/databases/$(database)/documents/enterprise_demos/$(workspace)/requests/$(uid)).data.email
+          && exists(demoInvite(workspace, request.resource.data.email.lower()))
+          && request.resource.data.role == 'member' && request.resource.data.active == true;
+        allow update: if demoAdmin(workspace)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active'])
+          && request.resource.data.active is bool;
+      }
+      match /requests/{uid} {
+        allow get: if demoIdentity(workspace) && (request.auth.uid == uid || demoAdmin(workspace));
+        allow list: if demoAdmin(workspace) && bounded();
+        allow create: if demoIdentity(workspace) && request.auth.uid == uid
+          && !exists(demoMember(workspace, uid))
+          && request.resource.data.keys().hasOnly(['email'])
+          && request.resource.data.email == request.auth.token.email
+          && exists(demoInvite(workspace, request.auth.token.email.lower()));
+        allow delete: if demoAdmin(workspace);
+      }
+      match /items/{id} {
+        function validEnterpriseItem() {
+          let d = request.resource.data;
+          return d.keys().hasOnly(['name', 'description', 'category', 'kind', 'filename', 'owner', 'creator', 'createdAt', 'file'])
+            && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+            && d.description is string && d.description.size() <= 2000
+            && d.category is string && d.category.size() <= 80
+            && d.kind in ['agent', 'skill']
+            && d.filename is string && d.filename.size() > 0 && d.filename.size() <= 200
+            && d.file is bytes && d.file.size() > 0 && d.file.size() <= 262144;
+        }
+        allow get: if demoActive(workspace);
+        allow list: if demoActive(workspace) && bounded();
+        allow create: if demoActive(workspace) && validEnterpriseItem()
+          && request.resource.data.owner == request.auth.uid
+          && request.resource.data.creator == request.auth.token.email
+          && request.resource.data.createdAt == request.time;
+        allow update: if demoActive(workspace) && validEnterpriseItem()
+          && (resource.data.owner == request.auth.uid || demoAdmin(workspace))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'description', 'category', 'kind', 'filename', 'file']);
+        allow delete: if demoActive(workspace)
+          && (resource.data.owner == request.auth.uid || demoAdmin(workspace));
+      }
+    }
+
   }
 }

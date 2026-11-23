@@ -31,8 +31,21 @@ const panel =
 export default function EnterprisePage() {
   const auth = useAuth()
   const user = auth.user
+  const [demo, setDemo] = useState(() =>
+    new URLSearchParams(window.location.search).has('demo'),
+  )
   return (
-    <PageShell title="AgentForce Enterprise">
+    <PageShell title={demo ? 'Enterprise Demo' : 'AgentForce Enterprise'}>
+      <button className={`${button} mb-4`} onClick={() => setDemo(!demo)}>
+        {demo ? 'Back to AgentForce Enterprise' : 'Enterprise Demo'}
+      </button>
+      {demo && (
+        <p className="mb-4">
+          Try a private demo workspace with a verified company email. No DNS
+          verification is required. Demo access does not verify company
+          ownership.
+        </p>
+      )}
       <p className="mb-6">
         Your company's private workspace for AI agents and skills. Share
         knowledge securely within your organization, separate from the public
@@ -90,6 +103,12 @@ export default function EnterprisePage() {
             I have verified my email
           </button>
         </div>
+      ) : demo ? (
+        <DemoWorkspace
+          key={user.uid + ':' + user.email}
+          uid={user.uid}
+          email={user.email}
+        />
       ) : (
         <Workspace
           key={user.uid + ':' + user.email}
@@ -98,6 +117,146 @@ export default function EnterprisePage() {
         />
       )}
     </PageShell>
+  )
+}
+
+function DemoWorkspace({ uid, email }: { uid: string; email: string }) {
+  const [workspace, setWorkspace] = useState(() => {
+    const code = new URLSearchParams(window.location.search).get('demo')
+    return code && /^[a-zA-Z0-9_-]+$/.test(code) ? code : uid
+  })
+  const [target, setTarget] = useState(workspace)
+  return (
+    <div className="space-y-4">
+      <p>Signed in as {email}</p>
+      <form
+        className={panel}
+        onSubmit={(event) => {
+          event.preventDefault()
+          setWorkspace(target.trim())
+        }}
+      >
+        <label className="block">
+          Invited to a workspace? Enter its invitation code.
+          <input
+            className={input}
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            required
+            pattern="[a-zA-Z0-9_-]+"
+          />
+        </label>
+        <button className={button}>Open workspace</button>
+        <button
+          type="button"
+          className="ml-3 underline"
+          onClick={() => {
+            setTarget(uid)
+            setWorkspace(uid)
+          }}
+        >
+          My demo
+        </button>
+      </form>
+      <DemoAccess
+        key={workspace}
+        workspace={workspace}
+        uid={uid}
+        email={email}
+      />
+    </div>
+  )
+}
+
+function DemoAccess({
+  workspace,
+  uid,
+  email,
+}: {
+  workspace: string
+  uid: string
+  email: string
+}) {
+  const { db } = getFirebaseServices()
+  const domain = email.split('@')[1]?.toLowerCase() ?? ''
+  const [role, setRole] = useState<string | null>(null)
+  const [message, setMessage] = useState('Checking demo access…')
+
+  useEffect(() => {
+    let live = true
+    const org = doc(db, 'enterprise_demos', workspace)
+    if (workspace === uid) {
+      async function connect() {
+        const current = await getDocFromServer(org)
+        if (!current.exists())
+          await setDoc(org, { owner: uid, email, domain, name: domain })
+        if (live) setRole('admin')
+      }
+      void connect().catch(() => {
+        if (live) setMessage('Demo unavailable. Use a verified company email.')
+      })
+      return () => {
+        live = false
+      }
+    }
+    const stop = onSnapshot(
+      doc(org, 'members', uid),
+      { includeMetadataChanges: true },
+      (snap) => {
+        setRole(
+          !snap.metadata.fromCache &&
+            snap.data()?.active &&
+            snap.data()?.email === email
+            ? 'member'
+            : null,
+        )
+        setMessage('Request access using your invitation.')
+      },
+      () => {
+        setRole(null)
+        setMessage('Demo unavailable. Check your invitation.')
+      },
+    )
+    return stop
+  }, [db, workspace, uid, email, domain])
+
+  if (role)
+    return (
+      <Repository
+        key={workspace + ':' + role}
+        domain={workspace}
+        uid={uid}
+        email={email}
+        admin={role === 'admin'}
+        demo
+      />
+    )
+  return (
+    <>
+      <p role="status">{message}</p>
+      {workspace !== uid && (
+        <button
+          className={button}
+          onClick={() => {
+            void setDoc(doc(db, 'enterprise_demos', workspace, 'requests', uid), {
+              email,
+            })
+              .then(() =>
+                setMessage(
+                  'Request sent. Your administrator must approve access.',
+                ),
+              )
+              .catch(() =>
+                setMessage(
+                  'Access request not accepted. Check your invitation.',
+                ),
+              )
+          }}
+        >
+          Request demo access
+        </button>
+      )}
+    </>
   )
 }
 
@@ -248,14 +407,16 @@ function Repository({
   uid,
   email,
   admin,
+  demo = false,
 }: {
   domain: string
   uid: string
   email: string
   admin: boolean
+  demo?: boolean
 }) {
   const { db } = getFirebaseServices()
-  const org = doc(db, 'enterprise_orgs', domain)
+  const org = doc(db, demo ? 'enterprise_demos' : 'enterprise_orgs', domain)
   const [items, setItems] = useState<Array<DocumentData & { id: string }>>([])
   const [requests, setRequests] = useState<
     Array<DocumentData & { id: string }>
@@ -264,6 +425,7 @@ function Repository({
     [],
   )
   const [company, setCompany] = useState(domain)
+  const [inviteEmail, setInviteEmail] = useState('')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -275,7 +437,7 @@ function Repository({
   const [busy, setBusy] = useState(false)
 
   const refresh = useCallback(async () => {
-    const org = doc(db, 'enterprise_orgs', domain)
+    const org = doc(db, demo ? 'enterprise_demos' : 'enterprise_orgs', domain)
     const read = async (sub: string) => {
       const result: Array<DocumentData & { id: string }> = []
       let cursor: QueryDocumentSnapshot | undefined
@@ -300,7 +462,7 @@ function Repository({
       setRequests(await read('requests'))
       setMembers(await read('members'))
     }
-  }, [db, domain, admin])
+  }, [db, domain, admin, demo])
   useEffect(() => {
     void refresh().catch(() => setMessage('Unable to load your repository.'))
   }, [refresh])
@@ -364,7 +526,8 @@ function Repository({
   return (
     <div className="space-y-6">
       <p className="font-semibold text-teal-600 dark:text-teal-300">
-        {company} · Private repository · {admin ? 'Administrator' : 'Member'}
+        {company} · {demo ? 'Enterprise Demo' : 'Private repository'} ·{' '}
+        {admin ? 'Administrator' : 'Member'}
       </p>
       <form className={panel} onSubmit={submit}>
         <h2 className="font-semibold">
@@ -524,6 +687,41 @@ function Repository({
       {admin && (
         <section className={panel}>
           <h2 className="font-semibold">Employee access</h2>
+          {demo && (
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void act(async () => {
+                  const address = inviteEmail.trim().toLowerCase()
+                  await setDoc(doc(org, 'invites', address), { email: address })
+                  setInviteEmail('')
+                  setMessage(
+                    'Invitation saved. Share the code below with your coworker.',
+                  )
+                })
+              }}
+            >
+              <label className="block">
+                Coworker company email
+                <input
+                  type="email"
+                  className={input}
+                  required
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </label>
+              <button className={button} disabled={busy}>
+                Invite coworker
+              </button>
+              <p className="break-all text-sm">Invitation code: {domain}</p>
+              <p>
+                Share this code privately. Invited coworkers must verify their
+                email and request access for your approval.
+              </p>
+            </form>
+          )}
           {requests.map((request) => (
             <div className="flex flex-wrap gap-2" key={request.id}>
               <span>{request.email}</span>
@@ -579,7 +777,7 @@ function Repository({
                   </button>
                   <button
                     className="underline"
-                    disabled={busy}
+                    disabled={busy || demo}
                     onClick={() =>
                       void act(() =>
                         updateDoc(doc(org, 'members', member.id), {

@@ -23,3 +23,11 @@ The dashboard reads the library and employee lists in bounded pages of 50. Large
 ## Verification
 
 Run npm run typecheck, npm run lint, npm test and npm run test:firestore. Verify registration with a real DNS domain in a staging project before deployment.
+
+## Enterprise Demo
+
+The Enterprise Demo button opens an independent, owner-scoped workspace after corporate email verification. It does not claim ownership of a domain or provide production Enterprise access. Common consumer email domains are blocked; email-only verification cannot prove company ownership or authorization. Use sample data unless your organization authorizes confidential uploads.
+
+The demo owner can invite an exact coworker email on the same domain and share the workspace code. The coworker verifies their email, enters the code, and requests access. The owner must approve before access is granted. Matching domains alone confer no repository access. Demo members can be disabled by the owner.
+
+Demo data is stored exclusively under `enterprise_demos/{ownerUid}`, with separate rules and no public export integration. The same 256 KiB package limit applies. Demo registration does not change production DNS verification.
