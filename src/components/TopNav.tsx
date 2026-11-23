@@ -1,5 +1,4 @@
-import { Anvil, Moon, Search, Sun } from 'lucide-react'
-import { useTheme } from '@/theme/ThemeProvider'
+import { Anvil, Search } from 'lucide-react'
 import { AGENT_CATEGORIES, type AgentCategoryTag } from '@/types/agent'
 import { Link, useRoute } from '@/router/Router'
 import { AppearanceMenu } from './appearance/AppearanceMenu'
@@ -22,9 +21,12 @@ const navLink =
   'inline-flex h-10 items-center rounded-full px-2.5 text-sm font-medium transition sm:px-3.5'
 
 export function TopNav({ search }: TopNavProps) {
-  const { theme, toggleTheme } = useTheme()
   const { route } = useRoute()
   const onSkills = route.name === 'skills' || route.name === 'skill'
+  const onCouncils =
+    route.name === 'councils' ||
+    route.name === 'council' ||
+    route.name === 'council-member'
 
   return (
     // Relative to this header, the Appearance panel opens just under it. The
@@ -64,15 +66,14 @@ export function TopNav({ search }: TopNavProps) {
           >
             Skills
           </Link>
-          <AppearanceMenu />
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            className="grid size-10 place-items-center rounded-full text-fg-muted transition hover:bg-surface hover:text-fg"
+          <Link
+            to="/councils"
+            aria-current={onCouncils ? 'page' : undefined}
+            className={cn(navLink, onCouncils ? 'text-accent-fg' : 'text-fg-muted hover:bg-surface hover:text-fg')}
           >
-            {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
-          </button>
+            Councils
+          </Link>
+          <AppearanceMenu />
           <AccountMenu />
         </div>
       </div>

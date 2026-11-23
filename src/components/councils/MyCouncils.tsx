@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { originLabel } from '@/lib/portability'
 import { Link } from '@/router/Router'
 import { councilStore } from '@/services/councilStore'
+import { NewCouncilButton } from './NewCouncilButton'
 import {
   smallButton,
   textLink,
@@ -53,6 +54,16 @@ export function MyCouncils({ owner }: { owner?: string }) {
   }
   return (
     <div className="space-y-3">
+      {!owner && (
+        <NewCouncilButton
+          onCreated={(record) =>
+            setItems((current) => [
+              record,
+              ...current.filter(({ id }) => id !== record.id),
+            ])
+          }
+        />
+      )}
       {error && <p role="alert">{error}</p>}
       {!items.length && !busy && !error && (
         <p>
