@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { emailPayload, sendEmail, validateRequest } from '../functions/demo-request.js'
+import {
+  emailPayload,
+  sendEmail,
+  validateRequest,
+} from '../functions/demo-request.js'
 
 const sample = {
   requestId: '01234567-0123-0123-0123-012345678901',
@@ -13,7 +17,7 @@ const sample = {
   description: 'Private collaboration',
 }
 
-test('validates and normalizes an enquiry without retaining extra fields', () => {
+test('normalizes an enquiry and removes extra fields', () => {
   const data = validateRequest({ ...sample, name: ' Jane ', extra: 'ignored' })
   assert.equal(data.name, 'Jane')
   assert.equal(data.extra, undefined)
@@ -32,7 +36,7 @@ test('rejects invalid, oversized and honeypot submissions', () => {
   }
 })
 
-test('email contains all fields and sends only to configured recipients', async () => {
+test('email uses configured recipients and inquiry fields', async () => {
   const data = {
     ...validateRequest(sample),
     submittedAt: '2026-11-23T12:00:00.000Z',

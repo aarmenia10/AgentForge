@@ -6,33 +6,44 @@ The existing Enterprise Demo and production registration paths are unchanged.
 
 ## Required operator setup before publishing
 
-1. Enable Firebase Cloud Functions (Blaze plan), Firestore, and Secret Manager
-   on the correct project. Ensure the deploy operator has Functions, Eventarc,
-   Cloud Build, and Secret Manager permissions.
-2. Create a Resend API key with sending permission and verify a sending domain.
-3. Set the Firebase function secret using
-   `npx firebase functions:secrets:set DEMO_EMAIL_CONFIG --project PROJECT_ID`.
-   At the secret prompt, enter JSON of this shape (replace placeholders locally):
+Enable Firebase Cloud Functions (Blaze plan), Firestore, and Secret Manager
+on the correct project. Ensure the deploy operator has Functions, Eventarc,
+Cloud Build, and Secret Manager permissions.
 
-   ```json
-   {
-     "key": "<API key>",
-     "from": "<verified sender>",
-     "recipients": ["<founder one>", "<founder two>"]
-   }
-   ```
+Create a Resend API key with sending permission and verify a sending domain.
+Set the Firebase function secret using:
 
-   Use both founders' designated addresses as the recipients. Never put the
-   actual configuration in version control or frontend environment variables.
-4. From the feature branch, deploy the functions to a staging Firebase project
-   with `npx firebase deploy --only functions:requestDemo,functions:notifyDemoRequest --project PROJECT_ID`.
-   Deploy the Firestore rules to that same project.
-5. Verify a real test submission produces a Firestore request and one email to
-   both founders with the correct reply-to. Test mobile and desktop, errors,
-   rate limits, and anonymous access. Repeat with production configuration
-   before publishing the frontend; existing CI deploys Hosting and rules only.
-6. Configure Firestore TTL on `enterprise_demo_rate_limits.expiresAt` and
-   monitor the functions and requests with failed or pending delivery status.
+```sh
+npx firebase functions:secrets:set DEMO_EMAIL_CONFIG --project PROJECT_ID
+```
+
+At the secret prompt, enter JSON of this shape (replace placeholders locally):
+
+```json
+{
+  "key": "<API key>",
+  "from": "<verified sender>",
+  "recipients": ["<founder one>", "<founder two>"]
+}
+```
+
+Use both founders' designated addresses as the recipients. Never put the
+actual configuration in version control or frontend environment variables.
+
+From the feature branch, deploy the functions to a staging Firebase project:
+
+```sh
+npx firebase deploy --only functions:requestDemo,functions:notifyDemoRequest --project PROJECT_ID
+```
+
+Deploy the Firestore rules to that same project. Verify a real test submission
+produces a Firestore request and one email to both founders with the correct
+reply-to. Test mobile and desktop, errors, rate limits, and anonymous access.
+Repeat with production configuration before publishing the frontend; existing
+CI deploys Hosting and rules only.
+
+Configure Firestore TTL on `enterprise_demo_rate_limits.expiresAt` and monitor
+the functions and requests with failed or pending delivery status.
 
 Requests are persisted before the email notification, with a server timestamp.
 The notification function retries delivery failures, and the email provider
