@@ -5,7 +5,6 @@ import {
   sendEmail,
   validateRequest,
 } from '../functions/demo-request.js'
-
 import { isDemoFounder, normalizeDemoRequest } from '../src/lib/demoRequest'
 
 const sample = {
@@ -64,7 +63,6 @@ test('email uses configured recipients and inquiry fields', async () => {
     sendEmail(data, config, 'test-id', async () => ({ ok: false })),
   )
 })
-
 
 test('public form normalizes fields and enforces the honeypot', () => {
   assert.equal(normalizeDemoRequest({ ...sample, name: ' Jane ' }).name, 'Jane')

@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { PageHold, PageShell } from '@/components/PageShell'
-import {
-  DEMO_STATUSES,
-  isDemoFounder,
-  type DemoStatus,
-} from '@/lib/demoRequest'
+import { DEMO_STATUSES, isDemoFounder, type DemoStatus } from '@/lib/demoRequest'
 import {
   appendDemoNote,
   deleteDemoRequest,
@@ -50,13 +46,12 @@ function Inbox() {
     [],
   )
 
+  const term = search.trim().toLowerCase()
   const visible = (requests ?? [])
     .filter(
       (r) =>
         (filter === 'All' || r.status === filter) &&
-        `${r.name} ${r.company}`
-          .toLowerCase()
-          .includes(search.trim().toLowerCase()),
+        `${r.name} ${r.company}`.toLowerCase().includes(term),
     )
     .sort((a, b) =>
       oldest

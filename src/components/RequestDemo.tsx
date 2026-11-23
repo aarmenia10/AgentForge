@@ -94,10 +94,7 @@ export default function RequestDemo() {
             personalized demonstration.
           </p>
         ) : (
-          <form
-            onSubmit={(event) => void submit(event)}
-            className="space-y-4"
-          >
+          <form onSubmit={(event) => void submit(event)} className="space-y-4">
             {fields.map((field) => (
               <label key={field.name} className="block space-y-1 text-sm">
                 <span>{field.label}</span>
