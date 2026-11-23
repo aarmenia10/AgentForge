@@ -1,4 +1,8 @@
 {
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
   "hosting": [
     {
       "site": "agentlemon",
@@ -9,6 +13,10 @@
         "**/node_modules/**"
       ],
       "rewrites": [
+        {
+          "source": "/api/enterprise/verify",
+          "function": "enterpriseVerify"
+        },
         {
           "source": "**",
           "destination": "/index.html"
@@ -106,6 +114,10 @@
         "**/node_modules/**"
       ],
       "rewrites": [
+        {
+          "source": "/api/enterprise/verify",
+          "function": "enterpriseVerify"
+        },
         {
           "source": "**",
           "destination": "/index.html"

@@ -20,6 +20,7 @@ import {
 import { useAuth } from '@/auth/AuthProvider'
 import { PageShell } from '@/components/PageShell'
 import { getFirebaseServices } from '@/lib/firebase'
+import { personalEmailDomain, enterpriseRequest } from '@/lib/enterprise'
 
 const button =
   'rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'
@@ -47,7 +48,7 @@ export default function EnterprisePage() {
             onClick={() =>
               auth.openSignIn({
                 mode: 'sign-up',
-                reason: 'Register using your company email.',
+                reason: 'Register using your company email, or use a personal email for a demo.',
               })
             }
           >
@@ -64,7 +65,7 @@ export default function EnterprisePage() {
         </div>
       ) : !user.emailVerified ? (
         <div className="space-y-3">
-          <p>Verify your company email before continuing.</p>
+          <p>Verify your email before continuing.</p>
           <button
             className={button}
             onClick={() =>
@@ -105,16 +106,19 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
   const domain = email.split('@')[1]?.toLowerCase() ?? ''
   const { db } = getFirebaseServices()
   const org = doc(db, 'enterprise_orgs', domain)
-  const registration = doc(db, 'enterprise_registrations', uid)
   const [membership, setMembership] = useState<DocumentData | null | undefined>(
     undefined,
   )
   const [challenge, setChallenge] = useState('')
+  const [existing, setExisting] = useState<boolean | undefined>(undefined)
+  const [requested, setRequested] = useState(false)
+  const [demo, setDemo] = useState(personalEmailDomain(domain))
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
+    if (personalEmailDomain(domain)) return
     const stop = onSnapshot(
       doc(db, 'enterprise_orgs', domain, 'members', uid),
       { includeMetadataChanges: true },
@@ -126,15 +130,31 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
       () => setMembership(null),
     )
     let live = true
+    void getDocFromServer(doc(db, 'enterprise_orgs', domain))
+      .then((snap) => {
+        if (live) setExisting(snap.exists())
+      })
+      .catch(() => {
+        if (live)
+          setMessage(
+            'Unable to check company registration. Refresh and try again.',
+          )
+      })
+    const stopRequests = onSnapshot(
+      doc(db, 'enterprise_orgs', domain, 'requests', uid),
+      (snap) => setRequested(snap.exists()),
+      () => {},
+    )
     void getDocFromServer(doc(db, 'enterprise_registrations', uid))
       .then((snap) => {
-        if (live && snap.data()?.domain === domain)
+        if (live && snap.data()?.domain === domain && snap.data()?.issuedAt)
           setChallenge(snap.data()?.challenge ?? '')
       })
       .catch(() => {})
     return () => {
       live = false
       stop()
+      stopRequests()
     }
   }, [db, domain, uid])
 
@@ -143,15 +163,32 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
     setMessage('')
     try {
       await work()
-    } catch {
+    } catch (error) {
       setMessage(
-        'Request could not be completed. Check your permissions and try again.',
+        error instanceof Error
+          ? error.message
+          : 'Request could not be completed. Try again.',
       )
     } finally {
       setBusy(false)
     }
   }
 
+  if (demo)
+    return (
+      <div className="space-y-4">
+        <p className="font-semibold">Demo workspace · Only you can access it.</p>
+        <p>
+          Use sample files only. This workspace is separate from every company.
+        </p>
+        {!personalEmailDomain(domain) && (
+          <button className={button} onClick={() => setDemo(false)}>
+            Back to company workspace
+          </button>
+        )}
+        <Repository domain={domain} uid={uid} email={email} admin={false} demo />
+      </div>
+    )
   if (membership === undefined) return <p>Checking company access…</p>
   if (membership?.active)
     return (
@@ -165,77 +202,98 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
     )
   return (
     <div className="space-y-4">
-      <p>Signed in as {email}</p>
+      <p>
+        Signed in as {email} · Company domain: {domain}
+      </p>
+      <button className={button} onClick={() => setDemo(true)}>
+        Try Enterprise demo
+      </button>
+      {existing === undefined && <p>Checking company registration…</p>}
       {membership ? (
         <p>Company access is disabled. Contact your company administrator.</p>
       ) : (
         <>
-          <section className={panel}>
-            <h2 className="font-semibold">Join your company</h2>
-            <p>
-              Request access to an existing verified organization. Its
-              administrator must approve you.
-            </p>
-            <button
-              className={button}
-              disabled={busy}
-              onClick={() =>
+          {existing === true && (
+            <section className={panel}>
+              <h2 className="font-semibold">Join your company</h2>
+              <p>
+                Request access to an existing verified organization. Its
+                administrator must approve you.
+              </p>
+              <button
+                className={button}
+                disabled={busy || requested}
+                onClick={() =>
+                  void act(async () => {
+                    await setDoc(doc(org, 'requests', uid), { email })
+                    setRequested(true)
+                    setMessage(
+                      'Access requested. Ask your company administrator to approve it.',
+                    )
+                  })
+                }
+              >
+                {requested ? 'Approval pending' : `Request access to ${domain}`}
+              </button>
+            </section>
+          )}
+          {existing === false && (
+            <form
+              className={panel}
+              onSubmit={(event) => {
+                event.preventDefault()
                 void act(async () => {
-                  await setDoc(doc(org, 'requests', uid), { email })
-                  setMessage(
-                    'Access requested. Ask your company administrator to approve it.',
-                  )
+                  const result = await enterpriseRequest('register', name.trim())
+                  setChallenge(result.challenge ?? '')
+                  setMessage('DNS challenge issued. Add the TXT record below.')
                 })
-              }
+              }}
             >
-              Request access to {domain}
-            </button>
-          </section>
-          <form
-            className={panel}
-            onSubmit={(event) => {
-              event.preventDefault()
-              void act(async () => {
-                const token = crypto.randomUUID()
-                await setDoc(registration, {
-                  domain,
-                  name: name.trim(),
-                  challenge: token,
-                })
-                setChallenge(token)
-              })
-            }}
-          >
-            <h2 className="font-semibold">Register a company</h2>
-            <p>
-              Company domains must be verified by proving control of their DNS
-              records.
-            </p>
-            <label className="block">
-              Company name
-              <input
-                className={input}
-                required
-                maxLength={100}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
-            <button className={button} disabled={busy}>
-              Generate verification challenge
-            </button>
-            {challenge && (
-              <div className="break-all text-sm">
-                <p>
-                  Add the following DNS TXT record, then contact AgentForce
-                  Enterprise support for verification:
-                </p>
-                <p>Host: _agentforce-enterprise.{domain}</p>
-                <p>Value: agentforce-enterprise={challenge}</p>
-                <p>Registration reference: {uid}</p>
-              </div>
-            )}
-          </form>
+              <h2 className="font-semibold">Register a company</h2>
+              <p>
+                Company domains must be verified by proving control of their DNS
+                records.
+              </p>
+              <label className="block">
+                Company name
+                <input
+                  className={input}
+                  required
+                  maxLength={100}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </label>
+              <button className={button} disabled={busy}>
+                Generate verification challenge
+              </button>
+              {challenge && (
+                <div className="break-all text-sm">
+                  <p>
+                    Add this DNS TXT record with your domain provider. DNS
+                    changes may take time to propagate.
+                  </p>
+                  <p>Host: _agentforce-enterprise.{domain}</p>
+                  <p>Value: agentforce-enterprise={challenge}</p>
+                  <button
+                    type="button"
+                    className={button}
+                    disabled={busy}
+                    onClick={() =>
+                      void act(async () => {
+                        await enterpriseRequest('verify')
+                        setMessage(
+                          'Company verified. Your workspace is being activated.',
+                        )
+                      })
+                    }
+                  >
+                    Verify Company
+                  </button>
+                </div>
+              )}
+            </form>
+          )}
         </>
       )}
       <p role="status">{message}</p>
@@ -248,14 +306,20 @@ function Repository({
   uid,
   email,
   admin,
+  demo = false,
 }: {
   domain: string
   uid: string
   email: string
   admin: boolean
+  demo?: boolean
 }) {
   const { db } = getFirebaseServices()
-  const org = doc(db, 'enterprise_orgs', domain)
+  const org = doc(
+    db,
+    demo ? 'enterprise_demos' : 'enterprise_orgs',
+    demo ? uid : domain,
+  )
   const [items, setItems] = useState<Array<DocumentData & { id: string }>>([])
   const [requests, setRequests] = useState<
     Array<DocumentData & { id: string }>
@@ -275,7 +339,11 @@ function Repository({
   const [busy, setBusy] = useState(false)
 
   const refresh = useCallback(async () => {
-    const org = doc(db, 'enterprise_orgs', domain)
+    const org = doc(
+      db,
+      demo ? 'enterprise_demos' : 'enterprise_orgs',
+      demo ? uid : domain,
+    )
     const read = async (sub: string) => {
       const result: Array<DocumentData & { id: string }> = []
       let cursor: QueryDocumentSnapshot | undefined
@@ -294,13 +362,17 @@ function Repository({
       } while (cursor)
       return result
     }
-    setCompany((await getDocFromServer(org)).data()?.name ?? domain)
+    setCompany(
+      demo
+        ? 'Enterprise demo'
+        : ((await getDocFromServer(org)).data()?.name ?? domain),
+    )
     setItems(await read('items'))
     if (admin) {
       setRequests(await read('requests'))
       setMembers(await read('members'))
     }
-  }, [db, domain, admin])
+  }, [db, domain, admin, demo, uid])
   useEffect(() => {
     void refresh().catch(() => setMessage('Unable to load your repository.'))
   }, [refresh])
@@ -364,7 +436,8 @@ function Repository({
   return (
     <div className="space-y-6">
       <p className="font-semibold text-teal-600 dark:text-teal-300">
-        {company} · Private repository · {admin ? 'Administrator' : 'Member'}
+        {company} · {demo ? 'Demo repository' : 'Private repository'} ·{' '}
+        {admin ? 'Administrator' : demo ? 'Owner' : 'Member'}
       </p>
       <form className={panel} onSubmit={submit}>
         <h2 className="font-semibold">
@@ -428,11 +501,11 @@ function Repository({
         )}
       </form>
       <section className="space-y-3">
-        <h2 className="font-semibold">Company library</h2>
+        <h2 className="font-semibold">{demo ? 'Demo library' : 'Company library'}</h2>
         <input
           type="search"
           className={input}
-          aria-label="Search company library"
+          aria-label="Search workspace library"
           placeholder="Search agents and skills"
           value={search}
           onChange={(e) => setSearch(e.target.value)}

@@ -139,6 +139,12 @@ jobs:
             echo "unchanged=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Deploy Enterprise verification function
+        if: steps.creds.outputs.present == 'true' && env.EXPORT_RUN_IS_SCHEDULED != 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx firebase deploy --only functions:enterpriseVerify --project "$FIREBASE_PROJECT" --non-interactive
+
       - name: Deploy Hosting and Firestore rules
         if: steps.creds.outputs.present == 'true' && steps.catalog.outputs.unchanged != 'true'
         env:

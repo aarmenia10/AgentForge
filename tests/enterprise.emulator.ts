@@ -54,6 +54,12 @@ test('enterprise rules enforce membership, verified email, and tenant boundaries
         email_verified: false,
       })
       .firestore()
+    const personal = env
+      .authenticatedContext('personal', {
+        email: 'person@gmail.com',
+        email_verified: true,
+      })
+      .firestore()
     const anonymous = env.unauthenticatedContext().firestore()
     const path = 'enterprise_orgs/acme.example/items/tool'
     await assertSucceeds(
@@ -70,7 +76,7 @@ test('enterprise rules enforce membership, verified email, and tenant boundaries
       }),
     )
     await assertSucceeds(getDoc(doc(alice, path)))
-    for (const db of [bob, other, anonymous, unverified])
+    for (const db of [bob, other, anonymous, unverified, personal])
       await assertFails(getDoc(doc(db, path)))
     await assertSucceeds(
       setDoc(doc(bob, 'enterprise_orgs/acme.example/requests/bob'), {
@@ -91,6 +97,37 @@ test('enterprise rules enforce membership, verified email, and tenant boundaries
       }),
     )
     await assertFails(getDoc(doc(bob, path)))
+    const demoPath = 'enterprise_demos/personal/items/tool'
+    await assertSucceeds(
+      setDoc(doc(personal, demoPath), {
+        name: 'Demo helper',
+        description: '',
+        category: 'Operations',
+        kind: 'skill',
+        filename: 'demo.txt',
+        owner: 'personal',
+        creator: 'person@gmail.com',
+        createdAt: serverTimestamp(),
+        file: Bytes.fromUint8Array(new Uint8Array([1])),
+      }),
+    )
+    await assertSucceeds(getDoc(doc(personal, demoPath)))
+    for (const db of [alice, bob, other, anonymous, unverified])
+      await assertFails(getDoc(doc(db, demoPath)))
+    await assertFails(
+      setDoc(doc(personal, 'enterprise_registrations/personal'), {
+        domain: 'gmail.com',
+        name: 'Fake organization',
+        challenge: '12345678-1234-1234-1234-123456789012',
+      }),
+    )
+    await assertFails(
+      setDoc(doc(alice, 'enterprise_registrations/alice'), {
+        domain: 'acme.example',
+        name: 'Acme',
+        challenge: '12345678-1234-1234-1234-123456789012',
+      }),
+    )
   } finally {
     await env.cleanup()
   }
