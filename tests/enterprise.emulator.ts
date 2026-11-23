@@ -175,3 +175,31 @@ test('demo workspaces require verified invited and approved members', async () =
     await env.cleanup()
   }
 })
+
+test('demo inquiries are only readable by platform administrators', async () => {
+  const env = await initializeTestEnvironment({
+    projectId: 'demo-agentlemon',
+    firestore: { rules: await readFile('firestore.rules', 'utf8') },
+  })
+  try {
+    await env.clearFirestore()
+    const path = 'enterprise_demo_requests/inquiry'
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore()
+      await setDoc(doc(db, 'admins/platform-admin'), {})
+      await setDoc(doc(db, path), { company: 'Acme' })
+    })
+    const admin = env.authenticatedContext('platform-admin').firestore()
+    const employee = env.authenticatedContext('employee').firestore()
+    const anonymous = env.unauthenticatedContext().firestore()
+    await assertSucceeds(getDoc(doc(admin, path)))
+    for (const db of [admin, employee, anonymous]) {
+      await assertFails(setDoc(doc(db, path), { company: 'Other' }))
+      await assertFails(getDoc(doc(db, 'enterprise_demo_rate_limits/global')))
+    }
+    for (const db of [employee, anonymous])
+      await assertFails(getDoc(doc(db, path)))
+  } finally {
+    await env.cleanup()
+  }
+})

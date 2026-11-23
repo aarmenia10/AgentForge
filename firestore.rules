@@ -864,6 +864,16 @@ service cloud.firestore {
         && getAfter(councilPath(request.resource.data.id)).data == request.resource.data;
     }
 
+    // Demo inquiries are submitted by the backend, never by clients.
+    match /enterprise_demo_requests/{id} {
+      allow get: if isAdmin();
+      allow list: if isAdmin() && bounded();
+      allow write: if false;
+    }
+    match /enterprise_demo_rate_limits/{id} {
+      allow read, write: if false;
+    }
+
     // Enterprise repositories are separate from public catalog and export paths.
     function enterpriseEmail(domain) {
       return verifiedEmail() && request.auth.token.email is string
