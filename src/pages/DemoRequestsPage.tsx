@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { PageHold, PageShell } from '@/components/PageShell'
-import { DEMO_STATUSES, isDemoFounder, type DemoStatus } from '@/lib/demoRequest'
+import {
+  DEMO_STATUSES,
+  isDemoFounder,
+  type DemoStatus,
+} from '@/lib/demoRequest'
 import {
   appendDemoNote,
   deleteDemoRequest,
@@ -36,13 +40,10 @@ function Inbox() {
   const [selected, setSelected] = useState('')
   useEffect(
     () =>
-      watchDemoRequests(
-        setRequests,
-        () => {
-          setRequests(null)
-          setError('Could not load demo requests. Refresh to try again.')
-        },
-      ),
+      watchDemoRequests(setRequests, () => {
+        setRequests(null)
+        setError('Could not load demo requests. Refresh to try again.')
+      }),
     [],
   )
 

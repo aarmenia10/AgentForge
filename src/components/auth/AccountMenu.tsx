@@ -11,7 +11,15 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { describeAuthError } from '@/auth/authErrors'
 import { isDemoFounder } from '@/lib/demoRequest'
@@ -345,9 +353,12 @@ function SignedInMenu() {
                     icon={ClipboardCheck}
                     onNavigate={() => setOpen(false)}
                   >
-                    {newCount === null
-                      ? 'Demo Requests'
-                      : `Demo Requests (${newCount})`}
+                    Demo Requests
+                    {newCount !== null && (
+                      <span className="ml-auto rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-900 dark:bg-teal-900 dark:text-teal-100">
+                        {newCount}
+                      </span>
+                    )}
                   </MenuLink>
                 </li>
               )}
@@ -400,7 +411,7 @@ function MenuLink({
   to: string
   icon: LucideIcon
   onNavigate: () => void
-  children: string
+  children: ReactNode
 }) {
   const { location } = useRoute()
   const current = location.pathname === to
