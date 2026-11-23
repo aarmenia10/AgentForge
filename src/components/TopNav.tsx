@@ -2,6 +2,7 @@ import { Anvil, Moon, Search, Sun } from 'lucide-react'
 import { useTheme } from '@/theme/ThemeProvider'
 import { AGENT_CATEGORIES, type AgentCategoryTag } from '@/types/agent'
 import { Link, useRoute } from '@/router/Router'
+import { AppearanceMenu } from './appearance/AppearanceMenu'
 import { AccountMenu } from './auth/AccountMenu'
 import { cn } from './ui'
 
@@ -17,50 +18,58 @@ interface TopNavProps {
   search?: NavSearch
 }
 
+const navLink =
+  'inline-flex h-10 items-center rounded-full px-2.5 text-sm font-medium transition sm:px-3.5'
+
 export function TopNav({ search }: TopNavProps) {
   const { theme, toggleTheme } = useTheme()
   const { route } = useRoute()
   const onSkills = route.name === 'skills' || route.name === 'skill'
 
   return (
-    <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
+    // Relative to this header, the Appearance panel opens just under it. The
+    // blur lives on its own layer so it does not trap that panel.
+    <header className="sticky top-0 z-30">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 border-b border-line/60 bg-page/85 backdrop-blur-md"
+      />
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:gap-x-4 sm:px-6 md:flex-nowrap">
         <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="AgentLemon home">
-          <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-teal-400 to-navy-600 text-white shadow-lg shadow-teal-500/25">
+          <span className="grid size-9 place-items-center rounded-xl bg-accent text-accent-ink">
             <Anvil className="size-5" />
           </span>
           <span className="hidden text-lg font-semibold tracking-tight sm:block">
-            Agent<span className="text-teal-500">Lemon</span>
+            Agent<span className="text-accent-fg">Lemon</span>
           </span>
         </Link>
 
         {search && <SearchAndCategories {...search} />}
 
-        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
           <Link
             to="/enterprise"
             aria-current={route.name === 'enterprise' ? 'page' : undefined}
-            className="inline-flex h-10 items-center rounded-xl px-2 text-sm font-medium text-teal-600 hover:text-teal-800 dark:text-teal-300 sm:px-3"
+            className={cn(
+              navLink,
+              route.name === 'enterprise' ? 'text-accent-fg' : 'text-fg-muted hover:bg-surface hover:text-fg',
+            )}
           >
             <span className="hidden md:inline">AgentForce&nbsp;</span>Enterprise
           </Link>
           <Link
             to="/skills"
             aria-current={onSkills ? 'page' : undefined}
-            className={cn(
-              'inline-flex h-10 items-center rounded-xl px-2 text-sm font-medium transition sm:px-3',
-              onSkills
-                ? 'text-teal-600 dark:text-teal-300'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
-            )}
+            className={cn(navLink, onSkills ? 'text-accent-fg' : 'text-fg-muted hover:bg-surface hover:text-fg')}
           >
             Skills
           </Link>
+          <AppearanceMenu />
           <button
             type="button"
             onClick={toggleTheme}
             aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            className="grid size-10 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-900/5 dark:text-slate-300 dark:hover:bg-white/10"
+            className="grid size-10 place-items-center rounded-full text-fg-muted transition hover:bg-surface hover:text-fg"
           >
             {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </button>
@@ -74,19 +83,20 @@ export function TopNav({ search }: TopNavProps) {
 function SearchAndCategories({ keyword, onKeywordChange, category, onCategoryChange }: NavSearch) {
   return (
     <>
-      <label className="relative min-w-0 flex-1 md:max-w-sm">
+      {/* Own row on a phone, so the buttons beside the logo keep their room. */}
+      <label className="relative order-last min-w-0 basis-full md:order-none md:min-w-32 md:max-w-sm md:flex-1 md:basis-auto">
         <span className="sr-only">Search agents</span>
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
         <input
           type="search"
           value={keyword}
           onChange={(event) => onKeywordChange(event.target.value)}
           placeholder="Search agents, tools, authors"
-          className="h-10 w-full rounded-xl border border-slate-200 bg-white/70 pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-white/5"
+          className="h-10 w-full rounded-full border border-transparent bg-surface pl-10 pr-4 text-sm placeholder:text-fg-muted focus:border-accent-fg focus:outline-none"
         />
       </label>
 
-      <nav aria-label="Categories" className="hidden items-center gap-1 lg:flex">
+      <nav aria-label="Categories" className="hidden items-center gap-1 2xl:flex">
         {AGENT_CATEGORIES.slice(0, 4).map(({ tag, label }) => (
           <a
             key={tag}
@@ -94,10 +104,8 @@ function SearchAndCategories({ keyword, onKeywordChange, category, onCategoryCha
             onClick={() => onCategoryChange(category === tag ? null : tag)}
             aria-current={category === tag ? 'true' : undefined}
             className={cn(
-              'rounded-lg px-3 py-2 text-sm font-medium transition',
-              category === tag
-                ? 'text-teal-600 dark:text-teal-300'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
+              'rounded-full px-3.5 py-2 text-sm font-medium transition',
+              category === tag ? 'text-accent-fg' : 'text-fg-muted hover:bg-surface hover:text-fg',
             )}
           >
             {label}

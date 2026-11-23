@@ -74,15 +74,15 @@ export default function App() {
         <HomePage query={query} patchQuery={patchQuery} resetQuery={resetQuery} />
       )}
 
-      <footer className="border-t border-slate-900/5 py-8 dark:border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 text-sm text-slate-500 sm:px-6 dark:text-slate-400">
+      <footer className="mx-auto mb-4 w-full max-w-7xl px-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-3xl bg-surface px-6 py-6 text-sm text-fg-muted sm:rounded-4xl sm:px-8">
           <p>AgentLemon is open source under the MIT license.</p>
-          <Link to="/councils" className="hover:text-teal-600 dark:hover:text-teal-300">Councils</Link>
+          <Link to="/councils" className="rounded-full hover:text-fg">Councils</Link>
           <a
             href="https://github.com/aarmenia10/AgentForge"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 hover:text-teal-600 dark:hover:text-teal-300"
+            className="inline-flex items-center gap-1.5 rounded-full hover:text-fg"
           >
             <GitHubIcon className="size-4" />
             Source on GitHub

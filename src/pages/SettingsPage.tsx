@@ -2,6 +2,7 @@ import { LogOut } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { describeAuthError } from '@/auth/authErrors'
+import { AppearanceControls } from '@/components/appearance/AppearanceControls'
 import { ConnectorCard } from '@/components/ConnectorCard'
 import RequireAccount from '@/components/RequireAccount'
 import { PageShell } from '@/components/PageShell'
@@ -111,6 +112,16 @@ function Settings() {
             />
           </>
         )}
+      </Section>
+
+      <Section id="settings-appearance" title="Appearance">
+        <p className="mb-4">
+          Pick a mode, a background, and an accent color. Your choice is saved
+          in this browser only.
+        </p>
+        <div className="max-w-md">
+          <AppearanceControls />
+        </div>
       </Section>
 
       <Section id="settings-preferences" title="Your answers">

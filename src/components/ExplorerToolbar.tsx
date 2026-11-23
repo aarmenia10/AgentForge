@@ -11,28 +11,28 @@ interface ExplorerToolbarProps {
 }
 
 const fieldClass =
-  'h-10 rounded-xl border border-slate-200 bg-white/70 px-3 text-sm focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-white/5'
+  'h-10 rounded-full border border-transparent bg-page px-4 text-sm focus:border-accent-fg focus:outline-none'
 
 export function ExplorerToolbar({ query, onChange, onReset, resultCount }: ExplorerToolbarProps) {
   const categoryLabel = AGENT_CATEGORIES.find((c) => c.tag === query.category)?.label
   const isFiltered = query.keyword !== '' || query.category !== null || query.framework !== 'all'
 
   return (
-    <div className="glass rounded-2xl p-3 sm:p-4">
+    <div className="rounded-3xl bg-surface p-3 sm:p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <label className="relative flex-1">
           <span className="sr-only">Filter by keyword</span>
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
           <input
             type="search"
             value={query.keyword}
             onChange={(event) => onChange({ keyword: event.target.value })}
             placeholder="Filter by keyword, tag, or tool"
-            className={cn(fieldClass, 'w-full pl-9')}
+            className={cn(fieldClass, 'w-full pl-10 placeholder:text-fg-muted')}
           />
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-fg-muted">
           <span className="shrink-0">Framework</span>
           <select
             value={query.framework}
@@ -53,7 +53,7 @@ export function ExplorerToolbar({ query, onChange, onReset, resultCount }: Explo
         <div
           role="radiogroup"
           aria-label="Sort agents"
-          className="flex rounded-xl bg-slate-900/5 p-1 dark:bg-white/5"
+          className="flex rounded-full bg-page p-1"
         >
           {SORT_OPTIONS.map(({ key, label }) => (
             <button
@@ -63,10 +63,8 @@ export function ExplorerToolbar({ query, onChange, onReset, resultCount }: Explo
               aria-checked={query.sort === key}
               onClick={() => onChange({ sort: key })}
               className={cn(
-                'h-8 flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition',
-                query.sort === key
-                  ? 'bg-white text-slate-900 shadow-sm dark:bg-navy-700 dark:text-white'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
+                'h-8 flex-1 whitespace-nowrap rounded-full px-3.5 text-sm font-medium transition',
+                query.sort === key ? 'bg-accent text-accent-ink' : 'text-fg-muted hover:text-fg',
               )}
             >
               {label}
@@ -75,7 +73,7 @@ export function ExplorerToolbar({ query, onChange, onReset, resultCount }: Explo
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-fg-muted">
         <span aria-live="polite">
           {resultCount} {resultCount === 1 ? 'agent' : 'agents'}
         </span>
@@ -83,7 +81,7 @@ export function ExplorerToolbar({ query, onChange, onReset, resultCount }: Explo
           <button
             type="button"
             onClick={() => onChange({ category: null })}
-            className="inline-flex items-center gap-1 rounded-md bg-teal-500/15 px-2 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-300"
+            className="inline-flex items-center gap-1 rounded-md bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent-fg"
           >
             {categoryLabel}
             <X className="size-3" aria-label="Remove category filter" />
@@ -93,7 +91,7 @@ export function ExplorerToolbar({ query, onChange, onReset, resultCount }: Explo
           <button
             type="button"
             onClick={onReset}
-            className="ml-auto text-xs font-medium text-slate-600 underline-offset-4 hover:underline dark:text-slate-300"
+            className="ml-auto text-xs font-medium text-fg underline-offset-4 hover:underline"
           >
             Clear filters
           </button>

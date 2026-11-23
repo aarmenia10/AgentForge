@@ -281,7 +281,7 @@ export function CommentsSection({
             <button
               type="submit"
               disabled={submitting || !body.trim() || Boolean(blockedNotice)}
-              className="rounded-xl bg-teal-500 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-600 disabled:opacity-50"
+              className="rounded-xl bg-teal-500 px-4 py-1.5 text-sm font-semibold text-accent-ink shadow-sm hover:bg-teal-600 disabled:opacity-50"
             >
               {submitting ? 'Posting…' : 'Post comment'}
             </button>

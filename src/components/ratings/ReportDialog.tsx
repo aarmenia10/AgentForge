@@ -181,7 +181,7 @@ export function ReportDialog({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-teal-500 px-4 py-2 text-sm font-medium text-white shadow hover:bg-teal-600 disabled:opacity-50"
+              className="rounded-xl bg-teal-500 px-4 py-2 text-sm font-medium text-accent-ink shadow hover:bg-teal-600 disabled:opacity-50"
             >
               {submitting ? 'Submitting…' : 'Submit report'}
             </button>

@@ -1,6 +1,8 @@
 import { SearchX, TriangleAlert } from 'lucide-react'
 import type { AgentManifest } from '@/types/agent'
 import { AgentCard } from './AgentCard'
+import { Reveal } from './Reveal'
+import { ArrowIcon, primaryButtonClass } from './ui'
 
 interface AgentGridProps {
   agents: AgentManifest[]
@@ -16,7 +18,7 @@ export function AgentGrid({ agents, status, onOpen, onReset }: AgentGridProps) {
     return (
       <div className={gridClass} aria-busy="true" aria-label="Loading agents">
         {Array.from({ length: 6 }, (_, index) => (
-          <div key={index} className="glass h-60 animate-pulse rounded-2xl" />
+          <div key={index} className="h-60 animate-pulse rounded-3xl bg-surface" />
         ))}
       </div>
     )
@@ -24,10 +26,10 @@ export function AgentGrid({ agents, status, onOpen, onReset }: AgentGridProps) {
 
   if (status === 'error') {
     return (
-      <div role="alert" className="glass rounded-2xl p-10 text-center">
+      <div role="alert" className="rounded-3xl bg-surface p-10 text-center">
         <TriangleAlert className="mx-auto size-8 text-amber-500" />
         <p className="mt-3 font-medium">The catalog failed to load.</p>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-sm text-fg-muted">
           Check your connection and reload the page.
         </p>
       </div>
@@ -36,15 +38,16 @@ export function AgentGrid({ agents, status, onOpen, onReset }: AgentGridProps) {
 
   if (agents.length === 0) {
     return (
-      <div className="glass rounded-2xl p-10 text-center">
-        <SearchX className="mx-auto size-8 text-slate-400" />
+      <div className="rounded-3xl bg-surface p-10 text-center">
+        <SearchX className="mx-auto size-8 text-fg-muted" />
         <p className="mt-3 font-medium">No agents match these filters.</p>
         <button
           type="button"
           onClick={onReset}
-          className="mt-4 rounded-xl bg-teal-500 px-4 py-2 text-sm font-medium text-white hover:bg-teal-600"
+          className={`${primaryButtonClass} mt-4`}
         >
           Clear filters
+          <ArrowIcon />
         </button>
       </div>
     )
@@ -52,10 +55,10 @@ export function AgentGrid({ agents, status, onOpen, onReset }: AgentGridProps) {
 
   return (
     <ul className={gridClass}>
-      {agents.map((agent) => (
-        <li key={agent.id}>
+      {agents.map((agent, index) => (
+        <Reveal as="li" key={agent.id} delay={(index % 3) * 80}>
           <AgentCard agent={agent} onOpen={onOpen} />
-        </li>
+        </Reveal>
       ))}
     </ul>
   )
