@@ -25,6 +25,7 @@ export type RouteName =
   | 'skill-upload'
   | 'skill'
   | 'enterprise'
+  | 'demo-requests'
   | 'suggestions'
   | 'not-found'
 
@@ -60,6 +61,7 @@ const STATIC: Record<string, RouteName> = {
   '/skills/new': 'skill-upload',
   '/suggestions': 'suggestions',
   '/enterprise': 'enterprise',
+  '/admin/demo-requests': 'demo-requests',
 }
 
 export function matchRoute(pathname: string): Route {
@@ -158,6 +160,8 @@ export function routeTitle(route: Route): string {
       return `Upload a skill · ${SITE}`
     case 'skill':
       return `${route.params.id} · Skills · ${SITE}`
+    case 'demo-requests':
+      return `Demo Requests · ${SITE}`
     case 'enterprise':
       return `AgentForce Enterprise · ${SITE}`
     case 'suggestions':

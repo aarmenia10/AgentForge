@@ -1,62 +1,31 @@
-# Enterprise demo requests
+# Private enterprise demo requests
 
-The public Enterprise page has a separate Request a Demo dialog. It uses the
-Firebase callable function `requestDemo` without requiring authentication.
-The existing Enterprise Demo and production registration paths are unchanged.
+The public Enterprise page saves inquiries directly to Firestore without
+requiring an account or a callable function. New inquiries go to
+`enterprise_demo_inbox` to avoid triggering the former email notification.
+Historical inquiries in `enterprise_demo_requests` are included in the inbox.
 
-## Required operator setup before publishing
+Both verified founder accounts can open Demo Requests from the account
+dropdown. Firestore rules deny all other visitors and platform administrators
+read, list, update, and delete access. Public creates must match an exact
+schema with a server timestamp, New status, and empty honeypot. Only founders
+can edit status and internal notes. Firebase project IAM operators retain
+privileged access.
 
-Enable Firebase Cloud Functions (Blaze plan), Firestore, and Secret Manager
-on the correct project. Ensure the deploy operator has Functions, Eventarc,
-Cloud Build, and Secret Manager permissions.
+## Deployment and limits
 
-Create a Resend API key with sending permission and verify a sending domain.
-Set the Firebase function secret using:
+Deploy Hosting and Firestore rules together using the normal CI workflow.
+No new Firebase plan, email service, or Cloud Function is needed. If the
+previous email functions were already deployed, the project operator should
+retire them after the new form is live. Do not delete historical records.
 
-```sh
-npx firebase functions:secrets:set DEMO_EMAIL_CONFIG --project PROJECT_ID
-```
+The form uses a honeypot, field length validation, a disabled submit button,
+and a deterministic document ID derived from normalized contents to prevent
+ordinary repeat submissions. Firestore rejects overwriting existing inquiries.
+These measures do not provide robust rate limiting or bot protection: rules
+cannot enforce a hash or request rate for unauthenticated visitors. Monitor
+usage and consider App Check or a managed anti-abuse endpoint if abuse occurs.
+Realtime inbox listeners consume Firestore reads; free-tier quotas still apply.
 
-At the secret prompt, enter JSON of this shape (replace placeholders locally):
-
-```json
-{
-  "key": "<API key>",
-  "from": "<verified sender>",
-  "recipients": ["<founder one>", "<founder two>"]
-}
-```
-
-Use both founders' designated addresses as the recipients. Never put the
-actual configuration in version control or frontend environment variables.
-
-From the feature branch, deploy the functions to a staging Firebase project:
-
-```sh
-npx firebase deploy --only functions:requestDemo,functions:notifyDemoRequest --project PROJECT_ID
-```
-
-Deploy the Firestore rules to that same project. Verify a real test submission
-produces a Firestore request and one email to both founders with the correct
-reply-to. Test mobile and desktop, errors, rate limits, and anonymous access.
-Repeat with production configuration before publishing the frontend; existing
-CI deploys Hosting and rules only.
-
-Configure Firestore TTL on `enterprise_demo_rate_limits.expiresAt` and monitor
-the functions and requests with failed or pending delivery status.
-
-Requests are persisted before the email notification, with a server timestamp.
-The notification function retries delivery failures, and the email provider
-uses an idempotency key. The same normalized form contents are stored only
-once. Rate limits use transactional hourly counters (global, client IP, and
-email), and a honeypot rejects basic automated submissions. Review abuse
-monitoring and consider an additional managed CAPTCHA as traffic grows.
-
-Only existing AgentForce platform administrators can read these request
-documents in Firestore. Clients cannot write them or access rate counters.
-Project IAM operators also have privileged access. Establish a retention
-policy and restrict production project access. Failed requests remain
-available for authorized operators to follow up manually.
-
-Run `npx tsx --test tests/demo-request.test.ts` for validation and mocked
-email delivery tests; run the normal repository CI for build and lint.
+Run the normal CI tests, including the Firestore emulator tests, before
+publishing. Verify both founder accounts on the deployed website.

@@ -864,11 +864,48 @@ service cloud.firestore {
         && getAfter(councilPath(request.resource.data.id)).data == request.resource.data;
     }
 
-    // Demo inquiries are submitted by the backend, never by clients.
+    function demoFounder() {
+      return verifiedEmail() && request.auth.token.email in [
+        'tcerto1234@gmail.com', 'aidanarmenia10@gmail.com'
+      ];
+    }
+    function validInquiryText(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max
+        && value.matches('[\\s\\S]*[^\\s][\\s\\S]*');
+    }
+    function validInquiryLine(value, max) {
+      return validInquiryText(value, max) && value.matches('[^\\r\\n]+');
+    }
+    function validInquiryCreate(id) {
+      let d = request.resource.data;
+      return id.matches('^[a-f0-9]{64}$')
+        && d.keys().hasAll(['name', 'position', 'company', 'email', 'size', 'description', 'website', 'submittedAt', 'status'])
+        && d.keys().hasOnly(['name', 'position', 'company', 'email', 'size', 'description', 'website', 'submittedAt', 'status'])
+        && validInquiryLine(d.name, 100)
+        && validInquiryLine(d.position, 100)
+        && validInquiryLine(d.company, 150)
+        && validInquiryLine(d.email, 254)
+        && d.email.matches('^[^\\s@,;<>]+@[^\\s@,;<>]+[.][a-zA-Z]{2,}$')
+        && d.size is string && d.size.size() <= 80 && d.size.matches('[^\\r\\n]*')
+        && validInquiryText(d.description, 3000)
+        && d.website == '' && d.status == 'New'
+        && d.submittedAt == request.time;
+    }
+    function validInquiryUpdate() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['status', 'notes'])
+        && (!d.keys().hasAny(['status']) || d.status in ['New', 'Contacted', 'Demo Scheduled', 'Completed', 'Archived'])
+        && (!d.keys().hasAny(['notes']) || (d.notes is string && d.notes.size() <= 10000));
+    }
+    match /enterprise_demo_inbox/{id} {
+      allow create: if validInquiryCreate(id);
+      allow read, delete: if demoFounder();
+      allow update: if demoFounder() && validInquiryUpdate();
+    }
+    // Preserve access to historical inquiries without triggering legacy email delivery.
     match /enterprise_demo_requests/{id} {
-      allow get: if isAdmin();
-      allow list: if isAdmin() && bounded();
-      allow write: if false;
+      allow read, delete: if demoFounder();
+      allow update: if demoFounder() && validInquiryUpdate();
     }
     match /enterprise_demo_rate_limits/{id} {
       allow read, write: if false;

@@ -1,6 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { getFunctions, httpsCallable } from 'firebase/functions'
-import { getFirebaseApp } from '@/lib/firebaseApp'
+import { submitDemoRequest } from '@/services/demoRequests'
 
 const input =
   'w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-white/20'
@@ -36,7 +35,6 @@ export default function RequestDemo() {
   const dialog = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const pending = useRef(false)
-  const requestId = useRef('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'success'>('idle')
   const [error, setError] = useState('')
 
@@ -48,10 +46,8 @@ export default function RequestDemo() {
     setError('')
     const form = event.currentTarget
     const data = Object.fromEntries(new FormData(form))
-    requestId.current ||= crypto.randomUUID()
     try {
-      const send = httpsCallable(getFunctions(getFirebaseApp()), 'requestDemo')
-      await send({ ...data, requestId: requestId.current })
+      await submitDemoRequest(data)
       form.reset()
       setStatus('success')
     } catch {
@@ -98,13 +94,7 @@ export default function RequestDemo() {
             personalized demonstration.
           </p>
         ) : (
-          <form
-            onSubmit={(event) => void submit(event)}
-            className="space-y-4"
-            onChange={() => {
-              if (!pending.current) requestId.current = ''
-            }}
-          >
+          <form onSubmit={(event) => void submit(event)} className="space-y-4">
             {fields.map((field) => (
               <label key={field.name} className="block space-y-1 text-sm">
                 <span>{field.label}</span>

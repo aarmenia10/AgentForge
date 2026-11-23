@@ -11,9 +11,18 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { describeAuthError } from '@/auth/authErrors'
+import { isDemoFounder } from '@/lib/demoRequest'
 import { Link, useRoute } from '@/router/Router'
 import { needsWelcomeCheck } from '../profile/profileMemory'
 import { cn } from '../ui'
@@ -93,6 +102,33 @@ function SignedInMenu() {
   const { route } = useRoute()
   const [open, setOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const founder = isDemoFounder(user)
+  const [newCount, setNewCount] = useState<number | null>(null)
+  useEffect(() => {
+    if (!founder) return
+    let active = true
+    let stop: (() => void) | undefined
+    void import('@/services/demoRequests')
+      .then(({ watchDemoRequests }) => {
+        if (!active) return
+        stop = watchDemoRequests(
+          (requests) => {
+            if (active)
+              setNewCount(requests.filter((r) => r.status === 'New').length)
+          },
+          () => {
+            if (active) setNewCount(null)
+          },
+        )
+      })
+      .catch(() => {
+        if (active) setNewCount(null)
+      })
+    return () => {
+      active = false
+      stop?.()
+    }
+  }, [founder])
   const [resend, setResend] = useState<'idle' | 'sending' | 'sent' | 'failed'>(
     'idle',
   )
@@ -310,6 +346,22 @@ function SignedInMenu() {
                   </MenuLink>
                 </li>
               ))}
+              {founder && (
+                <li>
+                  <MenuLink
+                    to="/admin/demo-requests"
+                    icon={ClipboardCheck}
+                    onNavigate={() => setOpen(false)}
+                  >
+                    Demo Requests
+                    {newCount !== null && (
+                      <span className="ml-auto rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-900 dark:bg-teal-900 dark:text-teal-100">
+                        {newCount}
+                      </span>
+                    )}
+                  </MenuLink>
+                </li>
+              )}
               {isAdmin && (
                 <li>
                   <MenuLink
@@ -359,7 +411,7 @@ function MenuLink({
   to: string
   icon: LucideIcon
   onNavigate: () => void
-  children: string
+  children: ReactNode
 }) {
   const { location } = useRoute()
   const current = location.pathname === to
