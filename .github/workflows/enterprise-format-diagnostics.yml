@@ -1,0 +1,22 @@
+name: Enterprise format diagnostics
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  format:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feature/agentforce-enterprise'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - name: Format changed enterprise files
+        run: |
+          npx prettier --write scripts/verify-enterprise-domain.ts src/pages/EnterprisePage.tsx tests/enterprise.emulator.ts
+          git diff -- scripts/verify-enterprise-domain.ts src/pages/EnterprisePage.tsx tests/enterprise.emulator.ts
