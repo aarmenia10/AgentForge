@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
   Bytes, collection, doc, getDocFromServer, getDocsFromServer, limit,
   onSnapshot, query, startAfter, serverTimestamp, setDoc, updateDoc, writeBatch, deleteDoc,
@@ -40,7 +40,6 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
   const domain = email.split('@')[1]?.toLowerCase() ?? ''
   const { db } = getFirebaseServices()
   const org = doc(db, 'enterprise_orgs', domain)
-  const member = doc(org, 'members', uid)
   const registration = doc(db, 'enterprise_registrations', uid)
   const [membership, setMembership] = useState<DocumentData | null | undefined>(undefined)
   const [challenge, setChallenge] = useState('')
@@ -122,7 +121,8 @@ function Repository({ domain, uid, email, admin }: { domain: string; uid: string
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
+    const org = doc(db, 'enterprise_orgs', domain)
     const read = async (sub: string) => {
       const result: Array<DocumentData & { id: string }> = []
       let cursor: QueryDocumentSnapshot | undefined
@@ -139,12 +139,10 @@ function Repository({ domain, uid, email, admin }: { domain: string; uid: string
       setRequests(await read('requests'))
       setMembers(await read('members'))
     }
-  }
+  }, [db, domain, admin])
   useEffect(() => {
     void refresh().catch(() => setMessage('Unable to load your repository.'))
-    // The component is keyed by organization, user and role.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [refresh])
   async function act(work: () => Promise<void>) {
     setBusy(true)
     setMessage('')
