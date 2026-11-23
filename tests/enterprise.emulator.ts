@@ -95,3 +95,83 @@ test('enterprise rules enforce membership, verified email, and tenant boundaries
     await env.cleanup()
   }
 })
+
+test('demo workspaces require verified invited and approved members', async () => {
+  const env = await initializeTestEnvironment({
+    projectId: 'demo-agentlemon',
+    firestore: { rules: await readFile('firestore.rules', 'utf8') },
+  })
+  try {
+    await env.clearFirestore()
+    const account = (uid: string, email: string, verified = true) =>
+      env
+        .authenticatedContext(uid, { email, email_verified: verified })
+        .firestore()
+    const owner = account('owner', 'owner@acme.example')
+    const coworker = account('coworker', 'coworker@acme.example')
+    const anonymous = env.unauthenticatedContext().firestore()
+    const unverified = account('unverified', 'unverified@acme.example', false)
+    const consumer = account('consumer', 'consumer@gmail.com')
+    const workspace = 'enterprise_demos/owner'
+    await assertSucceeds(
+      setDoc(doc(owner, workspace), {
+        owner: 'owner',
+        email: 'owner@acme.example',
+        domain: 'acme.example',
+        name: 'acme.example',
+      }),
+    )
+    await assertSucceeds(
+      setDoc(doc(coworker, 'enterprise_demos/coworker'), {
+        owner: 'coworker',
+        email: 'coworker@acme.example',
+        domain: 'acme.example',
+        name: 'acme.example',
+      }),
+    )
+    await assertSucceeds(
+      setDoc(doc(owner, workspace, 'items', 'tool'), {
+        name: 'Demo helper',
+        description: '',
+        category: 'Operations',
+        kind: 'skill',
+        filename: 'demo.txt',
+        owner: 'owner',
+        creator: 'owner@acme.example',
+        createdAt: serverTimestamp(),
+        file: Bytes.fromUint8Array(new Uint8Array([1])),
+      }),
+    )
+    await assertSucceeds(getDoc(doc(owner, workspace, 'items', 'tool')))
+    await assertFails(getDoc(doc(coworker, workspace, 'items', 'tool')))
+    await assertSucceeds(
+      setDoc(doc(owner, workspace, 'invites', 'coworker@acme.example'), {
+        email: 'coworker@acme.example',
+      }),
+    )
+    await assertSucceeds(
+      setDoc(doc(coworker, workspace, 'requests', 'coworker'), {
+        email: 'coworker@acme.example',
+      }),
+    )
+    await assertFails(getDoc(doc(coworker, workspace, 'items', 'tool')))
+    await assertSucceeds(
+      setDoc(doc(owner, workspace, 'members', 'coworker'), {
+        active: true,
+        role: 'member',
+        email: 'coworker@acme.example',
+      }),
+    )
+    await assertSucceeds(getDoc(doc(coworker, workspace, 'items', 'tool')))
+    await assertSucceeds(
+      updateDoc(doc(owner, workspace, 'members', 'coworker'), {
+        active: false,
+      }),
+    )
+    for (const db of [coworker, anonymous, unverified, consumer])
+      await assertFails(getDoc(doc(db, workspace, 'items', 'tool')))
+    await assertFails(getDoc(doc(owner, 'enterprise_orgs/acme.example')))
+  } finally {
+    await env.cleanup()
+  }
+})
