@@ -114,13 +114,17 @@ service cloud.firestore {
         return signedIn() && request.resource.data.keys().hasOnly(['revision'])
         && request.resource.data.revision is string && request.resource.data.revision.size() == 36
         && ((source == 'agents' && exists(agentPath(id))
-              && (getAfter(agentPath(id)).data != get(agentPath(id)).data || isAdmin()))
+              && ((!existsAfter(agentPath(id)) && liveApproved(get(agentPath(id)).data))
+                || (existsAfter(agentPath(id))
+                  && (getAfter(agentPath(id)).data != get(agentPath(id)).data || isAdmin()))))
           || (source == 'agent_versions' && isAdmin()
               && !exists(/databases/$(database)/documents/agent_versions/$(id))
               && existsAfter(/databases/$(database)/documents/agent_versions/$(id)))
           || (source == 'skills' && exists(skillPath(id))
-              && (liveApproved(get(skillPath(id)).data) || liveApproved(getAfter(skillPath(id)).data))
-              && (getAfter(skillPath(id)).data != get(skillPath(id)).data || isAdmin()))
+              && ((!existsAfter(skillPath(id)) && liveApproved(get(skillPath(id)).data))
+                || (existsAfter(skillPath(id))
+                  && (liveApproved(get(skillPath(id)).data) || liveApproved(getAfter(skillPath(id)).data))
+                  && (getAfter(skillPath(id)).data != get(skillPath(id)).data || isAdmin()))))
           || (source == 'skill_versions' && isAdmin()
               && !exists(/databases/$(database)/documents/skill_versions/$(id))
               && existsAfter(/databases/$(database)/documents/skill_versions/$(id)))
@@ -144,8 +148,10 @@ service cloud.firestore {
         return signedIn() && data.keys().hasOnly(['revision', 'changed_at'])
           && data.revision is string && data.revision.size() == 36 && data.changed_at == request.time
           && ((source == 'councils' && exists(councilPath(id))
-              && (liveApproved(get(councilPath(id)).data) || liveApproved(getAfter(councilPath(id)).data))
-              && getAfter(councilPath(id)).data != get(councilPath(id)).data)
+              && ((!existsAfter(councilPath(id)) && liveApproved(get(councilPath(id)).data))
+                || (existsAfter(councilPath(id))
+                  && (liveApproved(get(councilPath(id)).data) || liveApproved(getAfter(councilPath(id)).data))
+                  && getAfter(councilPath(id)).data != get(councilPath(id)).data)))
           || (source == 'council_versions' && isAdmin()
               && !exists(/databases/$(database)/documents/council_versions/$(id))
               && existsAfter(/databases/$(database)/documents/council_versions/$(id))));
@@ -389,7 +395,9 @@ service cloud.firestore {
         : (((!liveApproved(resource.data) && !liveApproved(request.resource.data))
             || exportMarked('agents', agentId))
           && (ownerEdit(agentId) || adminEdit(agentId) || approveEdit(agentId)));
-      allow delete: if false;
+      allow delete: if verifiedEmail() && resource.data.owner_uid == request.auth.uid
+        && !existsAfter(editPath(agentId))
+        && (!liveApproved(resource.data) || exportMarked('agents', agentId));
       match /stars/{userId} {
         allow get: if signedIn() && request.auth.uid == userId
           && readableAgent(get(agentPath(agentId)).data);
@@ -607,7 +615,9 @@ service cloud.firestore {
              && isSkillVoteDelta()
              && validSkillVoteDelta(skillId)
              && (!liveApproved(resource.data) || exportMarked('votes', 'skills_' + skillId)));
-      allow delete: if false;
+      allow delete: if verifiedEmail() && resource.data.owner_uid == request.auth.uid
+        && !existsAfter(skillEditPath(skillId))
+        && (!liveApproved(resource.data) || exportMarked('skills', skillId));
       match /votes/{userId} {
         function canVote() {
           let skill = get(skillPath(skillId)).data;
@@ -822,6 +832,9 @@ service cloud.firestore {
       allow update: if ((!liveApproved(resource.data) && !liveApproved(request.resource.data))
           || councilExportMarked('councils', id))
         && (councilOwnerUpdate(id) || (isAdmin() && (councilReview(id) || councilAuthorUpdate() || councilApproveEdit(id))));
+      allow delete: if verifiedEmail() && resource.data.owner_uid == request.auth.uid
+        && !existsAfter(councilEditPath(id))
+        && (!liveApproved(resource.data) || councilExportMarked('councils', id));
     }
     match /council_edits/{id} {
       function validEdit() {

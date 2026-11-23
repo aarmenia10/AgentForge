@@ -42,6 +42,9 @@ test('visibility, review, admin authority, bounded views, and star rules', async
   const charlie = env
     .authenticatedContext('charlie', { email_verified: false })
     .firestore()
+  const unverifiedAlice = env
+    .authenticatedContext('alice', { email_verified: false })
+    .firestore()
   const admin = env
     .authenticatedContext('admin-user', { email_verified: true })
     .firestore()
@@ -155,7 +158,9 @@ test('visibility, review, admin authority, bounded views, and star rules', async
             review_status: 'approved',
           }),
         )
-        await assertFails(deleteDoc(doc(alice, 'agents/alice-private')))
+        await assertFails(
+          deleteDoc(doc(unverifiedAlice, 'agents/alice-private')),
+        )
       },
     )
     await t.test(

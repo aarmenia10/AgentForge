@@ -17,6 +17,7 @@ import {
   getAgentRecord,
   listMyAgents,
   listMyPendingEdits,
+  deleteAgent,
   setAgentVisibility,
   withdrawPendingEdit,
 } from '@/services/agents'
@@ -110,6 +111,12 @@ export function MyAgents() {
             onOpen={() => setOpen(record)}
             onChanged={replace}
             onEditGone={() => dropEdit(record.id)}
+            onDeleted={() => {
+              setItems((current) =>
+                current.filter((item) => item.id !== record.id),
+              )
+              setOpen((current) => (current?.id === record.id ? null : current))
+            }}
           />
         ))}
       </ul>
@@ -128,10 +135,6 @@ export function MyAgents() {
           Show more
         </button>
       )}
-      <p className="text-xs text-slate-600 dark:text-slate-400">
-        Agents cannot be deleted. To take one out of circulation, make it
-        private.
-      </p>
       {open && (
         <AgentDetailModal
           agent={open}
@@ -151,12 +154,14 @@ function AgentRow({
   onOpen,
   onChanged,
   onEditGone,
+  onDeleted,
 }: {
   record: AgentRecord
   edit: AgentRecord | null
   onOpen: () => void
   onChanged: (record: AgentRecord) => void
   onEditGone: () => void
+  onDeleted: () => void
 }) {
   const [changing, setChanging] = useState<
     AgentRecord['visibility'] | 'any' | null
@@ -208,6 +213,25 @@ function AgentRow({
       setMessage('The edit was withdrawn.')
     } catch (e) {
       setError(describeServiceError(e, 'withdraw'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    if (
+      !window.confirm(
+        `Delete ${record.name} permanently? This can't be undone. If it is public, it leaves the site within the hour, and anyone who pinned it can no longer load it.`,
+      )
+    )
+      return
+    setBusy(true)
+    setError('')
+    try {
+      await deleteAgent(record.id)
+      onDeleted()
+    } catch (e) {
+      setError(describeServiceError(e, 'delete'))
     } finally {
       setBusy(false)
     }
@@ -283,6 +307,15 @@ function AgentRow({
               : 'Withdraw the edit'}
           </button>
         )}
+        <button
+          type="button"
+          className={smallButton}
+          onClick={remove}
+          disabled={busy}
+        >
+          Delete
+          <span className="sr-only"> {record.name}</span>
+        </button>
       </div>
       {changing && (
         <VisibilityChanger

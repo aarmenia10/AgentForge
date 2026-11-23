@@ -24,6 +24,9 @@ export async function setAgentVisibility(
 ) {
   return (await store()).setAgentVisibility(agentId, visibility)
 }
+export async function deleteAgent(agentId: string) {
+  return (await store()).deleteAgent(agentId)
+}
 export async function getAgentRecord(agentId: string) {
   return (await store()).getAgentRecord(agentId)
 }

@@ -35,6 +35,7 @@ export interface SkillStore {
     id: string,
     visibility: SkillManifest['visibility'],
   ): Promise<void>
+  deleteSkill(id: string): Promise<void>
   getSkillRecord(id: string): Promise<SkillRecord | null>
   listMySkills(pageSize: number, afterId?: string): Promise<Page<SkillRecord>>
   listSharedSkills(
@@ -249,6 +250,23 @@ export function createSkillStore(db: Firestore, uid: string): SkillStore {
       visibility: SkillManifest['visibility'],
     ): Promise<void> {
       await write(id, (current) => ({ ...current, visibility }))
+    },
+    async deleteSkill(id: string): Promise<void> {
+      await runTransaction(db, async (tx) => {
+        const target = ref(id)
+        const live = await tx.get(target)
+        if (!live.exists()) throw new Error('Skill does not exist')
+        const current = checked(live.data(), id)
+        if (current.owner_uid !== uid)
+          throw new Error('Only the owner can delete this skill')
+        tx.delete(target)
+        tx.delete(editRef(id))
+        if (
+          current.visibility === 'public' &&
+          current.review_status === 'approved'
+        )
+          markExportChange(tx, db, 'skills', id)
+      })
     },
     async getSkillRecord(id: string): Promise<SkillRecord | null> {
       const snapshot = await getDocFromServer(ref(id))

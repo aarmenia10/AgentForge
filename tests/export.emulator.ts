@@ -214,6 +214,26 @@ test('hourly export reads only dirty documents and acknowledges only published r
       access(join(directory, seed.id, seed.version + '.json')),
     )
     await publish([])
+
+    const deletable = { ...manifest, id: 'delete-agent', version: '1.0.0' }
+    await owner.createAgent(deletable)
+    await owner.setAgentVisibility(deletable.id, 'public')
+    await admin.reviewAgent(deletable.id, 'approved')
+    result = await publish([
+      marker('agents', deletable.id),
+      'agents/' + deletable.id,
+      marker('agent_versions', deletable.id + '@1.0.0'),
+      'agent_versions/' + deletable.id + '@1.0.0',
+    ])
+    assert.ok(result.catalog.some((a) => a.id === deletable.id))
+    assert.ok(result.files.has(deletable.id + '/1.0.0.json'))
+    await owner.deleteAgent(deletable.id)
+    result = await publish([
+      marker('agents', deletable.id),
+      'agents/' + deletable.id,
+    ])
+    assert.ok(!result.catalog.some((a) => a.id === deletable.id))
+    assert.ok(!result.files.has(deletable.id + '/1.0.0.json'))
   } finally {
     await db.terminate()
     await env.cleanup()

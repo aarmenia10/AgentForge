@@ -116,6 +116,11 @@ export function MySkills() {
             edit={edits.get(record.id) ?? null}
             onChanged={replace}
             onEditGone={() => dropEdit(record.id)}
+            onDeleted={() =>
+              setItems((current) =>
+                current.filter((item) => item.id !== record.id),
+              )
+            }
           />
         ))}
       </ul>
@@ -134,12 +139,6 @@ export function MySkills() {
           Show more skills
         </button>
       )}
-      {items.length > 0 && (
-        <p className="text-xs text-slate-600 dark:text-slate-400">
-          Skills cannot be deleted. To take one out of circulation, make it
-          private.
-        </p>
-      )}
     </div>
   )
 }
@@ -149,11 +148,13 @@ export function SkillRow({
   edit,
   onChanged,
   onEditGone,
+  onDeleted,
 }: {
   record: SkillRecord
   edit: SkillRecord | null
   onChanged: (record: SkillRecord) => void
   onEditGone: () => void
+  onDeleted: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [changing, setChanging] = useState<
@@ -205,6 +206,25 @@ export function SkillRow({
       setMessage('The edit was withdrawn.')
     } catch (e) {
       setError(describeServiceError(e, 'withdraw', 'skill'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    if (
+      !window.confirm(
+        `Delete ${record.name} permanently? This can't be undone. If it is public, it leaves the site within the hour, and anyone who pinned it can no longer load it.`,
+      )
+    )
+      return
+    setBusy(true)
+    setError('')
+    try {
+      await skillsApi.deleteSkill(record.id)
+      onDeleted()
+    } catch (e) {
+      setError(describeServiceError(e, 'delete', 'skill'))
     } finally {
       setBusy(false)
     }
@@ -295,6 +315,14 @@ export function SkillRow({
               : 'Withdraw the edit'}
           </button>
         )}
+        <button
+          type="button"
+          className={smallButton}
+          onClick={remove}
+          disabled={busy}
+        >
+          Delete<span className="sr-only"> {record.name}</span>
+        </button>
       </div>
       {changing && (
         <SkillVisibilityChanger
