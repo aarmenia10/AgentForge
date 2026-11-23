@@ -48,11 +48,16 @@ async function identity(uid) {
     user.disabled ||
     !user.emailVerified ||
     !domain ||
-    !/^(?=.{3,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(domain)
+    !/^(?=.{3,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(
+      domain,
+    )
   )
     throw new RequestError(403, 'Verify your corporate email first.')
   if (personalDomains.has(domain))
-    throw new RequestError(403, 'Personal email accounts can use demo mode only.')
+    throw new RequestError(
+      403,
+      'Personal email accounts can use demo mode only.',
+    )
   return { domain, email: user.email }
 }
 
@@ -118,9 +123,9 @@ export const enterpriseVerify = onRequest(
         ])
         if (company.exists)
           throw new RequestError(
-              409,
-              'Company already registered. Request employee access instead.',
-            )
+            409,
+            'Company already registered. Request employee access instead.',
+          )
         const data = snapshot.data()
         if (
           !data ||
@@ -140,7 +145,8 @@ export const enterpriseVerify = onRequest(
         .catch(() => [])
       if (
         !records.some(
-          (record) => record.join('') === 'agentforce-enterprise=' + pending.challenge,
+          (record) =>
+            record.join('') === 'agentforce-enterprise=' + pending.challenge,
         )
       )
         throw new RequestError(
@@ -149,7 +155,10 @@ export const enterpriseVerify = onRequest(
         )
       const current = await identity(uid)
       if (current.email !== email || current.domain !== domain)
-        throw new RequestError(403, 'Your verified email changed. Sign in again.')
+        throw new RequestError(
+          403,
+          'Your verified email changed. Sign in again.',
+        )
       await db.runTransaction(async (tx) => {
         const [company, latest] = await Promise.all([
           tx.get(org),
@@ -157,9 +166,9 @@ export const enterpriseVerify = onRequest(
         ])
         if (company.exists)
           throw new RequestError(
-              409,
-              'Company already registered. Request employee access instead.',
-            )
+            409,
+            'Company already registered. Request employee access instead.',
+          )
         if (
           latest.get('challenge') !== pending.challenge ||
           latest.get('issuedAt') !== pending.issuedAt ||

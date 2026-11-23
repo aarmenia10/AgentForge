@@ -48,15 +48,15 @@ jobs:
         run: npm run lint
 
       - name: Check formatting
-        run: |
-          if ! npm run format:check; then
-            npx prettier --write functions/index.mjs src/pages/EnterprisePage.tsx
-            git diff -- functions/index.mjs src/pages/EnterprisePage.tsx
-            exit 1
-          fi
+        run: npm run format:check
 
       # The catalog is built from the seed file here. Credentials are not
       # present yet, so the exporter cannot reach Firestore by accident.
+      - name: Check Enterprise function dependencies and syntax
+        run: |
+          npm --prefix functions install --no-audit --no-fund
+          node --check functions/index.mjs
+
       - name: Build
         run: npm run build
         env:

@@ -48,7 +48,8 @@ export default function EnterprisePage() {
             onClick={() =>
               auth.openSignIn({
                 mode: 'sign-up',
-                reason: 'Register using your company email, or use a personal email for a demo.',
+                reason:
+                  'Register using your company email, or use a personal email for a demo.',
               })
             }
           >
@@ -177,7 +178,9 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
   if (demo)
     return (
       <div className="space-y-4">
-        <p className="font-semibold">Demo workspace · Only you can access it.</p>
+        <p className="font-semibold">
+          Demo workspace · Only you can access it.
+        </p>
         <p>
           Use sample files only. This workspace is separate from every company.
         </p>
@@ -186,7 +189,13 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
             Back to company workspace
           </button>
         )}
-        <Repository domain={domain} uid={uid} email={email} admin={false} demo />
+        <Repository
+          domain={domain}
+          uid={uid}
+          email={email}
+          admin={false}
+          demo
+        />
       </div>
     )
   if (membership === undefined) return <p>Checking company access…</p>
@@ -243,7 +252,10 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
               onSubmit={(event) => {
                 event.preventDefault()
                 void act(async () => {
-                  const result = await enterpriseRequest('register', name.trim())
+                  const result = await enterpriseRequest(
+                    'register',
+                    name.trim(),
+                  )
                   setChallenge(result.challenge ?? '')
                   setMessage('DNS challenge issued. Add the TXT record below.')
                 })
@@ -501,7 +513,9 @@ function Repository({
         )}
       </form>
       <section className="space-y-3">
-        <h2 className="font-semibold">{demo ? 'Demo library' : 'Company library'}</h2>
+        <h2 className="font-semibold">
+          {demo ? 'Demo library' : 'Company library'}
+        </h2>
         <input
           type="search"
           className={input}
