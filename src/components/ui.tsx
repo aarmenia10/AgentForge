@@ -1,4 +1,4 @@
-import { BadgeCheck, Check, Copy } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FRAMEWORK_LABELS, type AgentAuthor, type AgentFramework } from '@/types/agent'
 import { Link } from '@/router/Router'
@@ -17,8 +17,24 @@ export function GitHubIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * Primary action: accent fill, pill shape, an arrow, and a gentle lift on
+ * hover. Put `<ArrowIcon />` last inside it.
+ */
+export const primaryButtonClass =
+  'group/btn inline-flex h-11 items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-semibold text-accent-ink transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_var(--lm-accent)] disabled:cursor-not-allowed disabled:opacity-50'
+
+export function ArrowIcon() {
+  return (
+    <ArrowRight
+      aria-hidden="true"
+      className="size-4 transition-transform duration-200 group-hover/btn:translate-x-0.5"
+    />
+  )
+}
+
 const FRAMEWORK_STYLES: Record<AgentFramework, string> = {
-  mcp_native: 'text-teal-600 dark:text-teal-300',
+  mcp_native: 'text-accent-fg',
   crewai: 'text-rose-600 dark:text-rose-300',
   langchain: 'text-emerald-600 dark:text-emerald-300',
   autogen: 'text-indigo-600 dark:text-indigo-300',
@@ -57,7 +73,7 @@ export function AuthorTag({
 }) {
   const badge = author.verified && (
     <span
-      className="inline-flex shrink-0 items-center gap-1 text-teal-600 dark:text-teal-300"
+      className="inline-flex shrink-0 items-center gap-1 text-accent-fg"
       title={VERIFIED_AUTHOR_HINT}
     >
       <BadgeCheck className="size-3.5" aria-hidden={showVerifiedLabel} aria-label={showVerifiedLabel ? undefined : VERIFIED_AUTHOR_LABEL} />
@@ -65,7 +81,7 @@ export function AuthorTag({
     </span>
   )
   const className =
-    'inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400'
+    'inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-fg-muted'
   return (
     <span className={className}>
       <span className="truncate underline-offset-2 group-hover/author:underline">

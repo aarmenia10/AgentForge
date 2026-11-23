@@ -16,14 +16,36 @@
           location.replace('https://agentlemon.web.app' + location.pathname + location.search + location.hash)
       })()
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <script>
-      // Apply the stored theme before first paint to avoid a flash.
-      (function () {
+      // Apply the chosen colors before first paint to avoid a flash. The app
+      // saves its computed CSS variables under agentlemon.appearance.cache
+      // (src/theme/appearance.ts), so this script holds no color logic. With
+      // nothing saved it applies the defaults (dark, black, lemon), which the
+      // build inserts from the same module.
+      ;(function () {
+        var defaults = /*__APPEARANCE_DEFAULTS__*/ null
+        var root = document.documentElement
+        function apply(dark, tokens) {
+          root.classList.toggle('dark', dark)
+          root.style.colorScheme = dark ? 'dark' : 'light'
+          for (var name in tokens) root.style.setProperty(name, tokens[name])
+        }
         try {
-          var stored = localStorage.getItem('agentlemon:theme')
-          var dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
-          document.documentElement.classList.toggle('dark', dark)
-        } catch (_) {}
+          var mode = localStorage.getItem('agentlemon:theme')
+          if (mode !== 'light' && mode !== 'dark') mode = 'dark'
+          var cache = JSON.parse(localStorage.getItem('agentlemon.appearance.cache') || 'null')
+          if (cache && cache.mode === mode && cache.tokens) return apply(cache.dark, cache.tokens)
+          if (defaults) return apply(defaults[mode].dark, defaults[mode].tokens)
+          apply(mode === 'dark', {})
+        } catch (_) {
+          if (defaults) apply(true, defaults.dark.tokens)
+        }
       })()
     </script>
   </head>

@@ -3,6 +3,7 @@ import { AgentGrid } from '@/components/AgentGrid'
 import { AgentDetailModal } from '@/components/detail/AgentDetailModal'
 import { ExplorerToolbar } from '@/components/ExplorerToolbar'
 import { Hero } from '@/components/Hero'
+import { Reveal } from '@/components/Reveal'
 import { agentRepository } from '@/lib/agentRepository'
 import { queryAgents, type CatalogQuery } from '@/lib/catalog'
 import { useRoute } from '@/router/Router'
@@ -89,9 +90,10 @@ export function HomePage({ query, patchQuery, resetQuery }: HomePageProps) {
           agentCount={agents.length}
         />
 
-        <section
+        <Reveal
+          as="section"
           id="explore"
-          className="mx-auto max-w-7xl scroll-mt-20 px-4 pb-24 sm:px-6"
+          className="mx-auto max-w-7xl scroll-mt-28 px-4 pb-24 sm:px-6"
         >
           <h2 className="mb-4 text-xl font-semibold tracking-tight">
             Explore agents
@@ -110,7 +112,7 @@ export function HomePage({ query, patchQuery, resetQuery }: HomePageProps) {
               onReset={resetQuery}
             />
           </div>
-        </section>
+        </Reveal>
       </main>
 
       {openedAgent && (

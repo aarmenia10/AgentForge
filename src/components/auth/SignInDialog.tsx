@@ -406,7 +406,7 @@ export default function SignInDialog({
             <button
               type="submit"
               aria-disabled={isBusy || undefined}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-500 px-5 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-wait aria-disabled:opacity-70"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-500 px-5 text-sm font-semibold text-accent-ink shadow-lg shadow-teal-500/25 transition hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-wait aria-disabled:opacity-70"
             >
               {busy && busy !== 'google' && (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -453,7 +453,7 @@ export default function SignInDialog({
               <button
                 type="button"
                 onClick={closeSignIn}
-                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-teal-500 px-5 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition hover:bg-teal-600"
+                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-teal-500 px-5 text-sm font-semibold text-accent-ink shadow-lg shadow-teal-500/25 transition hover:bg-teal-600"
               >
                 Done
               </button>

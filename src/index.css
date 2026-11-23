@@ -4,7 +4,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Navy: the brand's dark surface ramp. Slate and teal come from Tailwind. */
@@ -20,41 +20,79 @@
   --color-navy-900: #0d1830;
   --color-navy-950: #070e1f;
 
+  /* Bigger, softer corners: 1.5rem cards, 2rem on large panels. */
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
   --shadow-glow: 0 0 0 1px rgb(45 212 191 / 0.25), 0 12px 40px -12px rgb(20 184 166 / 0.35);
 }
 
+/* Semantic colors, set on <html> by src/theme/ThemeProvider.tsx. */
+@theme inline {
+  --color-page: var(--lm-bg);
+  --color-surface: var(--lm-surface);
+  --color-surface-2: var(--lm-surface-2);
+  --color-fg: var(--lm-text);
+  --color-fg-muted: var(--lm-muted);
+  --color-line: var(--lm-border);
+  --color-accent: var(--lm-accent);
+  --color-accent-ink: var(--lm-accent-ink);
+  --color-accent-fg: var(--lm-accent-text);
+}
+
+/* Fallbacks for the instant before the pre-paint script runs (dark, black, lemon). */
 :root {
-  --glass-bg: rgb(255 255 255 / 0.68);
-  --glass-bg-strong: rgb(255 255 255 / 0.88);
-  --glass-border: rgb(15 23 42 / 0.08);
-  --glass-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px -16px rgb(15 23 42 / 0.18);
-  --page-glow-a: rgb(45 212 191 / 0.2);
-  --page-glow-b: rgb(58 88 153 / 0.16);
+  --lm-bg: #0a0a0a;
+  --lm-surface: #1e1e1e;
+  --lm-surface-2: #2b2b2b;
+  --lm-text: #f6f6f6;
+  --lm-muted: #b3b3b3;
+  --lm-border: #272727;
+  --lm-accent: #fad628;
+  --lm-accent-ink: #000000;
+  --lm-accent-text: #fad628;
+  --lm-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.8);
 }
 
-.dark {
-  --glass-bg: rgb(21 36 69 / 0.42);
-  --glass-bg-strong: rgb(13 24 48 / 0.9);
-  --glass-border: rgb(255 255 255 / 0.09);
-  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 16px 40px -20px rgb(0 0 0 / 0.7);
-  --page-glow-a: rgb(20 184 166 / 0.16);
-  --page-glow-b: rgb(58 88 153 / 0.3);
-}
-
-/* Frosted surface used by cards, toolbars, and the nav. */
+/*
+ * "Glass" used to be a frosted panel. It is now a flat card: a fill one step
+ * off the page color, a hairline border, and no blur. Every page that still
+ * says "glass" picks the new look up from here.
+ */
 @utility glass {
-  background-color: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(18px) saturate(1.4);
+  background-color: var(--lm-surface);
+  border: 1px solid color-mix(in oklab, var(--lm-border) 55%, transparent);
 }
 
-/* Near-opaque variant for overlays that sit on busy content. */
+/* Overlays (dialogs, popovers) get a soft shadow and a solid fill. */
 @utility glass-strong {
-  background-color: var(--glass-bg-strong);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(24px) saturate(1.4);
+  background-color: var(--lm-surface);
+  border: 1px solid color-mix(in oklab, var(--lm-border) 55%, transparent);
+  box-shadow: var(--lm-shadow);
+}
+
+/* Card that lifts 4px with a soft shadow on hover. */
+@utility card-lift {
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease;
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--lm-shadow);
+  }
+}
+
+/* Fade-up on scroll. Hidden only once JS has confirmed it can reveal. */
+.reveal-ready .reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 600ms ease,
+    transform 600ms ease;
+}
+.reveal-ready .reveal.is-visible {
+  opacity: 1;
+  transform: none;
 }
 
 @layer base {
@@ -63,20 +101,26 @@
   }
 
   body {
-    @apply min-h-screen bg-slate-50 font-sans text-slate-900 antialiased dark:bg-navy-950 dark:text-slate-100;
-    background-image:
-      radial-gradient(60rem 32rem at 12% -8%, var(--page-glow-a), transparent 60%),
-      radial-gradient(56rem 34rem at 92% 0%, var(--page-glow-b), transparent 62%);
-    background-attachment: fixed;
-    background-repeat: no-repeat;
+    @apply min-h-screen font-sans antialiased;
+    background-color: var(--lm-bg);
+    color: var(--lm-text);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
   }
 
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-teal-500;
+    @apply outline-2 outline-offset-2;
+    outline-color: var(--lm-accent-text);
   }
 
   ::selection {
-    @apply bg-teal-500/30;
+    background-color: color-mix(in oklab, var(--lm-accent) 40%, transparent);
   }
 }
 
@@ -87,5 +131,10 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .reveal-ready .reveal {
+    opacity: 1;
+    transform: none;
   }
 }

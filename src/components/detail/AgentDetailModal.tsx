@@ -22,7 +22,7 @@ import { VoteButtons } from '@/components/ratings/VoteButtons'
 import { CommentsSection } from '@/components/ratings/CommentsSection'
 import { ReportDialog } from '@/components/ratings/ReportDialog'
 import { fetchRatings, type RatingData } from '@/services/ratings'
-import { AuthorLink, cn, CopyButton, FrameworkBadge } from '../ui'
+import { ArrowIcon, AuthorLink, cn, CopyButton, FrameworkBadge, primaryButtonClass } from '../ui'
 import { InstallPanel } from './InstallPanel'
 import { SchemaViewer } from './SchemaViewer'
 
@@ -150,19 +150,19 @@ export function AgentDetailModal({
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={onDialogKeyDown}
-        className="glass-strong relative flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl focus:outline-none sm:rounded-3xl"
+        className="relative flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-4xl bg-surface shadow-[var(--lm-shadow)] focus:outline-none sm:rounded-4xl"
       >
         <header className="px-5 pt-5 sm:px-7 sm:pt-7">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <FrameworkBadge framework={agent.framework} />
-                <span className="font-mono text-xs text-slate-400">v{agent.version}</span>
+                <span className="font-mono text-xs text-fg-muted">v{agent.version}</span>
               </div>
               <h2 id={titleId} className="mt-2 text-2xl font-semibold tracking-tight">
                 {agent.name}
               </h2>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
                 <AuthorLink author={agent.author} showVerifiedLabel />
                 <VoteButtons
                   kind="agent"
@@ -179,17 +179,17 @@ export function AgentDetailModal({
                   <button
                     type="button"
                     onClick={() => setShowReport(true)}
-                    className="text-xs text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400"
+                    className="text-xs text-fg-muted hover:text-rose-500"
                   >
                     Report
                   </button>
                 )}
               </div>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-[11px] text-fg-muted">
                 Vote totals in the catalog refresh about hourly.
               </p>
               {publicOriginLabel(originApp) && (
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-fg-muted">
                   {publicOriginLabel(originApp)}
                 </p>
               )}
@@ -198,7 +198,7 @@ export function AgentDetailModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="grid size-10 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-900/5 dark:text-slate-300 dark:hover:bg-white/10"
+              className="grid size-10 shrink-0 place-items-center rounded-full text-fg-muted transition hover:bg-surface-2 hover:text-fg"
             >
               <X className="size-5" />
             </button>
@@ -208,7 +208,7 @@ export function AgentDetailModal({
             role="tablist"
             aria-label="Agent details"
             onKeyDown={onTabKeyDown}
-            className="-mx-1 mt-5 flex gap-1 overflow-x-auto border-b border-slate-900/10 px-1 dark:border-white/10"
+            className="-mx-1 mt-5 flex gap-1 overflow-x-auto border-b border-line px-1"
           >
             {tabs.map(({ id, label, icon: Icon }) => {
               const selected = tab === id
@@ -225,8 +225,8 @@ export function AgentDetailModal({
                   className={cn(
                     '-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition',
                     selected
-                      ? 'border-teal-500 text-teal-600 dark:text-teal-300'
-                      : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
+                      ? 'border-accent text-accent-fg'
+                      : 'border-transparent text-fg-muted hover:text-fg',
                   )}
                 >
                   <Icon className="size-4" />
@@ -259,20 +259,21 @@ export function AgentDetailModal({
         </div>
 
         {!installable && (
-          <footer className="border-t border-slate-900/10 px-5 py-4 text-sm text-slate-600 sm:px-7 dark:border-white/10 dark:text-slate-300">
+          <footer className="border-t border-line px-5 py-4 text-sm text-fg-muted sm:px-7">
             This agent is not in the public catalog, so it cannot be added to
             an AI app yet. Copy what you need from the tabs above.
           </footer>
         )}
         {installable && tab !== 'install' && (
-          <footer className="border-t border-slate-900/10 px-5 py-4 sm:px-7 dark:border-white/10">
+          <footer className="border-t border-line px-5 py-4 sm:px-7">
             <button
               type="button"
               onClick={() => setTab('install')}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-500 px-5 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition hover:bg-teal-600 sm:w-auto"
+              className={`${primaryButtonClass} w-full sm:w-auto`}
             >
               <PlugZap className="size-4" />
               Add to Claude / Cursor
+              <ArrowIcon />
             </button>
           </footer>
         )}
@@ -302,12 +303,12 @@ function OverviewPanel({
   return (
     <div className="space-y-7">
       <section>
-        <p className="leading-relaxed text-slate-700 dark:text-slate-200">{agent.description}</p>
+        <p className="leading-relaxed text-fg">{agent.description}</p>
         <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Tags">
           {agent.tags.map((tag) => (
             <li
               key={tag}
-              className="rounded-md bg-slate-900/5 px-2 py-0.5 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300"
+              className="rounded-md bg-surface-2 px-2 py-0.5 text-xs text-fg-muted"
             >
               #{tag}
             </li>
@@ -320,20 +321,20 @@ function OverviewPanel({
           <h3 className="text-sm font-semibold">System prompt</h3>
           <CopyButton text={system_prompt} label="Copy prompt" />
         </div>
-        <blockquote className="rounded-xl border-l-2 border-teal-500 bg-slate-900/5 p-4 text-sm leading-relaxed text-slate-700 dark:bg-white/5 dark:text-slate-200">
+        <blockquote className="rounded-2xl border-l-2 border-accent bg-page p-4 text-sm leading-relaxed text-fg">
           {system_prompt}
         </blockquote>
       </section>
 
       <section>
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-          <ListChecks className="size-4 text-teal-500" />
+          <ListChecks className="size-4 text-accent-fg" />
           How it reasons, step by step
         </h3>
         <ol className="space-y-2.5">
           {instructions.map((step, index) => (
-            <li key={index} className="flex gap-3 text-sm text-slate-700 dark:text-slate-200">
-              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-teal-500/15 text-xs font-semibold text-teal-700 dark:text-teal-300">
+            <li key={index} className="flex gap-3 text-sm text-fg">
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent/15 text-xs font-semibold text-accent-fg">
                 {index + 1}
               </span>
               <span className="pt-0.5">{step}</span>
@@ -345,14 +346,14 @@ function OverviewPanel({
       {verification_rules.length > 0 && (
         <section>
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <ShieldCheck className="size-4 text-teal-500" />
+            <ShieldCheck className="size-4 text-accent-fg" />
             Verification rules
           </h3>
           <ul className="space-y-2">
             {verification_rules.map((rule, index) => (
               <li
                 key={index}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-white/10 dark:text-slate-200"
+                className="rounded-2xl bg-page px-4 py-3 text-sm text-fg"
               >
                 {rule}
               </li>
@@ -361,7 +362,7 @@ function OverviewPanel({
         </section>
       )}
 
-      <section className="pt-4 border-t border-slate-900/10 dark:border-white/10">
+      <section className="pt-4 border-t border-line">
         <h3 className="mb-3 text-sm font-semibold">Comments</h3>
         <CommentsSection
           kind="agent"
@@ -375,7 +376,7 @@ function OverviewPanel({
 }
 
 const TOOL_TYPE_STYLES: Record<AgentTool['type'], string> = {
-  mcp_tool: 'text-teal-700 dark:text-teal-300',
+  mcp_tool: 'text-accent-fg',
   python_function: 'text-amber-700 dark:text-amber-300',
   rest_api: 'text-indigo-700 dark:text-indigo-300',
 }
@@ -383,7 +384,7 @@ const TOOL_TYPE_STYLES: Record<AgentTool['type'], string> = {
 function ToolsPanel({ tools }: { tools: AgentTool[] }) {
   if (tools.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-white/15 dark:text-slate-400">
+      <p className="rounded-2xl border border-dashed border-line p-6 text-center text-sm text-fg-muted">
         This agent needs no companion tools. It runs on the model alone.
       </p>
     )
@@ -394,7 +395,7 @@ function ToolsPanel({ tools }: { tools: AgentTool[] }) {
       {tools.map((tool) => (
         <li
           key={`${tool.type}:${tool.name}`}
-          className="rounded-xl border border-slate-200 p-4 dark:border-white/10"
+          className="rounded-2xl bg-page p-4"
         >
           <div className="flex flex-wrap items-center gap-2">
             <code className="break-all font-mono text-sm font-medium">{tool.name}</code>
@@ -407,10 +408,10 @@ function ToolsPanel({ tools }: { tools: AgentTool[] }) {
               {TOOL_TYPE_LABELS[tool.type]}
             </span>
           </div>
-          <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-300">{tool.description}</p>
+          <p className="mt-1.5 text-sm text-fg-muted">{tool.description}</p>
           {tool.endpoint && (
-            <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-900/5 py-1.5 pl-3 pr-1.5 dark:bg-white/5">
-              <code className="min-w-0 flex-1 truncate font-mono text-xs text-slate-600 dark:text-slate-300">
+            <div className="mt-3 flex items-center gap-2 rounded-full bg-surface py-1.5 pl-4 pr-1.5">
+              <code className="min-w-0 flex-1 truncate font-mono text-xs text-fg-muted">
                 {tool.endpoint}
               </code>
               <CopyButton text={tool.endpoint} label="Copy endpoint" />

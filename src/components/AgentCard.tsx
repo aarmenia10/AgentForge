@@ -12,10 +12,10 @@ export function AgentCard({ agent, onOpen }: AgentCardProps) {
   const toolCount = agent.tools_required.length
 
   return (
-    <article className="glass group relative flex h-full flex-col rounded-2xl p-5 transition duration-200 hover:-translate-y-1 hover:shadow-glow">
+    <article className="card-lift group relative flex h-full flex-col rounded-3xl bg-surface p-6">
       <div className="flex items-start justify-between gap-3">
         <FrameworkBadge framework={agent.framework} />
-        <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-amber-600 dark:text-amber-300">
+        <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-accent-fg">
           <Star className="size-3.5 fill-current" />
           {formatCount(agent.stats.stars)}
           <span className="sr-only"> stars</span>
@@ -27,14 +27,14 @@ export function AgentCard({ agent, onOpen }: AgentCardProps) {
         <button
           type="button"
           onClick={() => onOpen(agent)}
-          className="text-left after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-teal-500"
+          className="text-left after:absolute after:inset-0 after:rounded-3xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-[var(--lm-accent-text)]"
         >
           {agent.name}
         </button>
-        <span className="ml-2 font-mono text-xs font-normal text-slate-400">v{agent.version}</span>
+        <span className="ml-2 font-mono text-xs font-normal text-fg-muted">v{agent.version}</span>
       </h3>
 
-      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-fg-muted">
         {agent.description}
       </p>
 
@@ -42,14 +42,14 @@ export function AgentCard({ agent, onOpen }: AgentCardProps) {
         {agent.tags.slice(0, 3).map((tag) => (
           <li
             key={tag}
-            className="rounded-md bg-slate-900/5 px-2 py-0.5 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300"
+            className="rounded-md bg-surface-2 px-2 py-0.5 text-xs text-fg-muted"
           >
             #{tag}
           </li>
         ))}
       </ul>
 
-      <footer className="mt-auto flex items-center justify-between gap-3 border-t border-slate-900/5 pt-4 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
+      <footer className="mt-auto flex items-center justify-between gap-3 border-t border-line/60 pt-4 text-xs text-fg-muted">
         <AuthorLink author={agent.author} />
         <div className="flex shrink-0 items-center gap-3">
           <span className="inline-flex items-center gap-1" title="Required tools">
@@ -62,7 +62,7 @@ export function AgentCard({ agent, onOpen }: AgentCardProps) {
           </span>
         </div>
       </footer>
-      <p className="mt-2 text-[11px] text-slate-400">
+      <p className="mt-2 text-[11px] text-fg-muted">
         Updated {formatRelativeTime(agent.stats.updated_at)}
       </p>
     </article>
