@@ -23,6 +23,7 @@ const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
   skills: lazy(() => import('./pages/SkillsPage')),
   'skill-upload': lazy(() => import('./pages/SkillUploadPage')),
   skill: lazy(() => import('./pages/SkillPage')),
+  enterprise: lazy(() => import('./pages/EnterprisePage')),
   suggestions: lazy(() => import('./pages/SuggestionsPage')),
   'not-found': lazy(() => import('./pages/NotFoundPage')),
 }

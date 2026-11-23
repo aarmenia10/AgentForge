@@ -38,6 +38,13 @@ export function TopNav({ search }: TopNavProps) {
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           <Link
+            to="/enterprise"
+            aria-current={route.name === 'enterprise' ? 'page' : undefined}
+            className="inline-flex h-10 items-center rounded-xl px-2 text-sm font-medium text-teal-600 hover:text-teal-800 dark:text-teal-300 sm:px-3"
+          >
+            <span className="hidden md:inline">AgentForce&nbsp;</span>Enterprise
+          </Link>
+          <Link
             to="/skills"
             aria-current={onSkills ? 'page' : undefined}
             className={cn(
