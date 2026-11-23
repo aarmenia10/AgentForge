@@ -238,9 +238,10 @@ function DemoAccess({
         <button
           className={button}
           onClick={() => {
-            void setDoc(doc(db, 'enterprise_demos', workspace, 'requests', uid), {
-              email,
-            })
+            void setDoc(
+              doc(db, 'enterprise_demos', workspace, 'requests', uid),
+              { email },
+            )
               .then(() =>
                 setMessage(
                   'Request sent. Your administrator must approve access.',
