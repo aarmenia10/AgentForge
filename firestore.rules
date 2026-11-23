@@ -873,11 +873,11 @@ service cloud.firestore {
       allow create, update: if signedIn() && request.auth.uid == uid
         && enterpriseEmail(request.resource.data.domain)
         && request.resource.data.keys().hasOnly(['domain', 'name', 'challenge'])
-        && request.resource.data.domain.matches('^[a-z0-9][a-z0-9.-]{1,251}[a-z0-9])
+        && request.resource.data.domain.matches('^[a-z0-9][a-z0-9.-]{1,251}[a-z0-9]$')
         && request.resource.data.name is string && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 100
         && request.resource.data.challenge is string
-        && request.resource.data.challenge.matches('^[a-f0-9-]{36});
+        && request.resource.data.challenge.matches('^[a-f0-9-]{36}$');
     }
     match /enterprise_orgs/{domain} {
       allow get: if enterpriseActive(domain);
