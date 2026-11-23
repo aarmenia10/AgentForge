@@ -13,6 +13,7 @@ export type ServiceAction =
   | 'approve'
   | 'reject'
   | 'take-down'
+  | 'delete'
   | 'verify-author'
 
 /** What the error is about. Agents are the default, for the existing screens. */
@@ -27,6 +28,7 @@ const FALLBACK: Record<ServiceAction, (item: ServiceItem) => string> = {
   approve: () => 'Could not approve. Try again.',
   reject: () => 'Could not reject. Try again.',
   'take-down': (item) => `Could not take this ${item} down. Try again.`,
+  delete: (item) => `Could not delete this ${item}. Try again.`,
   'verify-author': () => 'Could not change "Verified author". Try again.',
 }
 
@@ -41,6 +43,7 @@ const DENIED: Record<ServiceAction, (item: ServiceItem) => string> = {
   approve: () => 'The server refused the approval.',
   reject: () => 'The server refused the rejection.',
   'take-down': () => 'The server refused the take-down.',
+  delete: (item) => `The server refused to delete this ${item}.`,
   'verify-author': () => 'The server refused the change to "Verified author".',
 }
 

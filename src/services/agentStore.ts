@@ -187,6 +187,23 @@ export function createAgentStore(db: Firestore, uid: string) {
     ): Promise<void> {
       await write(id, (current) => ({ ...current, visibility }))
     },
+    async deleteAgent(id: string): Promise<void> {
+      await runTransaction(db, async (tx) => {
+        const target = ref(id)
+        const live = await tx.get(target)
+        if (!live.exists()) throw new Error('Agent does not exist')
+        const current = live.data() as AgentRecord
+        if (current.owner_uid !== uid)
+          throw new Error('Only the owner can delete this agent')
+        tx.delete(target)
+        tx.delete(editRef(id))
+        if (
+          current.visibility === 'public' &&
+          current.review_status === 'approved'
+        )
+          markExportChange(tx, db, 'agents', id)
+      })
+    },
     async getAgentRecord(id: string): Promise<AgentRecord | null> {
       const snapshot = await getDocFromServer(ref(id))
       return snapshot.exists() ? (snapshot.data() as AgentRecord) : null

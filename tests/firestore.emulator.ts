@@ -31,6 +31,7 @@ import './skills.emulator'
 import './councils.emulator'
 import './connector.emulator'
 import './preferences.emulator'
+import './deletion.emulator'
 import './ratings.emulator'
 import './ratings-export.emulator'
 

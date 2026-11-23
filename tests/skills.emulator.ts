@@ -107,7 +107,7 @@ test('skill access, sharing, proposals, immutable approval and queued public fil
     )
     await assertFails(updateDoc(doc(bob, live), { visibility: 'friends' }))
     await assertFails(updateDoc(doc(admin, live), { 'author.verified': true }))
-    await assertFails(deleteDoc(doc(alice, live)))
+    await assertFails(deleteDoc(doc(unconfirmed, live)))
     await assertFails(
       getDocsFromServer(
         query(
@@ -419,6 +419,31 @@ test('skill access, sharing, proposals, immutable approval and queued public fil
         review_status: 'pending',
         shared_with: [],
       }),
+    )
+
+    const deletable = skill({ id: 'delete-skill', visibility: 'private' })
+    await owner.createSkill(deletable)
+    await owner.setSkillVisibility(deletable.id, 'public')
+    await reviewer.reviewSkill(deletable.id, 'approved')
+    const beforeDelete = await publish()
+    assert.ok(
+      beforeDelete.skillIndex.skills.some((entry) => entry.id === deletable.id),
+    )
+    assert.ok(
+      beforeDelete.skillFiles.has('skills/' + deletable.id + '/1.0.0.json'),
+    )
+    await owner.deleteSkill(deletable.id)
+    const afterDelete = await publish()
+    assert.ok(
+      !afterDelete.skillIndex.skills.some((entry) => entry.id === deletable.id),
+    )
+    assert.ok(
+      !afterDelete.skillFiles.has('skills/' + deletable.id + '/1.0.0.json'),
+    )
+    assert.ok(
+      !(await readFile(join(directory, 'skills.json'), 'utf8')).includes(
+        deletable.id,
+      ),
     )
   } finally {
     await db.terminate()

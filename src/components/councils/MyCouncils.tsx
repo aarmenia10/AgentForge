@@ -20,6 +20,7 @@ export function MyCouncils({ owner }: { owner?: string }) {
   const [cursor, setCursor] = useState<string | null>(null)
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
+  const [deleting, setDeleting] = useState<string | null>(null)
   useEffect(() => {
     let active = true
     page(owner)
@@ -50,6 +51,26 @@ export function MyCouncils({ owner }: { owner?: string }) {
       setError('Could not load more councils.')
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function remove(item: CouncilRecord) {
+    if (
+      !window.confirm(
+        `Delete ${item.name} permanently? This can't be undone. If it is public, it leaves the site within the hour, and anyone who pinned it can no longer load it.`,
+      )
+    )
+      return
+    setDeleting(item.id)
+    setError('')
+    try {
+      const store = await councilStore()
+      await store.delete(item.id)
+      setItems((current) => current.filter((entry) => entry.id !== item.id))
+    } catch {
+      setError('Could not delete council.')
+    } finally {
+      setDeleting(null)
     }
   }
   return (
@@ -93,6 +114,17 @@ export function MyCouncils({ owner }: { owner?: string }) {
             {item.visibility === 'public' && <span>{item.review_status}</span>}
             {originLabel(item.origin_app, item.saved_from_chat) && (
               <span>{originLabel(item.origin_app, item.saved_from_chat)}</span>
+            )}
+            {!owner && (
+              <button
+                type="button"
+                className={smallButton}
+                disabled={deleting !== null}
+                onClick={() => void remove(item)}
+              >
+                Delete
+                <span className="sr-only"> {item.name}</span>
+              </button>
             )}
           </div>
         </article>

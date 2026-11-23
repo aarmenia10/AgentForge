@@ -193,7 +193,10 @@ test('wrangler.toml has one cron at minute 17 and no bindings', async () => {
 })
 
 test('ci.yml: the connector dispatch behaves as a schedule run, a manual run does not', async () => {
-  const ci = await readFile('.github/workflows/ci.yml', 'utf8')
+  const ci = (await readFile('.github/workflows/ci.yml', 'utf8')).replace(
+    /\r\n/g,
+    '\n',
+  )
 
   // The dispatch input exists, off by default.
   assert.match(

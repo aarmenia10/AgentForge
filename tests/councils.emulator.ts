@@ -183,6 +183,13 @@ test('council rules gate a 20-member roster, snapshots, proposals, and hourly ta
       .set({ revision: crypto.randomUUID() })
     const restored = await readFirestoreExport(db, [], [], () => {}, removed)
     assert.equal(exportDigest(restored), exportDigest(first))
+    await acknowledge(db, restored.receipts)
+
+    await owner.delete(draft.id)
+    const deleted = await readFirestoreExport(db, [], [], () => {}, restored)
+    assert.deepEqual(deleted.councilIndex.councils, [])
+    assert.equal(deleted.councilFiles.size, 0)
+    assert.ok(!deleted.councilFiles.has('councils/' + draft.id + '/1.1.0.json'))
   } finally {
     await db.terminate()
     await env.cleanup()

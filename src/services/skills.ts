@@ -32,6 +32,9 @@ export async function setSkillVisibility(
 ) {
   return (await store()).setSkillVisibility(skillId, visibility)
 }
+export async function deleteSkill(skillId: string) {
+  return (await store()).deleteSkill(skillId)
+}
 export async function getSkillRecord(skillId: string) {
   return (await store()).getSkillRecord(skillId)
 }

@@ -309,6 +309,19 @@ export function createCouncilStore(db: Firestore, uid: string) {
     update: (input: CouncilInput) => write(input.id, input),
     setVisibility: (id: string, visibility: CouncilRecord['visibility']) =>
       write(id, visibility),
+    async delete(id: string) {
+      await runTransaction(db, async (tx) => {
+        const target = ref(liveSource, id)
+        const live = await tx.get(target)
+        if (!live.exists()) throw new Error('Council does not exist.')
+        const current = checked(live.data(), id)
+        if (current.owner_uid !== uid)
+          throw new Error('Only the owner can delete a council.')
+        tx.delete(target)
+        tx.delete(ref(editSource, id))
+        if (isApproved(current)) mark(tx, liveSource, id)
+      })
+    },
 
     async verifyAuthor(id: string, verified: boolean) {
       await runTransaction(db, async (tx) => {
