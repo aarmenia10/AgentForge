@@ -21,6 +21,7 @@ import {
 import { SEED_AGENTS } from '../src/data/seedAgents'
 import { createEmulatorCatalogExport } from './emulatorCatalogExport'
 import { toggleUp } from './voteHelper'
+import './enterprise.emulator'
 import './profiles.emulator'
 import './visibility.emulator'
 import './edits.emulator'

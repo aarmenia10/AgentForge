@@ -851,5 +851,83 @@ service cloud.firestore {
         && getAfter(councilPath(request.resource.data.id)).data == request.resource.data;
     }
 
+    // Enterprise repositories are separate from public catalog and export paths.
+    function enterpriseEmail(domain) {
+      return verifiedEmail() && request.auth.token.email is string
+        && request.auth.token.email.split('@').size() == 2
+        && request.auth.token.email.split('@')[1].lower() == domain;
+    }
+    function enterpriseMemberPath(domain, uid) {
+      return /databases/$(database)/documents/enterprise_orgs/$(domain)/members/$(uid);
+    }
+    function enterpriseActive(domain) {
+      return enterpriseEmail(domain)
+        && get(enterpriseMemberPath(domain, request.auth.uid)).data.active == true;
+    }
+    function enterpriseAdmin(domain) {
+      return enterpriseActive(domain)
+        && get(enterpriseMemberPath(domain, request.auth.uid)).data.role == 'admin';
+    }
+    match /enterprise_registrations/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && enterpriseEmail(request.resource.data.domain)
+        && request.resource.data.keys().hasOnly(['domain', 'name', 'challenge'])
+        && request.resource.data.domain.matches('^[a-z0-9][a-z0-9.-]{1,251}[a-z0-9]$')
+        && request.resource.data.name is string && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.challenge is string
+        && request.resource.data.challenge.matches('^[a-f0-9-]{36}$');
+    }
+    match /enterprise_orgs/{domain} {
+      allow get: if enterpriseActive(domain);
+      match /members/{uid} {
+        allow get: if enterpriseEmail(domain) && (request.auth.uid == uid || enterpriseAdmin(domain));
+        allow list: if enterpriseAdmin(domain) && bounded();
+        allow create: if enterpriseAdmin(domain)
+          && exists(/databases/$(database)/documents/enterprise_orgs/$(domain)/requests/$(uid))
+          && request.resource.data.keys().hasOnly(['role', 'active', 'email'])
+          && request.resource.data.email == get(/databases/$(database)/documents/enterprise_orgs/$(domain)/requests/$(uid)).data.email
+          && request.resource.data.role in ['member', 'admin'] && request.resource.data.active == true;
+        allow update: if enterpriseAdmin(domain) && uid != request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'active'])
+          && request.resource.data.role in ['member', 'admin']
+          && request.resource.data.active is bool;
+      }
+      match /requests/{uid} {
+        allow get: if enterpriseEmail(domain) && (request.auth.uid == uid || enterpriseAdmin(domain));
+        allow list: if enterpriseAdmin(domain) && bounded();
+        allow create: if enterpriseEmail(domain) && request.auth.uid == uid
+          && exists(/databases/$(database)/documents/enterprise_orgs/$(domain))
+          && !exists(enterpriseMemberPath(domain, uid))
+          && request.resource.data.keys().hasOnly(['email'])
+          && request.resource.data.email == request.auth.token.email;
+        allow delete: if enterpriseAdmin(domain);
+      }
+      match /items/{id} {
+        function validEnterpriseItem() {
+          let d = request.resource.data;
+          return d.keys().hasOnly(['name', 'description', 'category', 'kind', 'filename', 'owner', 'creator', 'createdAt', 'file'])
+            && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+            && d.description is string && d.description.size() <= 2000
+            && d.category is string && d.category.size() <= 80
+            && d.kind in ['agent', 'skill']
+            && d.filename is string && d.filename.size() > 0 && d.filename.size() <= 200
+            && d.file is bytes && d.file.size() > 0 && d.file.size() <= 262144;
+        }
+        allow get: if enterpriseActive(domain);
+        allow list: if enterpriseActive(domain) && bounded();
+        allow create: if enterpriseActive(domain) && validEnterpriseItem()
+          && request.resource.data.owner == request.auth.uid
+          && request.resource.data.creator == request.auth.token.email
+          && request.resource.data.createdAt == request.time;
+        allow update: if enterpriseActive(domain) && validEnterpriseItem()
+          && (resource.data.owner == request.auth.uid || enterpriseAdmin(domain))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'description', 'category', 'kind', 'filename', 'file']);
+        allow delete: if enterpriseActive(domain)
+          && (resource.data.owner == request.auth.uid || enterpriseAdmin(domain));
+      }
+    }
+
   }
 }
