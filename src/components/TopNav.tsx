@@ -1,6 +1,7 @@
-import { Anvil } from 'lucide-react'
 import { Link, useRoute } from '@/router/Router'
 import { AccountMenu } from './auth/AccountMenu'
+import { LemonMark } from './brand/LemonMark'
+import { Wordmark } from './brand/Wordmark'
 import { NavSearch } from './nav/NavSearch'
 import { SITE_LINKS } from './nav/siteLinks'
 import { cn } from './ui'
@@ -30,12 +31,10 @@ export function TopNav() {
           className="flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lm-accent-text)]"
           aria-label="AgentLemon home"
         >
-          <span className="grid size-9 place-items-center rounded-xl bg-accent text-accent-ink">
-            <Anvil className="size-5" aria-hidden="true" />
+          <span className="grid size-9 place-items-center text-accent-fg">
+            <LemonMark className="size-6" />
           </span>
-          <span className="hidden text-lg font-semibold tracking-tight sm:block md:hidden lg:block">
-            Agent<span className="text-accent-fg">Lemon</span>
-          </span>
+          <Wordmark className="hidden sm:block md:hidden lg:block" />
         </Link>
 
         <NavSearch />
