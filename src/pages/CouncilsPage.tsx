@@ -6,15 +6,21 @@ import { Link } from '@/router/Router'
 import { publicCouncils } from '@/services/councilPublic'
 import type { CouncilIndexEntry } from '@/types/council'
 
+let cachedEntries: CouncilIndexEntry[] | null = null
+let cachedSearch = ''
+
 export default function CouncilsPage() {
-  const [entries, setEntries] = useState<CouncilIndexEntry[] | null>(null)
+  const [entries, setEntries] = useState<CouncilIndexEntry[] | null>(
+    cachedEntries,
+  )
   const [error, setError] = useState(false)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(cachedSearch)
   useEffect(() => {
     let active = true
     publicCouncils
       .list()
       .then((items) => {
+        cachedEntries = items
         if (active) setEntries(items)
       })
       .catch(() => {
@@ -37,7 +43,10 @@ export default function CouncilsPage() {
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              cachedSearch = e.target.value
+              setSearch(cachedSearch)
+            }}
             className={inputClass() + ' h-10'}
           />
         </label>

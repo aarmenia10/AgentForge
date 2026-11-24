@@ -21,6 +21,7 @@ interface Location {
    * query string, so pages that read `window.location` can resync.
    */
   key: number
+  restoreY?: number
 }
 
 interface RouterContextValue {
@@ -31,11 +32,12 @@ interface RouterContextValue {
 
 const RouterContext = createContext<RouterContextValue | null>(null)
 
-function readLocation(key: number): Location {
+function readLocation(key: number, restoreY?: number): Location {
   return {
     pathname: window.location.pathname,
     search: window.location.search,
     key,
+    restoreY,
   }
 }
 
@@ -49,7 +51,9 @@ export function RouterProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onPopState = () =>
-      setLocation((current) => readLocation(current.key + 1))
+      setLocation((current) =>
+        readLocation(current.key + 1, window.history.state?.agentLemonScrollY),
+      )
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
@@ -61,8 +65,15 @@ export function RouterProvider({ children }: { children: ReactNode }) {
       return
     }
     if (url.href !== window.location.href) {
-      if (options.replace) window.history.replaceState(null, '', url)
-      else window.history.pushState(null, '', url)
+      if (options.replace)
+        window.history.replaceState(window.history.state, '', url)
+      else {
+        window.history.replaceState(
+          { ...window.history.state, agentLemonScrollY: window.scrollY },
+          '',
+        )
+        window.history.pushState({ agentLemonCanGoBack: true }, '', url)
+      }
     }
     setLocation((current) => readLocation(current.key + 1))
   }, [])
@@ -80,6 +91,7 @@ export function RouterProvider({ children }: { children: ReactNode }) {
       firstPath.current = false
       return
     }
+    if (location.restoreY !== undefined) return restoreScroll(location.restoreY)
     window.scrollTo(0, 0)
     return focusPageHeading()
     // route derives from pathname, so the path is the only real dependency.
@@ -87,6 +99,29 @@ export function RouterProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({ route, location, go }), [route, location, go])
   return <RouterContext value={value}>{children}</RouterContext>
+}
+
+/** Return to an in-app browsing page, never to an unknown external page. */
+export function closeDetail(go: RouterContextValue['go'], fallback: string) {
+  if (window.history.state?.agentLemonCanGoBack) window.history.back()
+  else go(fallback, { replace: true })
+}
+
+/** Wait for the lazy catalog and its results to regain their previous height. */
+function restoreScroll(y: number): () => void {
+  const restore = () => {
+    window.scrollTo(0, y)
+    if (window.scrollY >= y - 1) stop()
+  }
+  const observer = new ResizeObserver(restore)
+  const timer = window.setTimeout(stop, 5000)
+  function stop() {
+    observer.disconnect()
+    window.clearTimeout(timer)
+  }
+  observer.observe(document.body)
+  restore()
+  return stop
 }
 
 /**

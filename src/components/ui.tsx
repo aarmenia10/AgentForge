@@ -2,6 +2,7 @@ import { ArrowRight, BadgeCheck, Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FRAMEWORK_LABELS, type AgentAuthor, type AgentFramework } from '@/types/agent'
 import { Link } from '@/router/Router'
+import { COPY_CONFIRMATION_MS, copyText } from '@/lib/clipboard'
 
 /** Joins class names, skipping falsy values. */
 export function cn(...parts: (string | false | null | undefined)[]): string {
@@ -121,44 +122,77 @@ export function CopyButton({
   text,
   label = 'Copy',
   tone = 'surface',
+  onResult,
 }: {
-  text: string
+  text: string | null
   label?: string
   /** `onDark` is for buttons sitting on an always-dark code block. */
-  tone?: 'surface' | 'onDark'
+  tone?: 'surface' | 'onDark' | 'primary'
+  onResult?: (manualText: string | null) => void
 }) {
-  const [copied, setCopied] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>(
+    'idle',
+  )
   const timer = useRef<number | undefined>(undefined)
+  const active = useRef(false)
 
-  useEffect(() => () => window.clearTimeout(timer.current), [])
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+      window.clearTimeout(timer.current)
+    }
+  }, [])
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      window.clearTimeout(timer.current)
-      timer.current = window.setTimeout(() => setCopied(false), 1800)
-    } catch {
-      setCopied(false)
+    if (!text) return
+    window.clearTimeout(timer.current)
+    setStatus('copying')
+    const result = await copyText(text)
+    if (!active.current) return
+    setStatus(result)
+    onResult?.(result === 'copied' ? null : text)
+    if (result === 'copied') {
+      timer.current = window.setTimeout(
+        () => setStatus('idle'),
+        COPY_CONFIRMATION_MS,
+      )
     }
   }
 
+  const copied = status === 'copied'
   return (
     <button
       type="button"
+      disabled={!text || status === 'copying'}
       onClick={copy}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition',
+        tone === 'primary'
+          ? copied
+            ? 'inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300'
+            : primaryButtonClass
+          : 'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition',
         copied
-          ? 'bg-teal-500/15 text-teal-700 dark:text-teal-300'
+          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
           : tone === 'onDark'
             ? 'bg-white/10 text-slate-200 hover:bg-white/20'
-            : 'bg-slate-900/5 text-slate-700 hover:bg-slate-900/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15',
-        copied && tone === 'onDark' && 'text-teal-300',
+            : tone === 'surface' &&
+              'bg-slate-900/5 text-slate-700 hover:bg-slate-900/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15',
+        copied && tone === 'onDark' && 'text-emerald-300',
       )}
     >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-      <span aria-live="polite">{copied ? 'Copied' : label}</span>
+      {copied ? (
+        <Check className="size-4 shrink-0 text-emerald-500" aria-hidden="true" />
+      ) : (
+        <Copy className="size-3.5" aria-hidden="true" />
+      )}
+      <span aria-live="polite">
+        {copied
+          ? 'Successfully copied!'
+          : status === 'error'
+            ? 'Copy failed. Try again.'
+            : label}
+      </span>
     </button>
   )
 }

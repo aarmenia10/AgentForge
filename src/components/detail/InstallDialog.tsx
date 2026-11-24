@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { MCP_CONNECTOR_URL } from '@/lib/mcpConfig'
 import { ACCOUNT_RESOURCE } from '@/services/connectorConfig'
-import { primaryButtonClass } from '../ui'
+import { CopyButton, primaryButtonClass } from '../ui'
 
 type Kind = 'Agent' | 'Skill' | 'Council'
 type Platform = 'ChatGPT' | 'Claude' | 'Codex' | 'Cursor'
@@ -39,23 +39,13 @@ export function InstallDialog({
   const dialog = useRef<HTMLDialogElement>(null)
   const heading = useId()
   const [platform, setPlatform] = useState<Platform>('ChatGPT')
-  const [message, setMessage] = useState('')
   const [manual, setManual] = useState('')
   const link = account ? ACCOUNT_RESOURCE : MCP_CONNECTOR_URL
   const platforms: Platform[] = account
     ? ['ChatGPT', 'Claude']
     : ['ChatGPT', 'Claude', 'Codex', 'Cursor']
 
-  async function copy(text: string, label: string) {
-    try {
-      await navigator.clipboard.writeText(text)
-      setManual('')
-      setMessage(`${label} copied. Follow the instructions above to paste it.`)
-    } catch {
-      setManual(text)
-      setMessage('Automatic copying failed. Select and copy the text below.')
-    }
-  }
+  const [copySession, setCopySession] = useState(0)
 
   return (
     <>
@@ -63,7 +53,7 @@ export function InstallDialog({
         type="button"
         className={primaryButtonClass}
         onClick={() => {
-          setMessage('')
+          setCopySession((current) => current + 1)
           setManual('')
           dialog.current?.showModal()
         }}
@@ -77,7 +67,6 @@ export function InstallDialog({
         onKeyDown={(event) => event.stopPropagation()}
         onClose={() => {
           setManual('')
-          setMessage('')
         }}
       >
         <div className="flex items-center justify-between gap-3">
@@ -111,16 +100,13 @@ export function InstallDialog({
               <li>Open your preferred AI platform.</li>
               <li>Paste into your chat and start using the tool.</li>
             </ol>
-            <button
-              type="button"
-              className={primaryButtonClass}
-              disabled={!directText}
-              onClick={() => {
-                if (directText) void copy(directText, kind)
-              }}
-            >
-              Copy {kind}
-            </button>
+            <CopyButton
+              key={`direct-${copySession}`}
+              text={directText}
+              label={`Copy ${kind}`}
+              tone="primary"
+              onResult={(text) => setManual(text ?? '')}
+            />
             {!directText && (
               <p className="text-sm text-fg-muted">
                 Instructions unavailable. Reload or use the connection method.
@@ -159,30 +145,32 @@ export function InstallDialog({
                   : 'For this public connection, choose No authentication or No sign in.'}{' '}
                 Already connected with this link? Skip this step.
               </p>
-              <button
-                type="button"
-                className={primaryButtonClass}
-                onClick={() => void copy(link, 'Connection link')}
-              >
-                Copy Connection Link
-              </button>
+              <CopyButton
+                key={`link-${copySession}`}
+                text={link}
+                label="Copy Connection Link"
+                tone="primary"
+                onResult={(text) => setManual(text ?? '')}
+              />
               <h4 className="text-sm font-semibold">2. Install your tool</h4>
               <p className="text-sm">
                 Paste the request into a chat with AgentLemon enabled.
               </p>
-              <button
-                type="button"
-                className={primaryButtonClass}
-                onClick={() => void copy(connectedText, kind)}
-              >
-                Copy {kind}
-              </button>
+              <CopyButton
+                key={`connected-${copySession}`}
+                text={connectedText}
+                label={`Copy ${kind}`}
+                tone="primary"
+                onResult={(text) => setManual(text ?? '')}
+              />
             </section>
           )}
         </div>
-        <div role="status" className="mt-3 text-sm">
-          {message}
-        </div>
+        {manual && (
+          <p role="alert" className="mt-3 text-sm">
+            Automatic copying failed. Select and copy the text below.
+          </p>
+        )}
         {manual && (
           <textarea
             aria-label="Text to copy manually"

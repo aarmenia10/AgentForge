@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { AuthorLink, CopyButton, VERIFIED_AUTHOR_LABEL } from '@/components/ui'
@@ -33,6 +33,7 @@ export function SkillDetail({
   loadFiles,
   heading = 'h2',
   showAuthor = true,
+  onClose,
   connectable = skill.visibility === 'public',
 }: {
   skill: SkillIndexEntry
@@ -40,6 +41,7 @@ export function SkillDetail({
   loadFiles: () => Promise<SkillFile[]>
   heading?: Heading
   showAuthor?: boolean
+  onClose?: () => void
   connectable?: boolean
 }) {
   const { status, user } = useAuth()
@@ -86,9 +88,21 @@ export function SkillDetail({
   return (
     <div className="space-y-6 text-sm">
       <div className="space-y-3">
-        <p className="whitespace-pre-wrap break-words text-base text-fg">
-          {skill.description}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 whitespace-pre-wrap break-words text-base text-fg">
+            {skill.description}
+          </p>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-3 text-sm font-medium text-fg hover:bg-surface"
+            >
+              <X className="size-5" aria-hidden="true" />
+              Close
+            </button>
+          )}
+        </div>
         <dl className="grid gap-x-4 gap-y-1.5 sm:grid-cols-[7rem_1fr]">
           {showAuthor && (
             <Row term="Author">

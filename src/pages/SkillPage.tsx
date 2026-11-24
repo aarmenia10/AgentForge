@@ -5,11 +5,11 @@ import { SkillBadge } from '@/components/skills/parts'
 import { SkillDetail } from '@/components/skills/SkillDetail'
 import { textLink } from '@/components/studio/parts'
 import { skillRepository, type SkillIndexResult } from '@/lib/skillRepository'
-import { Link, useRoute } from '@/router/Router'
+import { closeDetail, Link, useRoute } from '@/router/Router'
 
 /** One public skill, from skills.json and its version file. No database reads. */
 export default function SkillPage() {
-  const { route } = useRoute()
+  const { route, go } = useRoute()
   const id = route.params.id
   const [index, setIndex] = useState<SkillIndexResult | null>(null)
 
@@ -43,7 +43,7 @@ export default function SkillPage() {
     )
 
   return (
-    <PageShell title={skill.name}>
+    <PageShell title={skill.name} onClose={() => closeDetail(go, '/skills')}>
       <div className="-mt-1 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1">
         <SkillBadge />
         <code className="break-all font-mono text-xs text-slate-600 dark:text-slate-400">

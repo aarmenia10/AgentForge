@@ -200,9 +200,10 @@ export function AgentDetailModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="grid size-10 shrink-0 place-items-center rounded-full text-fg-muted transition hover:bg-surface-2 hover:text-fg"
+              className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-3 text-sm font-medium text-fg hover:bg-surface"
             >
-              <X className="size-5" />
+              <X className="size-5" aria-hidden="true" />
+              Close
             </button>
           </div>
 
