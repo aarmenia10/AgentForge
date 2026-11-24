@@ -1,7 +1,7 @@
 import { lazy, Suspense, useRef, useState } from 'react'
 import type { AtomItems } from '@/lib/homeFeed'
 import { Link } from '@/router/Router'
-import { HeroAtom } from './home/HeroAtom'
+import { HeroAtom, useAtomSupported } from './home/HeroAtom'
 import { Reveal } from './Reveal'
 import { ArrowIcon, primaryButtonClass } from './ui'
 
@@ -20,29 +20,44 @@ interface HeroProps {
 export function Hero({ atom }: HeroProps) {
   const demoButton = useRef<HTMLButtonElement>(null)
   const [demo, setDemo] = useState<'closed' | 'open' | 'dismissed'>('closed')
+  const supported = useAtomSupported()
+  const [failed, setFailed] = useState(false)
+  // No atom without WebGL, with reduced motion, after a WebGL failure, or when
+  // there are no agents or skills to orbit. Then the hero is the centred text
+  // it was before the atom (owner decision 2026-11-24: no static picture).
+  const empty = atom !== null && atom.agents.length + atom.skills.length === 0
+  const withAtom = supported && !failed && !empty
 
   return (
     <Reveal
       as="section"
-      className="mx-auto grid max-w-7xl items-center gap-6 overflow-x-clip px-4 pb-10 pt-6 sm:px-6 sm:pt-12 lg:grid-cols-2 lg:gap-12 lg:pt-10"
+      className={
+        withAtom
+          ? 'mx-auto grid max-w-7xl items-center gap-6 overflow-x-clip px-4 pb-10 pt-6 sm:px-6 sm:pt-12 lg:grid-cols-2 lg:gap-12 lg:pt-10'
+          : 'mx-auto max-w-7xl px-4 pb-10 pt-14 text-center sm:px-6 sm:pt-24'
+      }
     >
       {/* The text comes first in the page order; on phones the atom sits above it. */}
-      <div className="text-center lg:text-left">
+      <div className={withAtom ? 'text-center lg:text-left' : undefined}>
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent-fg">
           Open source · Works with AI tools you already use
         </p>
 
-        <h1 className="mt-6 text-balance text-[36px] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[52px] lg:text-[68px]">
+        <h1 className="mx-auto mt-6 max-w-4xl text-balance text-[36px] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[52px] lg:text-[68px]">
           Achieve <span className="text-accent-fg">More.</span>
         </h1>
 
-        <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-fg-muted sm:text-lg lg:mx-0">
+        <p
+          className={`mx-auto mt-5 max-w-2xl text-pretty text-base text-fg-muted sm:text-lg ${withAtom ? 'lg:mx-0' : ''}`}
+        >
           Discover, download, and share AI tools that help you complete everyday
           tasks, save time, and work smarter. No coding or AI expertise
           required.
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+        <div
+          className={`mt-8 flex flex-wrap items-center justify-center gap-3 ${withAtom ? 'lg:justify-start' : ''}`}
+        >
           <Link to="/studio" className={primaryButtonClass}>
             Start building
             <ArrowIcon />
@@ -58,9 +73,11 @@ export function Hero({ atom }: HeroProps) {
         </div>
       </div>
 
-      <div className="max-lg:order-first">
-        <HeroAtom items={atom} />
-      </div>
+      {withAtom && (
+        <div className="max-lg:order-first">
+          <HeroAtom items={atom} onUnavailable={() => setFailed(true)} />
+        </div>
+      )}
 
       {demo !== 'closed' && (
         <Suspense fallback={null}>

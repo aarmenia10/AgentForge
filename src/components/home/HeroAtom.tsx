@@ -13,13 +13,6 @@ import { mix, toHex, tokensFor } from '@/theme/appearance'
 import { atomPalette } from '@/theme/atomPalette'
 import { useTheme } from '@/theme/ThemeProvider'
 
-// The static SVG atom is a small chunk of its own too, so the richer drawing
-// does not grow the startup bundle. Until it arrives (a moment), the box shows
-// a soft accent glow, in the same reserved square, so nothing shifts.
-const AtomFallback = lazy(() =>
-  import('./AtomFallback').then((m) => ({ default: m.AtomFallback })),
-)
-
 /** The keyboard list's key for the nucleus (matches `atomScene.ts`). */
 const COUNCIL_KEY = 'council'
 
@@ -61,37 +54,49 @@ function hasWebGL(): boolean {
   }
 }
 
-/** If the chunk fails to load, the static atom stays. */
+/**
+ * Whether this visitor gets the atom at all: the browser has WebGL and the
+ * visitor has not asked for reduced motion. Without it the hero shows no atom
+ * (owner decision 2026-11-24: no static picture).
+ */
+export function useAtomSupported(): boolean {
+  const reduced = useReducedMotion()
+  const [webgl] = useState(hasWebGL)
+  return webgl && !reduced
+}
+
+/** If the 3D chunk fails to load or throws, the hero drops the atom. */
 class AtomBoundary extends Component<
-  { fallback: ReactNode; children: ReactNode },
+  { onError: () => void; children: ReactNode },
   { failed: boolean }
 > {
   state = { failed: false }
   static getDerivedStateFromError() {
     return { failed: true }
   }
+  componentDidCatch() {
+    this.props.onError()
+  }
   render() {
-    return this.state.failed ? this.props.fallback : this.props.children
+    return this.state.failed ? null : this.props.children
   }
 }
 
 interface HeroAtomProps {
   /** Null until the three public files have loaded. */
   items: AtomItems | null
+  /** WebGL failed or drew nothing: the hero removes the atom. */
+  onUnavailable: () => void
 }
 
 /**
  * The home page atom. The nucleus is "Council"; each electron is a real agent
- * or skill. It starts as the static SVG atom and swaps to the interactive 3D
- * one once three.js has loaded, unless the visitor prefers reduced motion or
- * the browser has no WebGL, in which case the static one stays.
+ * or skill. Render it only when `useAtomSupported()` is true. Until three.js
+ * and the items arrive, the reserved square shows a soft accent glow.
  */
-export function HeroAtom({ items }: HeroAtomProps) {
+export function HeroAtom({ items, onUnavailable }: HeroAtomProps) {
   const { appearance } = useTheme()
   const { go } = useRoute()
-  const reduced = useReducedMotion()
-  const [webgl] = useState(hasWebGL)
-  const [lost, setLost] = useState(false)
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const palette = useMemo(
     () => atomPalette(tokensFor(appearance).tokens),
@@ -99,11 +104,8 @@ export function HeroAtom({ items }: HeroAtomProps) {
   )
   const list = useMemo(() => (items ? interleave(items) : []), [items])
 
-  const interactive3d = webgl && !reduced && !lost
-
   // After first paint, fetch the 3D chunk without waiting for the item list.
   useEffect(() => {
-    if (!interactive3d) return
     const idle = 'requestIdleCallback' in window
     const handle = idle
       ? window.requestIdleCallback(() => void loadAtom())
@@ -112,20 +114,15 @@ export function HeroAtom({ items }: HeroAtomProps) {
       if (idle) window.cancelIdleCallback(handle)
       else window.clearTimeout(handle)
     }
-  }, [interactive3d])
+  }, [])
 
-  const show3d = interactive3d && list.length > 0
+  const show3d = list.length > 0
   const glow = (
     <div
       aria-hidden="true"
       className="absolute inset-[30%] rounded-full blur-2xl"
       style={{ backgroundColor: toHex(palette.accent), opacity: 0.22 }}
     />
-  )
-  const staticAtom = (
-    <Suspense fallback={glow}>
-      <AtomFallback palette={palette} items={items} interactive={!show3d} />
-    </Suspense>
   )
   const hasAgents = (items?.agents.length ?? 0) > 0
   const hasSkills = (items?.skills.length ?? 0) > 0
@@ -162,19 +159,19 @@ export function HeroAtom({ items }: HeroAtomProps) {
         }}
       >
         {show3d ? (
-          <AtomBoundary fallback={staticAtom}>
-            <Suspense fallback={staticAtom}>
+          <AtomBoundary onError={onUnavailable}>
+            <Suspense fallback={glow}>
               <AtomCanvas
                 items={list}
                 palette={palette}
                 activeKey={activeKey}
                 onOpen={go}
-                onUnavailable={() => setLost(true)}
+                onUnavailable={onUnavailable}
               />
             </Suspense>
           </AtomBoundary>
         ) : (
-          staticAtom
+          glow
         )}
       </div>
 
@@ -205,7 +202,7 @@ export function HeroAtom({ items }: HeroAtomProps) {
         </ul>
       )}
 
-      {(hasAgents || hasSkills) && (
+      {show3d && (hasAgents || hasSkills) && (
         <p
           className={`relative mt-1 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs ${stage ? 'text-white/70' : 'text-fg-muted'}`}
         >
@@ -225,7 +222,7 @@ export function HeroAtom({ items }: HeroAtomProps) {
               Skills
             </span>
           )}
-          {show3d && <span>Drag to rotate</span>}
+          <span>Drag to rotate</span>
         </p>
       )}
     </div>
