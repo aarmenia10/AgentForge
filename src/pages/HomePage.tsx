@@ -48,7 +48,7 @@ export function HomePage() {
   )
 
   return (
-    <main className="flex-1">
+    <main className="flex-1 overflow-x-clip">
       <Hero atom={atom} />
 
       <section
