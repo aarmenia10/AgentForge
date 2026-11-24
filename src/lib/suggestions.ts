@@ -122,8 +122,11 @@ export function computeSuggestions(
 ): SuggestionsResult {
   const cats = inferCategories(prefs)
 
+  // Only items that match at least one inferred category are suggestions;
+  // otherwise every answer set shows the whole (small) catalog in a new order.
   const rankedAgents = [...agents]
     .map((a) => ({ item: a, score: scoreAgent(a, cats) }))
+    .filter((x) => x.score > 0)
     .sort(
       (a, b) => b.score - a.score || b.item.stats.views - a.item.stats.views,
     )
@@ -132,6 +135,7 @@ export function computeSuggestions(
 
   const rankedSkills = [...skills]
     .map((s) => ({ item: s, score: scoreSkill(s, cats) }))
+    .filter((x) => x.score > 0)
     .sort(
       (a, b) =>
         b.score - a.score ||
