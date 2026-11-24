@@ -136,7 +136,7 @@ const SITE = 'AgentLemon'
 export function routeTitle(route: Route): string {
   switch (route.name) {
     case 'home':
-      return `${SITE} · The GitHub for AI Agents`
+      return `${SITE} · Achieve More.`
     case 'about':
       return `About AgentLemon · ${SITE}`
     case 'me':

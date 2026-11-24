@@ -30,16 +30,16 @@ export function Hero({ category, onCategoryChange, agentCount }: HeroProps) {
   return (
     <Reveal as="section" className="mx-auto max-w-7xl px-4 pb-10 pt-14 text-center sm:px-6 sm:pt-24">
       <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent-fg">
-        Open source · MCP-native · runs on the subscription you already pay for
+        Open source · Works with AI tools you already use
       </p>
 
       <h1 className="mx-auto mt-6 max-w-4xl text-balance text-[36px] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[52px] lg:text-[68px]">
-        The GitHub for <span className="text-accent-fg">AI Agents</span>
+        Achieve <span className="text-accent-fg">More.</span>
       </h1>
 
       <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-fg-muted sm:text-lg">
-        Discover agents built on any framework, inspect their prompts, tools, and schema contracts,
-        then add them to Claude or Cursor with one config snippet. No API keys. No inference bill.
+        Discover, download, and share AI tools that help you complete everyday tasks, save time,
+        and work smarter. No coding or AI expertise required.
       </p>
 
       <div className="mt-8">
