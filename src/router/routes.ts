@@ -11,6 +11,8 @@ import {
 
 export type RouteName =
   | 'home'
+  | 'agents'
+  | 'search'
   | 'about'
   | 'me'
   | 'settings'
@@ -36,10 +38,13 @@ export interface Route {
   params: Record<string, string>
 }
 
-/** Pages that need an account. They render through RequireAccount. */
+/**
+ * Pages that need an account. They render through RequireAccount. `settings`
+ * is not here: its Appearance section is open to everyone, and only the
+ * account sections below it ask for sign-in.
+ */
 export const SIGNED_IN_ROUTES: readonly RouteName[] = [
   'me',
-  'settings',
   'friends',
   'studio',
   'review',
@@ -49,6 +54,8 @@ export const SIGNED_IN_ROUTES: readonly RouteName[] = [
 
 const STATIC: Record<string, RouteName> = {
   '/': 'home',
+  '/agents': 'agents',
+  '/search': 'search',
   '/about': 'about',
   '/index.html': 'home',
   '/me': 'me',
@@ -118,6 +125,22 @@ export function matchRoute(pathname: string): Route {
   return notFound()
 }
 
+/**
+ * Where an old link should go, or null. The agent catalog moved from the home
+ * page to `/agents`, so `/?agent=<id>` becomes `/agents?agent=<id>`. Every
+ * other query parameter and the hash are kept.
+ */
+export function legacyRedirect(
+  pathname: string,
+  search: string,
+  hash = '',
+): string | null {
+  if (matchRoute(pathname).name !== 'home') return null
+  const params = new URLSearchParams(search)
+  if (!params.has('agent')) return null
+  return `/agents${search}${hash}`
+}
+
 function decodeSegment(segment: string): string | null {
   try {
     return decodeURIComponent(segment)
@@ -137,6 +160,10 @@ export function routeTitle(route: Route): string {
   switch (route.name) {
     case 'home':
       return `${SITE} · Achieve More.`
+    case 'agents':
+      return `Agents · ${SITE}`
+    case 'search':
+      return `Search · ${SITE}`
     case 'about':
       return `About AgentLemon · ${SITE}`
     case 'me':

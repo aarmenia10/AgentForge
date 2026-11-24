@@ -1,32 +1,14 @@
-import {
-  Clapperboard,
-  Code2,
-  FlaskConical,
-  LineChart,
-  ServerCog,
-  Workflow,
-  type LucideIcon,
-} from 'lucide-react'
-import { AGENT_CATEGORIES, type AgentCategoryTag } from '@/types/agent'
+import { Link } from '@/router/Router'
+import { AGENT_CATEGORIES } from '@/types/agent'
+import { CATEGORY_ICONS, categoryPillClass } from './CategoryPills'
 import { Reveal } from './Reveal'
-import { ArrowIcon, cn, primaryButtonClass } from './ui'
-
-const CATEGORY_ICONS: Record<AgentCategoryTag, LucideIcon> = {
-  coding: Code2,
-  finance: LineChart,
-  research: FlaskConical,
-  devops: ServerCog,
-  ops: Workflow,
-  creative: Clapperboard,
-}
+import { ArrowIcon, primaryButtonClass } from './ui'
 
 interface HeroProps {
-  category: AgentCategoryTag | null
-  onCategoryChange: (category: AgentCategoryTag | null) => void
   agentCount: number
 }
 
-export function Hero({ category, onCategoryChange, agentCount }: HeroProps) {
+export function Hero({ agentCount }: HeroProps) {
   return (
     <Reveal as="section" className="mx-auto max-w-7xl px-4 pb-10 pt-14 text-center sm:px-6 sm:pt-24">
       <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent-fg">
@@ -42,40 +24,39 @@ export function Hero({ category, onCategoryChange, agentCount }: HeroProps) {
         and work smarter. No coding or AI expertise required.
       </p>
 
-      <div className="mt-8">
-        <a href="#explore" className={primaryButtonClass}>
-          Explore agents
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <Link to="/agents" className={primaryButtonClass}>
+          Explore Agents
           <ArrowIcon />
-        </a>
+        </Link>
+        <Link to="/skills" className={primaryButtonClass}>
+          Explore Skills
+          <ArrowIcon />
+        </Link>
+        <Link to="/councils" className={primaryButtonClass}>
+          Explore Councils
+          <ArrowIcon />
+        </Link>
       </div>
 
-      <div
-        role="group"
-        aria-label="Browse by category"
+      <nav
+        aria-label="Browse agents by category"
         className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-2.5"
       >
         {AGENT_CATEGORIES.map(({ tag, label }) => {
           const Icon = CATEGORY_ICONS[tag]
-          const active = category === tag
           return (
-            <button
+            <Link
               key={tag}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onCategoryChange(active ? null : tag)}
-              className={cn(
-                'inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-medium transition duration-200 hover:-translate-y-0.5',
-                active
-                  ? 'bg-accent text-accent-ink'
-                  : 'bg-surface text-fg hover:bg-surface-2',
-              )}
+              to={`/agents?category=${tag}`}
+              className={categoryPillClass(false)}
             >
-              <Icon className="size-4" />
+              <Icon className="size-4" aria-hidden="true" />
               {label}
-            </button>
+            </Link>
           )
         })}
-      </div>
+      </nav>
 
       {agentCount > 0 && (
         <p className="mt-6 text-sm text-fg-muted">
