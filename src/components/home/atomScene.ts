@@ -305,8 +305,10 @@ export interface AtomOptions {
   items: HomeItem[]
   palette: AtomPalette
   onOpen: (to: string) => void
-  /** The GPU context was lost. The page swaps in the static atom. */
-  onLost: () => void
+  /** WebGL failed (context lost, or nothing drawn). The hero drops the atom. */
+  onLost: (reason: string) => void
+  /** Diagnostic lines for `?atomdebug` (renderer, buffers, the draw check). */
+  onInfo?: (lines: string[]) => void
 }
 
 export interface AtomController {
@@ -342,7 +344,7 @@ function seeded(seed: number) {
 
 /** Throws when WebGL is unavailable. */
 export function createAtom(options: AtomOptions): AtomController {
-  const { canvas, label, items, onOpen, onLost } = options
+  const { canvas, label, items, onOpen, onLost, onInfo } = options
   const box = canvas.parentElement as HTMLElement
   let palette = options.palette
 
@@ -863,7 +865,7 @@ export function createAtom(options: AtomOptions): AtomController {
   const onContextLost = (event: Event) => {
     event.preventDefault()
     stop()
-    onLost()
+    onLost('WebGL context lost')
   }
 
   canvas.addEventListener('pointerdown', onPointerDown)
@@ -1059,40 +1061,53 @@ export function createAtom(options: AtomOptions): AtomController {
     time += dt
     update(dt)
     composer.render(dt)
-    if (!verified && ++renderedFrames >= 3) verifyFirstFrame()
+    if (!verified && ++renderedFrames >= 10) verifyFirstFrame()
   }
 
   // A browser can accept every call yet draw nothing (for example when it
-  // cannot create one of the buffers above). After a few frames, read back a
-  // small square at the centre, where the nucleus always is. If nothing was
-  // drawn there, hand over to the static atom instead of showing a blank box.
+  // cannot create one of the buffers above). After ten frames, read back the
+  // whole canvas once. The canvas is transparent, so if every pixel has zero
+  // alpha the visitor sees nothing at all: only then hand over. Anything drawn
+  // anywhere counts as working, so this cannot drop an atom that shows.
   let verified = false
   let renderedFrames = 0
   function verifyFirstFrame() {
     verified = true
+    const gl = renderer.getContext()
+    const info: string[] = []
+    let drawn = 0
+    let maxAlpha = 0
+    let error = ''
     try {
-      const gl = renderer.getContext()
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info')
+      info.push(
+        `renderer: ${String(gl.getParameter(debugInfo ? debugInfo.UNMASKED_RENDERER_WEBGL : gl.RENDERER))}`,
+        `webgl2: ${renderer.capabilities.isWebGL2}, float buffers: ${floatTargets}, phone: ${phone}`,
+        `buffer: ${gl.drawingBufferWidth}x${gl.drawingBufferHeight}, pixel ratio: ${renderer.getPixelRatio()}`,
+      )
       renderer.setRenderTarget(null)
-      const side = Math.max(
-        1,
-        Math.min(32, gl.drawingBufferWidth, gl.drawingBufferHeight),
-      )
-      const pixels = new Uint8Array(side * side * 4)
-      gl.readPixels(
-        Math.floor((gl.drawingBufferWidth - side) / 2),
-        Math.floor((gl.drawingBufferHeight - side) / 2),
-        side,
-        side,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        pixels,
-      )
-      for (let i = 3; i < pixels.length; i += 4) if (pixels[i] > 8) return
-    } catch {
-      // Fall through: an unreadable frame counts as a failed one.
+      const w = gl.drawingBufferWidth
+      const h = gl.drawingBufferHeight
+      const pixels = new Uint8Array(w * h * 4)
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] > 0) drawn++
+        if (pixels[i] > maxAlpha) maxAlpha = pixels[i]
+      }
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err)
     }
+    info.push(
+      error
+        ? `draw check: could not read pixels (${error})`
+        : `draw check: ${drawn} pixels drawn, max alpha ${maxAlpha}`,
+      `gl error: ${gl.getError()}, context lost: ${gl.isContextLost()}`,
+    )
+    onInfo?.(info)
+    // An unreadable frame is not proof of failure: keep the atom.
+    if (error || drawn > 0) return
     stop()
-    onLost()
+    onLost('nothing was drawn')
   }
 
   function start() {

@@ -22,11 +22,24 @@ export function Hero({ atom }: HeroProps) {
   const [demo, setDemo] = useState<'closed' | 'open' | 'dismissed'>('closed')
   const supported = useAtomSupported()
   const [failed, setFailed] = useState(false)
+  // `?atomdebug` keeps the atom even when it fails and prints what the
+  // browser reports, so a failure on someone's machine can be diagnosed.
+  const [debug] = useState(() =>
+    new URLSearchParams(window.location.search).has('atomdebug'),
+  )
+  const [debugLines, setDebugLines] = useState<string[]>([])
   // No atom without WebGL, with reduced motion, after a WebGL failure, or when
   // there are no agents or skills to orbit. Then the hero is the centred text
   // it was before the atom (owner decision 2026-11-24: no static picture).
   const empty = atom !== null && atom.agents.length + atom.skills.length === 0
   const withAtom = supported && !failed && !empty
+  const debugReport = debug
+    ? [
+        `supported (WebGL and no reduced motion): ${supported}`,
+        `reduced motion: ${window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? 'unknown'}`,
+        ...debugLines,
+      ]
+    : []
 
   return (
     <Reveal
@@ -75,8 +88,26 @@ export function Hero({ atom }: HeroProps) {
 
       {withAtom && (
         <div className="max-lg:order-first">
-          <HeroAtom items={atom} onUnavailable={() => setFailed(true)} />
+          <HeroAtom
+            items={atom}
+            onUnavailable={(reason) =>
+              debug
+                ? setDebugLines((lines) => [...lines, `FAILED: ${reason}`])
+                : setFailed(true)
+            }
+            onInfo={
+              debug
+                ? (lines) => setDebugLines((old) => [...old, ...lines])
+                : undefined
+            }
+          />
         </div>
+      )}
+
+      {debug && (
+        <pre className="col-span-full overflow-x-auto whitespace-pre-wrap rounded-2xl bg-surface p-4 text-left text-xs text-fg">
+          {debugReport.join('\n')}
+        </pre>
       )}
 
       {demo !== 'closed' && (
