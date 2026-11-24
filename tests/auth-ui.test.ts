@@ -125,25 +125,29 @@ test('no signed-in page module is statically reachable from the entry', () => {
 })
 
 /**
- * The home page atom: the wrapper and the static SVG atom are in the startup
- * bundle, but three.js, the 3D scene, the loader with its schemas, and the
- * demo form (which reaches Firestore) load only through dynamic import().
+ * The home page background: the sticky shell and the card colors are in the
+ * startup bundle, but the lemon press drawing and its motion, the loader with
+ * its schemas, and the demo form (which reaches Firestore) load only through
+ * dynamic import(). three.js is gone for good.
  */
-test('three.js and the lazy home pieces are not statically reachable from the entry', () => {
+test('the lemon press and the lazy home pieces are not statically reachable from the entry', () => {
   const { seen } = walkStartupGraph()
   const rel = [...seen].map((file) =>
     file.slice(ROOT.length + 1).replaceAll('\\', '/'),
   )
   assert.ok(
-    rel.includes('src/components/home/HeroAtom.tsx'),
-    'reached HeroAtom',
+    rel.includes('src/components/home/HomeBackdrop.tsx'),
+    'reached HomeBackdrop',
   )
   for (const lazy of [
-    'src/components/home/AtomCanvas.tsx',
-    'src/components/home/atomScene.ts',
+    'src/components/home/LemonPressScene.tsx',
+    'src/components/home/sceneMotion.ts',
     'src/components/RequestDemo.tsx',
     'src/lib/homeData.ts',
   ]) {
     assert.ok(!rel.includes(lazy), `${lazy} is in the startup graph`)
   }
+  const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+  assert.equal(pkg.dependencies.three, undefined)
+  assert.equal(pkg.devDependencies['@types/three'], undefined)
 })
