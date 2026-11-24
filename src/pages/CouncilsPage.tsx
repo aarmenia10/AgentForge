@@ -10,7 +10,9 @@ let cachedEntries: CouncilIndexEntry[] | null = null
 let cachedSearch = ''
 
 export default function CouncilsPage() {
-  const [entries, setEntries] = useState<CouncilIndexEntry[] | null>(cachedEntries)
+  const [entries, setEntries] = useState<CouncilIndexEntry[] | null>(
+    cachedEntries,
+  )
   const [error, setError] = useState(false)
   const [search, setSearch] = useState(cachedSearch)
   useEffect(() => {

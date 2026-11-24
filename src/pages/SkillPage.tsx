@@ -43,10 +43,7 @@ export default function SkillPage() {
     )
 
   return (
-    <PageShell
-      title={skill.name}
-      onClose={() => closeDetail(go, '/skills')}
-    >
+    <PageShell title={skill.name} onClose={() => closeDetail(go, '/skills')}>
       <div className="-mt-1 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1">
         <SkillBadge />
         <code className="break-all font-mono text-xs text-slate-600 dark:text-slate-400">
