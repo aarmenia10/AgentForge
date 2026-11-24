@@ -51,6 +51,7 @@ import {
   Vector2,
   Vector3,
   WebGLRenderer,
+  UnsignedByteType,
   WebGLRenderTarget,
   ZeroFactor,
   type Blending,
@@ -668,17 +669,26 @@ export function createAtom(options: AtomOptions): AtomController {
 
   // ------------------------------------------------------------- post
 
+  // Half-float buffers keep the glow smooth, but some phone browsers cannot
+  // draw into them (Safari on iPhone among them), and multisampled float
+  // buffers fail on more. Without support, use ordinary 8-bit buffers; phones
+  // skip multisampling. Whatever happens, verifyFirstFrame() below falls back
+  // to the static atom rather than leave a blank square.
+  const floatTargets =
+    renderer.capabilities.isWebGL2 &&
+    renderer.extensions.has('EXT_color_buffer_float')
+  const targetType = floatTargets ? HalfFloatType : UnsignedByteType
   const composer = new EffectComposer(
     renderer,
-    new WebGLRenderTarget(1, 1, { type: HalfFloatType }),
+    new WebGLRenderTarget(1, 1, { type: targetType }),
   )
   // Only the buffer the scene and the bloom draw into is multisampled (it
   // antialiases the thin orbits); the later passes use plain buffers. Two
   // passes swap buffers each frame (output, alpha), an even number, so this
   // stays the read buffer the scene renders into.
   const sceneTarget = new WebGLRenderTarget(1, 1, {
-    type: HalfFloatType,
-    samples: 4,
+    type: targetType,
+    samples: phone || !floatTargets ? 0 : 4,
   })
   composer.renderTarget2.dispose()
   composer.renderTarget2 = sceneTarget
@@ -690,6 +700,8 @@ export function createAtom(options: AtomOptions): AtomController {
   const bloomScale = phone ? 0.5 : 1
   bloom.setSize = (w: number, h: number) =>
     bloomSetSize(Math.max(1, w * bloomScale), Math.max(1, h * bloomScale))
+  // The bloom pass keeps its own half-float buffers, so skip it without them.
+  bloom.enabled = floatTargets
   composer.addPass(bloom)
   composer.addPass(new OutputPass())
   composer.addPass(new ShaderPass(ALPHA_SHADER))
@@ -1047,6 +1059,40 @@ export function createAtom(options: AtomOptions): AtomController {
     time += dt
     update(dt)
     composer.render(dt)
+    if (!verified && ++renderedFrames >= 3) verifyFirstFrame()
+  }
+
+  // A browser can accept every call yet draw nothing (for example when it
+  // cannot create one of the buffers above). After a few frames, read back a
+  // small square at the centre, where the nucleus always is. If nothing was
+  // drawn there, hand over to the static atom instead of showing a blank box.
+  let verified = false
+  let renderedFrames = 0
+  function verifyFirstFrame() {
+    verified = true
+    try {
+      const gl = renderer.getContext()
+      renderer.setRenderTarget(null)
+      const side = Math.max(
+        1,
+        Math.min(32, gl.drawingBufferWidth, gl.drawingBufferHeight),
+      )
+      const pixels = new Uint8Array(side * side * 4)
+      gl.readPixels(
+        Math.floor((gl.drawingBufferWidth - side) / 2),
+        Math.floor((gl.drawingBufferHeight - side) / 2),
+        side,
+        side,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        pixels,
+      )
+      for (let i = 3; i < pixels.length; i += 4) if (pixels[i] > 8) return
+    } catch {
+      // Fall through: an unreadable frame counts as a failed one.
+    }
+    stop()
+    onLost()
   }
 
   function start() {
