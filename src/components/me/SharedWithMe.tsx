@@ -61,7 +61,7 @@ export function SharedWithMe({ friendExtra }: { friendExtra?: FriendExtra }) {
 
   if (!loading && !error && friends.length === 0)
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-white/15">
+      <div className="rounded-3xl bg-surface p-6 text-center text-fg-muted">
         <p>No friends yet.</p>
         <p className="mt-2">
           Once you and someone else accept each other as friends, the{' '}
@@ -160,25 +160,25 @@ function FriendRow({
   }
 
   return (
-    <li className="rounded-xl border border-slate-900/10 dark:border-white/10">
+    <li className="rounded-3xl bg-surface">
       <h3>
         <button
           type="button"
           aria-expanded={expanded}
           aria-controls={panelId}
           onClick={toggle}
-          className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left hover:bg-slate-900/5 dark:hover:bg-white/5"
+          className="flex w-full items-center gap-2 rounded-3xl px-5 py-4 text-left hover:bg-surface-2"
         >
           {expanded ? (
             <ChevronDown className="size-4 shrink-0" aria-hidden="true" />
           ) : (
             <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
           )}
-          <span className="min-w-0 break-words font-semibold text-slate-900 dark:text-white">
+          <span className="min-w-0 break-words font-semibold text-fg">
             {name}
           </span>
           {profile?.display_name && (
-            <span className="min-w-0 truncate text-slate-600 dark:text-slate-400">
+            <span className="min-w-0 truncate text-fg-muted">
               {profile.display_name}
             </span>
           )}
@@ -186,11 +186,7 @@ function FriendRow({
       </h3>
       {expanded && (
         <div id={panelId} className="space-y-2 px-4 pb-4">
-          {extra && (
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-              Agents
-            </h4>
-          )}
+          {extra && <h4 className="text-sm font-semibold text-fg">Agents</h4>}
           {error && (
             <Notice tone="error" role="alert">
               {error}
@@ -204,13 +200,13 @@ function FriendRow({
               {agents.map((agent) => (
                 <li
                   key={agent.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-900/5 px-3 py-2 dark:bg-white/5"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-2 px-4 py-3"
                 >
                   <span className="min-w-0">
-                    <span className="block break-words font-medium text-slate-900 dark:text-white">
+                    <span className="block break-words font-medium text-fg">
                       {agent.name}
                     </span>
-                    <span className="font-mono text-xs text-slate-600 dark:text-slate-400">
+                    <span className="font-mono text-xs text-fg-muted">
                       v{agent.version}
                     </span>
                   </span>

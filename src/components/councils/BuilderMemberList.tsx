@@ -96,7 +96,7 @@ export function BuilderMemberList({
 
   if (!members.length)
     return (
-      <p className="rounded-2xl bg-page px-4 py-3 text-sm text-fg-muted">
+      <p className="rounded-3xl bg-surface px-5 py-4 text-sm text-fg-muted">
         No members yet. Add at least 2 from the lists below.
       </p>
     )
@@ -109,7 +109,7 @@ export function BuilderMemberList({
         const orderErrors = errors[`members.${index}.order`]
         const refErrors = errors[`members.${index}.ref`]
         return (
-          <li key={member.key} className="space-y-3 rounded-2xl bg-page p-4">
+          <li key={member.key} className="space-y-3 rounded-3xl bg-surface p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="break-words font-medium">{member.name}</p>

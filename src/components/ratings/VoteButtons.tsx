@@ -133,19 +133,18 @@ export function VoteButtons({
           }
           disabled={busy}
           className={cn(
-            '-mx-1 inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm font-medium transition',
-            'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500',
+            '-mx-1 inline-flex items-center gap-1.5 rounded-[9999px] bg-surface-2 px-3 py-1.5 text-sm font-medium transition hover:bg-surface',
+            'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent-fg',
             userVote === 'up'
-              ? 'text-teal-600 dark:text-teal-400 font-semibold'
-              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100',
+              ? 'text-accent-fg font-semibold'
+              : 'text-fg-muted hover:text-fg',
           )}
         >
           <ThumbsUp
             aria-hidden="true"
             className={cn(
               'size-4',
-              userVote === 'up' &&
-                'fill-current text-teal-600 dark:text-teal-400',
+              userVote === 'up' && 'fill-current text-accent-fg',
             )}
           />
           <span className="tabular-nums">{formatCount(thumbsUp)}</span>
@@ -166,19 +165,18 @@ export function VoteButtons({
           }
           disabled={busy}
           className={cn(
-            '-mx-1 inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm font-medium transition',
-            'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500',
+            '-mx-1 inline-flex items-center gap-1.5 rounded-[9999px] bg-surface-2 px-3 py-1.5 text-sm font-medium transition hover:bg-surface',
+            'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent-fg',
             userVote === 'down'
-              ? 'text-teal-600 dark:text-teal-400 font-semibold'
-              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100',
+              ? 'text-accent-fg font-semibold'
+              : 'text-fg-muted hover:text-fg',
           )}
         >
           <ThumbsDown
             aria-hidden="true"
             className={cn(
               'size-4',
-              userVote === 'down' &&
-                'fill-current text-teal-600 dark:text-teal-400',
+              userVote === 'down' && 'fill-current text-accent-fg',
             )}
           />
           <span className="tabular-nums">{formatCount(thumbsDown)}</span>
@@ -186,10 +184,7 @@ export function VoteButtons({
       </div>
 
       {message && (
-        <span
-          role="status"
-          className="basis-full text-xs text-rose-700 dark:text-rose-300"
-        >
+        <span role="status" className="basis-full text-xs text-fg">
           {message}
         </span>
       )}

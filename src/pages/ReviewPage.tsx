@@ -63,7 +63,7 @@ function ReviewerOnly() {
       <div
         role="group"
         aria-label="What to review"
-        className="mt-4 flex w-full rounded-xl bg-slate-900/5 p-1 sm:w-fit dark:bg-white/5"
+        className="mt-4 flex w-full rounded-full bg-surface-2 p-1 sm:w-fit"
       >
         {(
           [
@@ -82,10 +82,10 @@ function ReviewerOnly() {
               setSeen((current) => new Set(current).add(value))
             }}
             className={cn(
-              'h-8 flex-1 rounded-lg px-4 text-sm font-medium transition sm:flex-none',
+              'h-9 flex-1 rounded-full px-4 text-sm font-medium transition sm:flex-none',
               items === value
-                ? 'bg-white text-slate-900 shadow-sm dark:bg-navy-700 dark:text-white'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
+                ? 'bg-surface text-fg'
+                : 'text-fg-muted hover:text-fg',
             )}
           >
             {label}

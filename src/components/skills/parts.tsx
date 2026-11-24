@@ -87,7 +87,7 @@ export function KindLabel({ kind }: { kind: SkillFileKind }) {
 /** Plain typographic label for the item kind, like FrameworkBadge. */
 export function SkillBadge() {
   return (
-    <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-300">
+    <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-fg">
       Skill
     </span>
   )
@@ -111,18 +111,13 @@ function Bar({
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
-        <span
-          id={id}
-          className="font-medium text-slate-800 dark:text-slate-100"
-        >
+        <span id={id} className="font-medium text-fg">
           {label}
         </span>
         <span
           className={cn(
             'tabular-nums',
-            over
-              ? 'font-semibold text-rose-700 dark:text-rose-300'
-              : 'text-slate-600 dark:text-slate-400',
+            over ? 'font-semibold text-fg' : 'text-fg-muted',
           )}
         >
           {text}
@@ -135,17 +130,10 @@ function Bar({
         aria-valuemax={max}
         aria-valuenow={Math.min(value, max)}
         aria-valuetext={text}
-        className="mt-1 h-2 overflow-hidden rounded-full bg-slate-900/10 dark:bg-white/10"
+        className="mt-1 h-2 overflow-hidden rounded-full bg-surface-2"
       >
         <div
-          className={cn(
-            'h-full rounded-full transition-[width]',
-            over
-              ? 'bg-rose-600 dark:bg-rose-400'
-              : ratio > 0.85
-                ? 'bg-amber-500 dark:bg-amber-400'
-                : 'bg-teal-600 dark:bg-teal-400',
-          )}
+          className={cn('h-full rounded-full transition-[width]', 'bg-accent')}
           style={{ width: `${Math.max(ratio * 100, value > 0 ? 2 : 0)}%` }}
         />
       </div>
@@ -189,7 +177,7 @@ export function FileText({ text, label }: { text: string; label: string }) {
     <pre
       aria-label={label}
       tabIndex={0}
-      className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-slate-900/5 p-3 font-mono text-xs leading-relaxed text-slate-800 focus-visible:outline-2 focus-visible:outline-teal-500 dark:bg-white/5 dark:text-slate-100"
+      className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-4 font-mono text-xs leading-relaxed text-fg focus-visible:outline-2 focus-visible:outline-accent-fg"
     >
       {text}
     </pre>

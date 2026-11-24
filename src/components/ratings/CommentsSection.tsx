@@ -171,15 +171,13 @@ export function CommentsSection({
   }
 
   return (
-    <section className="space-y-4 pt-4 border-t border-slate-900/10 dark:border-white/10">
-      <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+    <section className="space-y-4 border-t border-line pt-4">
+      <h3 className="text-base font-semibold text-fg">
         Comments ({comments.length})
       </h3>
 
       {comments.length === 0 ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          No comments yet.
-        </p>
+        <p className="text-sm text-fg-muted">No comments yet.</p>
       ) : (
         <ul className="space-y-3" aria-label="Comments">
           {comments.map((comment) => {
@@ -190,13 +188,13 @@ export function CommentsSection({
             return (
               <li
                 key={comment.id}
-                className="rounded-xl border border-slate-200/80 bg-slate-900/[0.02] p-3 text-sm dark:border-white/10 dark:bg-white/[0.02]"
+                className="rounded-3xl bg-surface p-4 text-sm"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-slate-900 dark:text-white">
+                  <span className="font-medium text-fg">
                     @{comment.author_handle}
                   </span>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-3 text-xs text-fg-muted">
                     <time dateTime={comment.created_at}>
                       {formatRelativeTime(comment.created_at)}
                     </time>
@@ -204,7 +202,7 @@ export function CommentsSection({
                       <button
                         type="button"
                         onClick={() => handleDelete(comment.id)}
-                        className="text-rose-600 hover:underline dark:text-rose-400"
+                        className="text-fg-muted underline-offset-2 hover:underline"
                       >
                         Delete
                       </button>
@@ -220,7 +218,7 @@ export function CommentsSection({
                     )}
                   </div>
                 </div>
-                <p className="mt-1.5 whitespace-pre-wrap break-words text-slate-700 dark:text-slate-300">
+                <p className="mt-1.5 whitespace-pre-wrap break-words text-fg">
                   {comment.body}
                 </p>
               </li>
@@ -230,28 +228,28 @@ export function CommentsSection({
       )}
 
       {!uid ? (
-        <p className="pt-2 text-sm text-slate-600 dark:text-slate-400">
+        <p className="pt-2 text-sm text-fg-muted">
           <button
             type="button"
             onClick={() =>
               openSignIn({ reason: 'Sign in to leave a comment.' })
             }
-            className="font-medium text-teal-600 hover:underline dark:text-teal-400"
+            className="font-medium text-accent-fg hover:underline"
           >
             Sign in
           </button>{' '}
           to leave a comment.
         </p>
       ) : isAuthor ? (
-        <p className="pt-2 text-xs text-slate-500 dark:text-slate-400">
+        <p className="pt-2 text-xs text-fg-muted">
           Authors cannot comment on their own items.
         </p>
       ) : handle === null ? (
-        <p className="pt-2 text-sm text-slate-600 dark:text-slate-400">
+        <p className="pt-2 text-sm text-fg-muted">
           Choose a username before commenting.{' '}
           <Link
             to="/settings"
-            className="font-medium text-teal-600 hover:underline dark:text-teal-400"
+            className="font-medium text-accent-fg hover:underline"
           >
             Open Settings
           </Link>
@@ -260,7 +258,7 @@ export function CommentsSection({
         <form onSubmit={handlePost} className="space-y-2 pt-2">
           <label
             htmlFor="comment-textarea"
-            className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400"
+            className="block text-xs font-semibold uppercase tracking-wider text-fg-muted"
           >
             Add a comment
           </label>
@@ -272,33 +270,25 @@ export function CommentsSection({
             rows={3}
             placeholder="Share feedback or use cases (max 1,000 characters)…"
             disabled={submitting}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-white/10 dark:bg-navy-900 dark:text-white"
+            className="w-full rounded-2xl border border-line bg-surface p-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-2 focus:ring-accent-fg"
           />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs text-slate-400">
-              {body.length} / 1,000
-            </span>
+            <span className="text-xs text-fg-muted">{body.length} / 1,000</span>
             <button
               type="submit"
               disabled={submitting || !body.trim() || Boolean(blockedNotice)}
-              className="rounded-xl bg-teal-500 px-4 py-1.5 text-sm font-semibold text-accent-ink shadow-sm hover:bg-teal-600 disabled:opacity-50"
+              className="inline-flex h-10 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_var(--lm-accent)] disabled:opacity-50"
             >
               {submitting ? 'Posting…' : 'Post comment'}
             </button>
           </div>
           {blockedNotice && (
-            <p
-              className="text-xs text-amber-600 dark:text-amber-400"
-              role="alert"
-            >
+            <p className="text-xs text-fg-muted" role="alert">
               {blockedNotice}
             </p>
           )}
           {postError && (
-            <p
-              className="text-xs text-rose-600 dark:text-rose-400"
-              role="alert"
-            >
+            <p className="text-xs text-fg" role="alert">
               {postError}
             </p>
           )}

@@ -90,7 +90,7 @@ export function MySkills() {
 
   if (!loading && !error && items.length === 0)
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-white/15">
+      <div className="rounded-3xl bg-surface p-6 text-center text-fg-muted">
         <p>You have not uploaded a skill yet.</p>
         <p className="mt-2">
           <Link to="/skills/new" className={textLink}>
@@ -231,18 +231,16 @@ export function SkillRow({
   }
 
   return (
-    <li className="rounded-xl border border-slate-900/10 p-4 dark:border-white/10">
+    <li className="rounded-3xl bg-surface p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h3 className="min-w-0 break-words text-base font-semibold text-slate-900 dark:text-white">
+        <h3 className="min-w-0 break-words text-base font-semibold text-fg">
           {record.name}
         </h3>
-        <span className="font-mono text-xs text-slate-600 dark:text-slate-400">
+        <span className="font-mono text-xs text-fg-muted">
           v{record.version}
         </span>
       </div>
-      <p className="break-all font-mono text-xs text-slate-600 dark:text-slate-400">
-        {record.id}
-      </p>
+      <p className="break-all font-mono text-xs text-fg-muted">{record.id}</p>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
         <StatusText tone="indigo">Skill</StatusText>
         <VisibilityLabel visibility={record.visibility} />
@@ -344,18 +342,12 @@ export function SkillRow({
         </div>
       )}
       {message && !error && (
-        <p
-          role="status"
-          className="mt-3 text-sm text-teal-800 dark:text-teal-200"
-        >
+        <p role="status" className="mt-3 text-sm text-accent-fg">
           {message}
         </p>
       )}
       {open && (
-        <div
-          id={panel}
-          className="mt-4 border-t border-slate-900/10 pt-4 dark:border-white/10"
-        >
+        <div id={panel} className="mt-4 border-t border-line pt-4">
           <SkillDetail
             skill={toIndexEntry(record)}
             loadFiles={() => Promise.resolve(record.files)}

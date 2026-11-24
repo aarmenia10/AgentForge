@@ -130,7 +130,7 @@ export default function CouncilMemberPage() {
         )}
         {message && <p role="status">{message}</p>}
         {member.kind === 'agent' ? (
-          <pre className="glass whitespace-pre-wrap break-words rounded-2xl p-4 text-sm">
+          <pre className="whitespace-pre-wrap break-words rounded-3xl bg-surface p-5 text-sm">
             {[
               member.item.prompt_blueprint.system_prompt,
               ...member.item.prompt_blueprint.instructions,
@@ -144,7 +144,7 @@ export default function CouncilMemberPage() {
               <details
                 key={path}
                 open={path === 'SKILL.md'}
-                className="glass rounded-2xl p-4"
+                className="rounded-3xl bg-surface p-5"
               >
                 <summary className="cursor-pointer font-medium">{path}</summary>
                 <pre className="mt-3 whitespace-pre-wrap break-words text-sm">

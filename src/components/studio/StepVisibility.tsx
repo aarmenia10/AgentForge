@@ -38,14 +38,14 @@ export function StepVisibility({
   return (
     <div className="space-y-4">
       <fieldset>
-        <legend className="mb-3 block text-sm font-medium text-slate-800 dark:text-slate-100">
+        <legend className="mb-3 block text-sm font-medium text-fg">
           Who can see this agent?
         </legend>
         <div className="space-y-2">
           {VISIBILITY_CHOICES.map(({ value, label, line, icon: Icon }) => (
             <label
               key={value}
-              className="flex cursor-pointer gap-3 rounded-xl border border-slate-300 p-3 has-[:checked]:border-teal-600 has-[:checked]:bg-teal-500/10 dark:border-white/15 dark:has-[:checked]:border-teal-400"
+              className="flex cursor-pointer gap-3 rounded-3xl border border-line bg-surface p-4 has-[:checked]:border-accent-fg has-[:checked]:bg-accent/10"
             >
               <input
                 type="radio"
@@ -53,10 +53,10 @@ export function StepVisibility({
                 value={value}
                 checked={draft.visibility === value}
                 onChange={() => update({ visibility: value })}
-                className="mt-1 size-4 accent-teal-700 dark:accent-teal-400"
+                className="mt-1 size-4 accent-[var(--lm-accent)]"
               />
               <span className="min-w-0">
-                <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-white">
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-fg">
                   <Icon className="size-4" aria-hidden="true" />
                   {label}
                 </span>
@@ -75,7 +75,7 @@ export function StepVisibility({
         </Notice>
       )}
       {draft.visibility !== 'public' && (
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-fg-muted">
           For now, private and friends agents are used from this website: open
           one and copy its prompt. The install command works for public agents.
         </p>

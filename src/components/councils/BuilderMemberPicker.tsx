@@ -91,7 +91,7 @@ function Row({
 }) {
   const pin = pinCandidate(candidate)
   return (
-    <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl bg-page px-4 py-3">
+    <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-3xl bg-surface p-4">
       <div className="min-w-0">
         <p className="break-words font-medium">{candidate.name}</p>
         <p className="break-all font-mono text-xs text-fg-muted">
@@ -198,7 +198,7 @@ export function BuilderMemberPicker({
           </p>
         )}
         {mineState === 'error' && (
-          <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">
+          <p role="alert" className="text-sm text-fg">
             Could not load your agents and skills. You can still search the
             public ones below.
           </p>
@@ -265,7 +265,7 @@ export function BuilderMemberPicker({
           </p>
         )}
         {pubState === 'error' && (
-          <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">
+          <p role="alert" className="text-sm text-fg">
             Could not load the public catalog. Try again in a moment.
           </p>
         )}

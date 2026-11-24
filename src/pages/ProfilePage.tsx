@@ -45,20 +45,20 @@ export default function ProfilePage() {
   return (
     <>
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
-        <header className="glass rounded-2xl p-6 sm:p-8">
+        <header className="rounded-3xl bg-surface p-6 sm:p-8">
           <h1
             tabIndex={-1}
             className="break-words text-2xl font-semibold tracking-tight outline-none sm:text-3xl"
           >
             {profile?.displayName ?? `@${handle}`}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-muted">
             {profile?.displayName && (
               <span className="font-mono">@{handle}</span>
             )}
             {profile?.verified && (
               <span
-                className="inline-flex items-center gap-1 font-medium text-teal-700 dark:text-teal-300"
+                className="inline-flex items-center gap-1 font-medium text-accent-fg"
                 title="The registry confirmed who this author is. It is not a safety check or a review of their agents."
               >
                 <BadgeCheck className="size-4" aria-hidden="true" />
@@ -81,7 +81,7 @@ export default function ProfilePage() {
             Public agents
           </h2>
           {status === 'ready' && profile?.agents.length === 0 ? (
-            <p className="glass rounded-2xl p-10 text-center text-slate-600 dark:text-slate-300">
+            <p className="rounded-3xl bg-surface p-10 text-center text-fg-muted">
               No public agents from @{handle} yet.
             </p>
           ) : (

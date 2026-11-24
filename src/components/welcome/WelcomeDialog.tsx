@@ -69,7 +69,7 @@ export function WelcomeDialog({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
       <div
-        className="absolute inset-0 bg-navy-950/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-page/80 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -80,14 +80,14 @@ export function WelcomeDialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={onKeyDown}
-        className="glass-strong relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl focus:outline-none sm:rounded-3xl"
+        className="relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-surface shadow-[var(--lm-shadow)] focus:outline-none sm:rounded-3xl"
       >
         <header className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-7 sm:pt-7">
           <div className="min-w-0">
             <h2 id={titleId} className="text-2xl font-semibold tracking-tight">
               Welcome to AgentLemon
             </h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p className="mt-1 text-sm text-fg-muted">
               Three things worth doing now. All are optional, and you can find
               them later in Settings.
             </p>
@@ -96,7 +96,7 @@ export function WelcomeDialog({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="grid size-10 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-900/5 dark:text-slate-300 dark:hover:bg-white/10"
+            className="grid size-10 shrink-0 place-items-center rounded-full text-fg-muted transition hover:bg-surface-2 hover:text-fg"
           >
             <X className="size-5" />
           </button>
@@ -115,10 +115,7 @@ export function WelcomeDialog({
               Choose a username
             </StepHeading>
             {saved ? (
-              <p
-                role="status"
-                className="text-sm text-slate-700 dark:text-slate-200"
-              >
+              <p role="status" className="text-sm text-fg">
                 You are{' '}
                 <Link
                   to={`/u/${saved.handle}`}
@@ -132,7 +129,7 @@ export function WelcomeDialog({
               </p>
             ) : (
               <>
-                <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
+                <p className="mb-4 text-sm text-fg-muted">
                   You need one to publish agents and to add friends.
                 </p>
                 <UsernameForm
@@ -159,7 +156,7 @@ export function WelcomeDialog({
           </section>
         </div>
 
-        <footer className="flex justify-end border-t border-slate-900/10 px-5 py-4 sm:px-7 dark:border-white/10">
+        <footer className="flex justify-end border-t border-line px-5 py-4 sm:px-7">
           <button
             type="button"
             onClick={onClose}
@@ -186,9 +183,9 @@ function StepHeading({
   return (
     <h3
       id={id}
-      className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white"
+      className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg"
     >
-      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-teal-500/15 text-xs font-semibold text-teal-700 dark:text-teal-300">
+      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent/15 text-xs font-semibold text-accent-fg">
         {n}
       </span>
       {children}

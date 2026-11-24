@@ -98,23 +98,23 @@ export function ReportDialog({
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-page/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-900/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-navy-800">
+      <div className="relative w-full max-w-md rounded-3xl bg-surface p-6 shadow-[var(--lm-shadow)]">
         <div className="flex items-center justify-between pb-4">
           <h2
             id="report-dialog-title"
-            className="text-lg font-semibold text-slate-900 dark:text-white"
+            className="text-lg font-semibold text-fg"
           >
             Report this {kind}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            className="grid size-10 place-items-center rounded-full text-fg-muted transition hover:bg-surface-2 hover:text-fg"
             aria-label="Close dialog"
           >
             <X className="size-5" />
@@ -123,13 +123,13 @@ export function ReportDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <fieldset className="space-y-2">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <legend className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
               Reason
             </legend>
             {REASONS.map((r) => (
               <label
                 key={r.id}
-                className="flex cursor-pointer items-center gap-3 text-sm text-slate-700 dark:text-slate-200"
+                className="flex cursor-pointer items-center gap-3 text-sm text-fg"
               >
                 <input
                   type="radio"
@@ -137,7 +137,7 @@ export function ReportDialog({
                   value={r.id}
                   checked={reason === r.id}
                   onChange={() => setReason(r.id)}
-                  className="size-4 text-teal-600 focus:ring-teal-500"
+                  className="size-4 accent-[var(--lm-accent)] focus:ring-2 focus:ring-accent-fg"
                 />
                 {r.label}
               </label>
@@ -147,7 +147,7 @@ export function ReportDialog({
           <div>
             <label
               htmlFor="report-note"
-              className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+              className="block text-xs font-semibold uppercase tracking-wider text-fg-muted"
             >
               Optional note (max 500 characters)
             </label>
@@ -158,30 +158,28 @@ export function ReportDialog({
               maxLength={500}
               rows={3}
               placeholder="Provide any additional context…"
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-white/10 dark:bg-navy-900 dark:text-white"
+              className="mt-1 w-full rounded-2xl border border-line bg-surface p-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-2 focus:ring-accent-fg"
             />
-            <div className="mt-1 text-right text-xs text-slate-400">
+            <div className="mt-1 text-right text-xs text-fg-muted">
               {note.length} / 500
             </div>
           </div>
 
-          {error && (
-            <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p>
-          )}
+          {error && <p className="text-xs text-fg">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              className="inline-flex h-10 items-center justify-center rounded-full bg-surface px-5 text-sm font-medium text-fg transition hover:-translate-y-0.5 hover:bg-surface-2"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-teal-500 px-4 py-2 text-sm font-medium text-accent-ink shadow hover:bg-teal-600 disabled:opacity-50"
+              className="inline-flex h-10 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_var(--lm-accent)] disabled:opacity-50"
             >
               {submitting ? 'Submitting…' : 'Submit report'}
             </button>

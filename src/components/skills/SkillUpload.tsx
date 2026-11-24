@@ -291,7 +291,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
         <div
           role="group"
           aria-label="How to add your skill"
-          className="flex w-full rounded-xl bg-slate-900/5 p-1 sm:w-fit dark:bg-white/5"
+          className="flex w-full rounded-full bg-surface-2 p-1 sm:w-fit"
         >
           {(
             [
@@ -305,10 +305,10 @@ export function SkillUpload({ editId }: { editId: string | null }) {
               aria-pressed={draft.source === value}
               onClick={() => update({ source: value })}
               className={cn(
-                'flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition sm:flex-none',
+                'flex-1 rounded-full px-4 py-2 text-sm font-medium transition sm:flex-none',
                 draft.source === value
-                  ? 'bg-white text-teal-800 shadow-sm dark:bg-white/15 dark:text-teal-200'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
+                  ? 'bg-surface text-fg'
+                  : 'text-fg-muted hover:text-fg',
               )}
             >
               {label}
@@ -326,19 +326,15 @@ export function SkillUpload({ editId }: { editId: string | null }) {
               onDragLeave={() => setDragging(false)}
               onDrop={onDrop}
               className={cn(
-                'space-y-3 rounded-2xl border-2 border-dashed p-4 text-center transition sm:p-6',
-                dragging
-                  ? 'border-teal-600 bg-teal-500/10 dark:border-teal-400'
-                  : 'border-slate-300 dark:border-white/15',
+                'space-y-3 rounded-3xl bg-surface p-5 text-center transition sm:p-6',
+                dragging ? 'ring-2 ring-accent-fg' : '',
               )}
             >
               <Upload
-                className="mx-auto size-6 text-slate-500 dark:text-slate-400"
+                className="mx-auto size-6 text-fg-muted"
                 aria-hidden="true"
               />
-              <p className="font-medium text-slate-900 dark:text-white">
-                Drop your skill folder here
-              </p>
+              <p className="font-medium text-fg">Drop your skill folder here</p>
               <div className="flex flex-wrap justify-center gap-2">
                 <PickerButton
                   id={`${ids}-folder`}
@@ -355,7 +351,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
                   Choose files
                 </PickerButton>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <p className="text-xs text-fg-muted">
                 Choose files puts every file at the top of the skill, because
                 the browser does not send folders that way. Links from SKILL.md
                 into subfolders will not work, so use a computer and Choose
@@ -383,7 +379,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
           <div>
             <label
               htmlFor={`${ids}-text`}
-              className="mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-100"
+              className="mb-1.5 block text-sm font-medium text-fg"
             >
               SKILL.md
             </label>
@@ -398,7 +394,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
                 'py-2 font-mono text-xs leading-relaxed',
               )}
             />
-            <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400">
+            <p className="mt-1.5 text-xs text-fg-muted">
               Keep the lines between the two <code>---</code> marks: the name
               (lowercase words joined by hyphens) and a description saying what
               the skill does and when to use it. Write the instructions below
@@ -418,14 +414,12 @@ export function SkillUpload({ editId }: { editId: string | null }) {
 
       <Section id={`${ids}-details`} title="2. Details">
         <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[7rem_1fr]">
-          <dt className="font-medium text-slate-800 dark:text-slate-100">
-            Name
-          </dt>
+          <dt className="font-medium text-fg">Name</dt>
           <dd className="min-w-0">
             {front ? (
               <code className="break-all font-mono">{front.name}</code>
             ) : (
-              <span className="text-slate-600 dark:text-slate-400">
+              <span className="text-fg-muted">
                 Read from SKILL.md once it is added.
               </span>
             )}
@@ -433,12 +427,10 @@ export function SkillUpload({ editId }: { editId: string | null }) {
               problems={shownProblems('name').map((p) => p.message)}
             />
           </dd>
-          <dt className="font-medium text-slate-800 dark:text-slate-100">
-            Description
-          </dt>
+          <dt className="font-medium text-fg">Description</dt>
           <dd className="min-w-0 whitespace-pre-wrap break-words">
             {front?.description ?? (
-              <span className="text-slate-600 dark:text-slate-400">
+              <span className="text-fg-muted">
                 Read from SKILL.md once it is added.
               </span>
             )}
@@ -485,7 +477,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
 
       <Section id={`${ids}-who`} title="3. Who can see it">
         <fieldset>
-          <legend className="mb-3 block text-sm font-medium text-slate-800 dark:text-slate-100">
+          <legend className="mb-3 block text-sm font-medium text-fg">
             Who can see this skill?
           </legend>
           <div className="space-y-2">
@@ -493,7 +485,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
               ({ value, label, line, icon: Icon }) => (
                 <label
                   key={value}
-                  className="flex cursor-pointer gap-3 rounded-xl border border-slate-300 p-3 has-[:checked]:border-teal-600 has-[:checked]:bg-teal-500/10 dark:border-white/15 dark:has-[:checked]:border-teal-400"
+                  className="flex cursor-pointer gap-3 rounded-3xl border border-line bg-surface p-4 has-[:checked]:border-accent-fg has-[:checked]:bg-accent/10"
                 >
                   <input
                     type="radio"
@@ -501,10 +493,10 @@ export function SkillUpload({ editId }: { editId: string | null }) {
                     value={value}
                     checked={draft.visibility === value}
                     onChange={() => update({ visibility: value })}
-                    className="mt-1 size-4 accent-teal-700 dark:accent-teal-400"
+                    className="mt-1 size-4 accent-[var(--lm-accent)]"
                   />
                   <span className="min-w-0">
-                    <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-white">
+                    <span className="flex items-center gap-1.5 text-sm font-semibold text-fg">
                       <Icon className="size-4" aria-hidden="true" />
                       {label}
                     </span>
@@ -515,7 +507,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
             )}
           </div>
         </fieldset>
-        <p className="text-slate-700 dark:text-slate-200">{SCRIPT_RULE}</p>
+        <p className="text-fg">{SCRIPT_RULE}</p>
         {check.scripts.length > 0 && sharing && (
           <Notice tone="error" title="This skill has scripts">
             <p>
@@ -565,7 +557,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
       </Section>
 
       <Section id={`${ids}-save`} title="Save">
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-fg-muted">
           {check.findings.length === 0
             ? NO_FINDINGS_TEXT
             : `The safety linter flagged ${blockCount ? `${blockCount} item${blockCount > 1 ? 's' : ''} that block${blockCount > 1 ? '' : 's'} sharing` : ''}${blockCount && warnCount ? ' and ' : ''}${warnCount ? `${warnCount} item${warnCount > 1 ? 's' : ''} for a reviewer to check` : ''}. Each one is shown beside its file.`}
@@ -652,12 +644,9 @@ function Section({
   return (
     <section
       aria-labelledby={id}
-      className="space-y-4 rounded-2xl border border-slate-900/10 p-4 sm:p-5 dark:border-white/10"
+      className="space-y-4 rounded-3xl bg-surface p-5 sm:p-6"
     >
-      <h2
-        id={id}
-        className="text-lg font-semibold text-slate-900 dark:text-white"
-      >
+      <h2 id={id} className="text-lg font-semibold text-fg">
         {title}
       </h2>
       {children}
@@ -697,7 +686,7 @@ function PickerButton({
         htmlFor={id}
         className={cn(
           secondaryButton,
-          'cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-teal-500',
+          'cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-fg',
         )}
       >
         {children}
@@ -729,7 +718,7 @@ function UploadReport({ note }: { note: UploadNote }) {
         </Notice>
       )}
       {note.skipped.length > 0 && (
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-fg-muted">
           Left out on purpose (hidden files and tool folders):{' '}
           {note.skipped.slice(0, 8).join(', ')}
           {note.skipped.length > 8
@@ -777,14 +766,14 @@ function FileRow({
   const [open, setOpen] = useState(false)
   const panel = useId()
   return (
-    <li className="rounded-xl border border-slate-900/10 p-3 dark:border-white/10">
+    <li className="rounded-3xl bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <code className="min-w-0 break-all font-mono text-xs font-semibold text-slate-900 dark:text-white">
+        <code className="min-w-0 break-all font-mono text-xs font-semibold text-fg">
           {file.path}
         </code>
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <KindLabel kind={file.kind} />
-          <span className="font-mono text-xs tabular-nums text-slate-600 dark:text-slate-400">
+          <span className="font-mono text-xs tabular-nums text-fg-muted">
             {formatBytes(utf8ByteLength(file.content))}
           </span>
         </span>
@@ -856,7 +845,7 @@ function ProblemLines({ problems }: { problems: string[] }) {
   return (
     <div className="mt-1.5 space-y-1">
       {problems.map((message, i) => (
-        <p key={i} className="text-xs text-rose-700 dark:text-rose-300">
+        <p key={i} className="text-xs text-fg">
           {message}
         </p>
       ))}
@@ -885,10 +874,7 @@ function TextField({
 }) {
   return (
     <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-100"
-      >
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-fg">
         {label}
       </label>
       <input
@@ -901,9 +887,7 @@ function TextField({
         autoComplete="off"
         spellCheck={false}
       />
-      <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400">
-        {hint}
-      </p>
+      <p className="mt-1.5 text-xs text-fg-muted">{hint}</p>
       <ProblemLines problems={problems} />
       {children}
     </div>

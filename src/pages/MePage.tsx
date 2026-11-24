@@ -19,10 +19,7 @@ export default function MePage() {
         <div className="mt-2 space-y-10 text-sm">
           <section aria-labelledby="me-mine" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2
-                id="me-mine"
-                className="text-lg font-semibold text-slate-900 dark:text-white"
-              >
+              <h2 id="me-mine" className="text-lg font-semibold text-fg">
                 Agents you made
               </h2>
               <Link to="/studio" className={primaryButton}>
@@ -33,10 +30,7 @@ export default function MePage() {
           </section>
           <section aria-labelledby="me-skills" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2
-                id="me-skills"
-                className="text-lg font-semibold text-slate-900 dark:text-white"
-              >
+              <h2 id="me-skills" className="text-lg font-semibold text-fg">
                 Skills you made
               </h2>
               <Link to="/skills/new" className={primaryButton}>
@@ -47,10 +41,7 @@ export default function MePage() {
           </section>
           <section aria-labelledby="me-councils" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2
-                id="me-councils"
-                className="text-lg font-semibold text-slate-900 dark:text-white"
-              >
+              <h2 id="me-councils" className="text-lg font-semibold text-fg">
                 Your councils
               </h2>
               <Link to="/councils" className={primaryButton}>
@@ -60,10 +51,7 @@ export default function MePage() {
             <MyCouncils />
           </section>
           <section aria-labelledby="me-shared" className="space-y-3">
-            <h2
-              id="me-shared"
-              className="text-lg font-semibold text-slate-900 dark:text-white"
-            >
+            <h2 id="me-shared" className="text-lg font-semibold text-fg">
               Shared with me
             </h2>
             <p>

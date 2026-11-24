@@ -96,7 +96,7 @@ export function MyCouncils({ owner }: { owner?: string }) {
       {items.map((item) => (
         <article
           key={item.id}
-          className="glass flex flex-wrap items-center justify-between gap-3 rounded-xl p-4"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-surface p-5"
         >
           <div className="min-w-0">
             <Link

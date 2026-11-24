@@ -71,7 +71,7 @@ export default function CouncilsPage() {
             {visible.map((council) => (
               <li
                 key={council.id}
-                className="glass min-w-0 space-y-2 rounded-2xl p-5"
+                className="min-w-0 space-y-2 rounded-3xl bg-surface p-6"
               >
                 <Link
                   to={'/councils/' + council.id}

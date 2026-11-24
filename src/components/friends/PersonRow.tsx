@@ -20,20 +20,18 @@ export function PersonRow({
       <div className="min-w-0">
         {person.handle ? (
           <>
-            <p className="truncate font-medium text-slate-900 dark:text-white">
+            <p className="truncate font-medium text-fg">
               {person.display_name || `@${person.handle}`}
             </p>
             <Link
               to={`/u/${person.handle}`}
-              className="font-mono text-xs text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
+              className="font-mono text-xs text-accent-fg underline-offset-2 hover:underline"
             >
               @{person.handle}
             </Link>
           </>
         ) : (
-          <p className="text-slate-600 dark:text-slate-400">
-            An account without a username
-          </p>
+          <p className="text-fg-muted">An account without a username</p>
         )}
       </div>
       {children && (

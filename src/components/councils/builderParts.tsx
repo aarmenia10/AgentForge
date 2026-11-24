@@ -5,8 +5,8 @@ import { cn } from '@/components/ui'
 
 export const builderInput = (invalid = false) =>
   cn(
-    'w-full rounded-2xl border bg-page px-4 text-sm text-fg placeholder:text-fg-muted focus:border-accent-fg focus:outline-none disabled:opacity-60',
-    invalid ? 'border-rose-500 dark:border-rose-400' : 'border-line',
+    'w-full rounded-2xl border bg-surface px-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-2 focus:ring-accent-fg disabled:opacity-60',
+    invalid ? 'border-accent-fg' : 'border-line',
   )
 
 export const pillButton =
@@ -27,7 +27,7 @@ export function FieldErrors({
   return (
     <div id={id} className="mt-1.5 space-y-0.5">
       {messages.map((message) => (
-        <p key={message} className="text-xs text-rose-600 dark:text-rose-300">
+        <p key={message} className="text-xs text-fg">
           {message}
         </p>
       ))}

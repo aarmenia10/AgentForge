@@ -19,7 +19,7 @@ let cachedIndex: SkillIndexResult | null = null
 let cachedQuery: SkillQuery = DEFAULT_SKILL_QUERY
 
 const fieldClass =
-  'h-10 rounded-xl border border-slate-200 bg-white/70 px-3 text-sm focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-white/5'
+  'h-10 rounded-full border border-line bg-surface px-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-2 focus:ring-accent-fg'
 const gridClass = 'grid gap-5 sm:grid-cols-2 xl:grid-cols-3'
 
 /** Public skills from the static skills.json. No database reads. */
@@ -55,7 +55,7 @@ export default function SkillsPage() {
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-12 sm:px-6 sm:pt-16">
-      <div className="glass rounded-2xl p-6 sm:p-8">
+      <div className="rounded-3xl bg-surface p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 max-w-2xl">
             <h1
@@ -64,7 +64,7 @@ export default function SkillsPage() {
             >
               Skills
             </h1>
-            <p className="mt-3 text-slate-600 dark:text-slate-300">
+            <p className="mt-3 text-fg-muted">
               A skill is a folder of instructions an AI follows for one kind of
               job, with a SKILL.md at the top. Any AI app connected to
               AgentLemon can load one, even apps with no skills feature of their
@@ -84,11 +84,11 @@ export default function SkillsPage() {
         >
           Explore skills
         </h2>
-        <div className="glass rounded-2xl p-3 sm:p-4">
+        <div className="rounded-3xl bg-surface p-3 sm:p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <label className="relative flex-1">
               <span className="sr-only">Search skills</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
               <input
                 type="search"
                 value={query.keyword}
@@ -97,15 +97,12 @@ export default function SkillsPage() {
                 className={cn(fieldClass, 'w-full pl-9')}
               />
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-fg-muted">
               <span className="shrink-0">Category</span>
               <select
                 value={query.tag ?? ''}
                 onChange={(e) => patch({ tag: e.target.value || null })}
-                className={cn(
-                  fieldClass,
-                  'w-full lg:w-40 dark:[&>option]:bg-navy-900',
-                )}
+                className={cn(fieldClass, 'w-full lg:w-40')}
               >
                 <option value="">All categories</option>
                 {AGENT_CATEGORIES.map(({ tag, label }) => (
@@ -118,7 +115,7 @@ export default function SkillsPage() {
             <div
               role="radiogroup"
               aria-label="Sort skills"
-              className="flex rounded-xl bg-slate-900/5 p-1 dark:bg-white/5"
+              className="flex rounded-full bg-surface-2 p-1"
             >
               {SKILL_SORT_OPTIONS.map(({ key, label }) => (
                 <button
@@ -128,10 +125,10 @@ export default function SkillsPage() {
                   aria-checked={query.sort === key}
                   onClick={() => patch({ sort: key })}
                   className={cn(
-                    'h-8 flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition',
+                    'h-9 flex-1 whitespace-nowrap rounded-full px-3 text-sm font-medium transition',
                     query.sort === key
-                      ? 'bg-white text-slate-900 shadow-sm dark:bg-navy-700 dark:text-white'
-                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
+                      ? 'bg-surface text-fg'
+                      : 'text-fg-muted hover:text-fg',
                   )}
                 >
                   {label}
@@ -139,7 +136,7 @@ export default function SkillsPage() {
               ))}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-fg-muted">
             <span aria-live="polite">
               {visible.length} {visible.length === 1 ? 'skill' : 'skills'}
             </span>
@@ -147,7 +144,7 @@ export default function SkillsPage() {
               <button
                 type="button"
                 onClick={() => patch({ tag: null })}
-                className="inline-flex items-center gap-1 rounded-md bg-teal-500/15 px-2 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-300"
+                className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-3 py-1 text-xs font-medium text-accent-fg"
               >
                 {tagLabel}
                 <X className="size-3" aria-label="Remove category filter" />
@@ -157,7 +154,7 @@ export default function SkillsPage() {
               <button
                 type="button"
                 onClick={reset}
-                className="ml-auto text-xs font-medium text-slate-600 underline-offset-4 hover:underline dark:text-slate-300"
+                className="ml-auto text-xs font-medium text-fg underline-offset-4 hover:underline"
               >
                 Clear filters
               </button>
@@ -173,23 +170,29 @@ export default function SkillsPage() {
               aria-label="Loading skills"
             >
               {Array.from({ length: 3 }, (_, i) => (
-                <div key={i} className="glass h-56 animate-pulse rounded-2xl" />
+                <div
+                  key={i}
+                  className="h-56 animate-pulse rounded-3xl bg-surface"
+                />
               ))}
             </div>
           ) : index.state === 'error' ? (
-            <div role="alert" className="glass rounded-2xl p-10 text-center">
-              <TriangleAlert className="mx-auto size-8 text-amber-500" />
+            <div
+              role="alert"
+              className="rounded-3xl bg-surface p-10 text-center"
+            >
+              <TriangleAlert className="mx-auto size-8 text-fg-muted" />
               <p className="mt-3 font-medium">
                 The skills list failed to load.
               </p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-sm text-fg-muted">
                 Check your connection and reload the page.
               </p>
             </div>
           ) : index.skills.length === 0 ? (
-            <div className="glass rounded-2xl p-10 text-center">
+            <div className="rounded-3xl bg-surface p-10 text-center">
               <p className="font-medium">No public skills yet.</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-sm text-fg-muted">
                 Approved public skills appear here within about an hour.
               </p>
               <Link to="/skills/new" className={cn(primaryButton, 'mt-4')}>
@@ -197,13 +200,13 @@ export default function SkillsPage() {
               </Link>
             </div>
           ) : visible.length === 0 ? (
-            <div className="glass rounded-2xl p-10 text-center">
-              <SearchX className="mx-auto size-8 text-slate-400" />
+            <div className="rounded-3xl bg-surface p-10 text-center">
+              <SearchX className="mx-auto size-8 text-fg-muted" />
               <p className="mt-3 font-medium">No skills match these filters.</p>
               <button
                 type="button"
                 onClick={reset}
-                className="mt-4 rounded-xl bg-teal-500 px-4 py-2 text-sm font-medium text-accent-ink hover:bg-teal-600"
+                className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_var(--lm-accent)]"
               >
                 Clear filters
               </button>
