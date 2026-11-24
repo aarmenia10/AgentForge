@@ -133,8 +133,8 @@ export function HeroAtom({ items, onUnavailable, onInfo }: HeroAtomProps) {
   // Glow does not read on a light page, so in light mode the atom floats in
   // its own patch of dark space: a soft cloud with no hard edge, whose rim
   // drifts slowly (owner request 2026-11-24, replacing a rounded box). In dark
-  // mode the page is the space, and the atom may spill past its column (the
-  // hero clips it at the page edge).
+  // mode the page is the space. The atom stays inside its column: spilling
+  // past it let the hero's edge slice it off in a straight line.
   const stage = !palette.dark
   const stageColor = toHex(palette.stage)
 
@@ -145,7 +145,7 @@ export function HeroAtom({ items, onUnavailable, onInfo }: HeroAtomProps) {
       className={
         stage
           ? 'mx-auto w-full max-w-[min(100%,36svh)] sm:max-w-[34rem] lg:max-w-[38rem]'
-          : 'mx-auto w-full max-w-[min(100%,34svh)] sm:max-w-[34rem] lg:w-[calc(100%+5rem)] lg:max-w-[46rem] lg:-translate-x-6'
+          : 'mx-auto w-full max-w-[min(100%,34svh)] sm:max-w-[34rem] lg:max-w-[40rem]'
       }
     >
       <div className="relative">
