@@ -188,3 +188,26 @@ test('computeSuggestions handles arbitrary Other text answers gracefully', () =>
   assert.ok(result.agents.length > 0)
   assert.ok(result.skills.length > 0)
 })
+
+test('changing answers changes which agents are suggested, not just their order', () => {
+  const agents = [
+    makeAgent('code-a', ['coding']),
+    makeAgent('money-b', ['finance']),
+    makeAgent('story-c', ['creative']),
+  ]
+  const coding = computeSuggestions(
+    { use_for: ['Coding projects'] },
+    agents,
+    [],
+  )
+  const writing = computeSuggestions({ use_for: ['Writing'] }, agents, [])
+  assert.deepEqual(
+    coding.agents.map((a) => a.id),
+    ['code-a'],
+  )
+  assert.deepEqual(
+    writing.agents.map((a) => a.id),
+    ['story-c'],
+  )
+  assert.equal(coding.few_matches, true)
+})
