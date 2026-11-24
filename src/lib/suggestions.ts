@@ -68,51 +68,42 @@ export interface SuggestionsResult {
   few_matches: boolean
 }
 
-function inferCategories(prefs: UserPreferences): Set<Category> {
-  const cats = new Set<Category>()
-  const add = (cs: Category[]) => cs.forEach((c) => cats.add(c))
-  if (prefs.work_role) {
-    const mapped = WORK_ROLE_MAP[prefs.work_role]
-    if (mapped) add(mapped)
+const ALL_CATEGORIES: Category[] = [
+  'coding',
+  'finance',
+  'research',
+  'devops',
+  'ops',
+  'creative',
+]
+
+/**
+ * How much each category matters to this person. The topic answers (what
+ * they will use AgentLemon for, what they want help with, and an old work
+ * answer) decide which categories count. Goals and AI apps are broad (one
+ * goal maps to every category), so they only add weight to categories the
+ * topic answers already chose; they are used on their own only when there
+ * are no topic answers, and with no answers at all every category counts.
+ */
+export function categoryWeights(prefs: UserPreferences): Map<Category, number> {
+  const weights = new Map<Category, number>()
+  const add = (cs: Category[] | undefined, by: number, onlyKnown = false) => {
+    for (const c of cs ?? [])
+      if (!onlyKnown || weights.has(c))
+        weights.set(c, (weights.get(c) ?? 0) + by)
   }
-  for (const use of prefs.use_for ?? []) {
-    const mapped = USE_FOR_MAP[use]
-    if (mapped) add(mapped)
-  }
-  for (const goal of prefs.goals ?? []) {
-    const mapped = GOALS_MAP[goal]
-    if (mapped) add(mapped)
-  }
-  for (const app of prefs.ai_apps ?? []) {
-    const mapped = AI_APPS_MAP[app]
-    if (mapped) add(mapped)
-  }
-  for (const topic of prefs.help_topics ?? []) {
-    const mapped = HELP_TOPICS_MAP[topic]
-    if (mapped) add(mapped)
-  }
-  // No prefs at all → show everything
-  if (cats.size === 0) {
-    ;(
-      [
-        'coding',
-        'finance',
-        'research',
-        'devops',
-        'ops',
-        'creative',
-      ] as Category[]
-    ).forEach((c) => cats.add(c))
-  }
-  return cats
+  if (prefs.work_role) add(WORK_ROLE_MAP[prefs.work_role], 2)
+  for (const use of prefs.use_for ?? []) add(USE_FOR_MAP[use], 2)
+  for (const topic of prefs.help_topics ?? []) add(HELP_TOPICS_MAP[topic], 2)
+  const topical = weights.size > 0
+  for (const app of prefs.ai_apps ?? []) add(AI_APPS_MAP[app], 1, topical)
+  if (!topical) for (const goal of prefs.goals ?? []) add(GOALS_MAP[goal], 1)
+  if (weights.size === 0) for (const c of ALL_CATEGORIES) weights.set(c, 1)
+  return weights
 }
 
-function scoreAgent(agent: AgentManifest, cats: Set<Category>): number {
-  return agent.tags.filter((t) => cats.has(t as Category)).length
-}
-
-function scoreSkill(skill: SkillIndexEntry, cats: Set<Category>): number {
-  return skill.tags.filter((t) => cats.has(t as Category)).length
+function score(tags: readonly string[], weights: Map<Category, number>) {
+  return tags.reduce((sum, t) => sum + (weights.get(t as Category) ?? 0), 0)
 }
 
 export function computeSuggestions(
@@ -120,12 +111,12 @@ export function computeSuggestions(
   agents: readonly AgentManifest[],
   skills: readonly SkillIndexEntry[],
 ): SuggestionsResult {
-  const cats = inferCategories(prefs)
+  const weights = categoryWeights(prefs)
 
   // Only items that match at least one inferred category are suggestions;
   // otherwise every answer set shows the whole (small) catalog in a new order.
   const rankedAgents = [...agents]
-    .map((a) => ({ item: a, score: scoreAgent(a, cats) }))
+    .map((a) => ({ item: a, score: score(a.tags, weights) }))
     .filter((x) => x.score > 0)
     .sort(
       (a, b) => b.score - a.score || b.item.stats.views - a.item.stats.views,
@@ -134,7 +125,7 @@ export function computeSuggestions(
     .map((x) => x.item)
 
   const rankedSkills = [...skills]
-    .map((s) => ({ item: s, score: scoreSkill(s, cats) }))
+    .map((s) => ({ item: s, score: score(s.tags, weights) }))
     .filter((x) => x.score > 0)
     .sort(
       (a, b) =>

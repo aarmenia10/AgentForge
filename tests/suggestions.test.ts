@@ -211,3 +211,42 @@ test('changing answers changes which agents are suggested, not just their order'
   )
   assert.equal(coding.few_matches, true)
 })
+
+test('broad goals and AI apps do not drown the topic answers (P3-15 step 8)', () => {
+  const agents = [
+    makeAgent('api-scaffold', ['coding', 'devops']),
+    makeAgent('regex-tool', ['coding']),
+    makeAgent('filing-audit', ['finance', 'research']),
+    makeAgent('brief-crew', ['creative', 'ops']),
+    makeAgent('story-editor', ['creative']),
+  ]
+  const broad = {
+    goals: ['Find agents and skills to use'],
+    ai_apps: ['Claude', 'ChatGPT'],
+  }
+  const coding = computeSuggestions(
+    {
+      ...broad,
+      use_for: ['Coding projects'],
+      help_topics: ['Coding', 'DevOps'],
+    },
+    agents,
+    [],
+  )
+  const writing = computeSuggestions(
+    { ...broad, use_for: ['Writing', 'Business'], help_topics: ['Writing'] },
+    agents,
+    [],
+  )
+  assert.deepEqual(
+    coding.agents.map((a) => a.id),
+    ['api-scaffold', 'regex-tool'],
+  )
+  assert.deepEqual(writing.agents.map((a) => a.id).sort(), [
+    'brief-crew',
+    'filing-audit',
+    'story-editor',
+  ])
+  // Only goals and apps: they still produce suggestions on their own.
+  assert.equal(computeSuggestions(broad, agents, []).agents.length, 5)
+})
