@@ -352,6 +352,7 @@ export function SkillRow({
             skill={toIndexEntry(record)}
             loadFiles={() => Promise.resolve(record.files)}
             heading="h4"
+            onClose={() => setOpen(false)}
             showAuthor={false}
             connectable={
               record.visibility === 'public' &&

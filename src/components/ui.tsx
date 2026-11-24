@@ -2,6 +2,7 @@ import { ArrowRight, BadgeCheck, Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FRAMEWORK_LABELS, type AgentAuthor, type AgentFramework } from '@/types/agent'
 import { Link } from '@/router/Router'
+import { COPY_CONFIRMATION_MS, copyText } from '@/lib/clipboard'
 
 /** Joins class names, skipping falsy values. */
 export function cn(...parts: (string | false | null | undefined)[]): string {
@@ -147,16 +148,15 @@ export function CopyButton({
     if (!text) return
     window.clearTimeout(timer.current)
     setStatus('copying')
-    try {
-      await navigator.clipboard.writeText(text)
-      if (!active.current) return
-      setStatus('copied')
-      onResult?.(null)
-      timer.current = window.setTimeout(() => setStatus('idle'), 3000)
-    } catch {
-      if (!active.current) return
-      setStatus('error')
-      onResult?.(text)
+    const result = await copyText(text)
+    if (!active.current) return
+    setStatus(result)
+    onResult?.(result === 'copied' ? null : text)
+    if (result === 'copied') {
+      timer.current = window.setTimeout(
+        () => setStatus('idle'),
+        COPY_CONFIRMATION_MS,
+      )
     }
   }
 

@@ -106,6 +106,7 @@ export function FriendSkills({ uid, name }: { uid: string; name: string }) {
             skill={toIndexEntry(opened)}
             loadFiles={() => Promise.resolve(opened.files)}
             heading="h4"
+            onClose={() => setOpen(null)}
           />
         </div>
       )}

@@ -65,7 +65,8 @@ export function RouterProvider({ children }: { children: ReactNode }) {
       return
     }
     if (url.href !== window.location.href) {
-      if (options.replace) window.history.replaceState(null, '', url)
+      if (options.replace)
+        window.history.replaceState(window.history.state, '', url)
       else {
         window.history.replaceState(
           { ...window.history.state, agentLemonScrollY: window.scrollY },

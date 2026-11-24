@@ -27,7 +27,7 @@ function writeAgentParam(id: string | null) {
   const url = new URL(window.location.href)
   if (id) url.searchParams.set(AGENT_PARAM, id)
   else url.searchParams.delete(AGENT_PARAM)
-  window.history.pushState(null, '', url)
+  window.history.pushState({ agentLemonCanGoBack: true }, '', url)
 }
 
 // Kept for the session so returning to the page shows the catalog at once.
