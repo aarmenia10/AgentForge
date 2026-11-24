@@ -29,7 +29,7 @@ export default function AtomCanvas({
   onOpen,
   onUnavailable,
 }: AtomCanvasProps) {
-  const canvas = useRef<HTMLCanvasElement>(null)
+  const host = useRef<HTMLDivElement>(null)
   const label = useRef<HTMLSpanElement>(null)
   const controller = useRef<AtomController | null>(null)
   // Latest values for the long-lived scene, without rebuilding it.
@@ -37,10 +37,18 @@ export default function AtomCanvas({
   latest.current = { palette, activeKey, onOpen, onUnavailable }
 
   useEffect(() => {
-    if (!canvas.current || !label.current) return
+    if (!host.current || !label.current) return
+    // A fresh canvas per scene: dispose() forces the WebGL context lost, and a
+    // canvas keeps its lost context, so reusing one (React's development
+    // double mount, or a new item list) would leave the second scene blank.
+    const canvas = document.createElement('canvas')
+    canvas.setAttribute('aria-hidden', 'true')
+    canvas.className =
+      'absolute inset-0 size-full cursor-grab touch-pan-y select-none'
+    host.current.append(canvas)
     try {
       controller.current = createAtom({
-        canvas: canvas.current,
+        canvas,
         label: label.current,
         items,
         palette: latest.current.palette,
@@ -54,6 +62,7 @@ export default function AtomCanvas({
     return () => {
       controller.current?.dispose()
       controller.current = null
+      canvas.remove()
     }
   }, [items])
 
@@ -62,11 +71,7 @@ export default function AtomCanvas({
 
   return (
     <>
-      <canvas
-        ref={canvas}
-        aria-hidden="true"
-        className="absolute inset-0 size-full cursor-grab touch-pan-y select-none"
-      />
+      <div ref={host} className="absolute inset-0" />
       <span
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold tracking-tight"
