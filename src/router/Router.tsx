@@ -31,6 +31,15 @@ interface RouterContextValue {
 }
 
 const RouterContext = createContext<RouterContextValue | null>(null)
+// History state survives a reload. This token belongs to the current document.
+const agentDetailSession = crypto.getRandomValues(new Uint32Array(4)).join('-')
+
+export function canCloseAgentWithBack(
+  state: { agentLemonAgentSession?: string } | null,
+  session = agentDetailSession,
+): boolean {
+  return state?.agentLemonAgentSession === session
+}
 
 function readLocation(key: number, restoreY?: number): Location {
   return {
@@ -72,7 +81,19 @@ export function RouterProvider({ children }: { children: ReactNode }) {
           { ...window.history.state, agentLemonScrollY: window.scrollY },
           '',
         )
-        window.history.pushState({ agentLemonCanGoBack: true }, '', url)
+        const opensAgent =
+          url.searchParams.has('agent') &&
+          !new URLSearchParams(window.location.search).has('agent')
+        window.history.pushState(
+          opensAgent
+            ? {
+                agentLemonCanGoBack: true,
+                agentLemonAgentSession: agentDetailSession,
+              }
+            : { agentLemonCanGoBack: true },
+          '',
+          url,
+        )
       }
     }
     setLocation((current) => readLocation(current.key + 1))

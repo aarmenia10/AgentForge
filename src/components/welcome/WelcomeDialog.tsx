@@ -1,3 +1,4 @@
+import { lockBodyScroll } from '@/lib/scrollLock'
 import { X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
@@ -31,11 +32,10 @@ export function WelcomeDialog({
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockBodyScroll()
     dialogRef.current?.focus()
     return () => {
-      document.body.style.overflow = previousOverflow
+      unlock()
       previouslyFocused?.focus()
     }
   }, [])

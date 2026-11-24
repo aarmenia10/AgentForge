@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth, type SignInMode } from '@/auth/AuthProvider'
+import { lockBodyScroll } from '@/lib/scrollLock'
 import {
   describeAuthError,
   isUserCancellation,
@@ -67,11 +68,10 @@ export default function SignInDialog({
   // Lock page scroll, move focus in, and restore both on close.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockBodyScroll()
     dialogRef.current?.focus()
     return () => {
-      document.body.style.overflow = previousOverflow
+      unlock()
       previouslyFocused?.focus()
     }
   }, [])

@@ -28,6 +28,7 @@ import {
   type MemberCandidate,
 } from '@/lib/councilBuilder'
 import { councilStore } from '@/services/councilStore'
+import { lockBodyScroll } from '@/lib/scrollLock'
 import type { CouncilRecord } from '@/types/council'
 import { BuilderMemberList } from './BuilderMemberList'
 import { BuilderMemberPicker } from './BuilderMemberPicker'
@@ -75,11 +76,10 @@ export function CouncilBuilder({
   // Lock page scroll, move focus in, and restore both on close.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockBodyScroll()
     dialogRef.current?.focus()
     return () => {
-      document.body.style.overflow = previousOverflow
+      unlock()
       previouslyFocused?.focus()
     }
   }, [])
