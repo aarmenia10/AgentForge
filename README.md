@@ -543,6 +543,7 @@ What is being built right now. One row per claim. Add yours before you start and
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
 | P3-12 | Aidan | Codex | `copilot/signup-use-for` | Preferences UI, storage, suggestions, rules, tests, README | 2026-11-22 |
+| Visual restyle | Aidan | Copilot | `aarmenia10-restyle-pages` | Studio, My items, Friends, Review, Skills, Councils, Profile, Suggestions, comments, reports, welcome | 2026-11-23 |
 
 ### 8.2 Ideas inbox
 
