@@ -67,15 +67,17 @@ export function useAtomSupported(): boolean {
 
 /** If the 3D chunk fails to load or throws, the hero drops the atom. */
 class AtomBoundary extends Component<
-  { onError: () => void; children: ReactNode },
+  { onError: (reason: string) => void; children: ReactNode },
   { failed: boolean }
 > {
   state = { failed: false }
   static getDerivedStateFromError() {
     return { failed: true }
   }
-  componentDidCatch() {
-    this.props.onError()
+  componentDidCatch(error: unknown) {
+    this.props.onError(
+      `3D chunk failed: ${error instanceof Error ? error.message : String(error)}`,
+    )
   }
   render() {
     return this.state.failed ? null : this.props.children
@@ -86,7 +88,9 @@ interface HeroAtomProps {
   /** Null until the three public files have loaded. */
   items: AtomItems | null
   /** WebGL failed or drew nothing: the hero removes the atom. */
-  onUnavailable: () => void
+  onUnavailable: (reason: string) => void
+  /** Diagnostic lines to show under the atom (`?atomdebug` only). */
+  onInfo?: (lines: string[]) => void
 }
 
 /**
@@ -94,7 +98,7 @@ interface HeroAtomProps {
  * or skill. Render it only when `useAtomSupported()` is true. Until three.js
  * and the items arrive, the reserved square shows a soft accent glow.
  */
-export function HeroAtom({ items, onUnavailable }: HeroAtomProps) {
+export function HeroAtom({ items, onUnavailable, onInfo }: HeroAtomProps) {
   const { appearance } = useTheme()
   const { go } = useRoute()
   const [activeKey, setActiveKey] = useState<string | null>(null)
@@ -167,6 +171,7 @@ export function HeroAtom({ items, onUnavailable }: HeroAtomProps) {
                 activeKey={activeKey}
                 onOpen={go}
                 onUnavailable={onUnavailable}
+                onInfo={onInfo}
               />
             </Suspense>
           </AtomBoundary>

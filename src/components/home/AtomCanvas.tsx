@@ -10,8 +10,9 @@ interface AtomCanvasProps {
   /** `kind:id` (or `council`) of the keyboard link that has focus, if any. */
   activeKey: string | null
   onOpen: (to: string) => void
-  /** WebGL is missing or was lost. The caller shows the static atom. */
-  onUnavailable: () => void
+  /** WebGL failed. The hero drops the atom (or, with `?atomdebug`, reports). */
+  onUnavailable: (reason: string) => void
+  onInfo?: (lines: string[]) => void
 }
 
 /**
@@ -29,13 +30,14 @@ export default function AtomCanvas({
   activeKey,
   onOpen,
   onUnavailable,
+  onInfo,
 }: AtomCanvasProps) {
   const host = useRef<HTMLDivElement>(null)
   const label = useRef<HTMLSpanElement>(null)
   const controller = useRef<AtomController | null>(null)
   // Latest values for the long-lived scene, without rebuilding it.
-  const latest = useRef({ palette, activeKey, onOpen, onUnavailable })
-  latest.current = { palette, activeKey, onOpen, onUnavailable }
+  const latest = useRef({ palette, activeKey, onOpen, onUnavailable, onInfo })
+  latest.current = { palette, activeKey, onOpen, onUnavailable, onInfo }
 
   useEffect(() => {
     if (!host.current || !label.current) return
@@ -54,11 +56,14 @@ export default function AtomCanvas({
         items,
         palette: latest.current.palette,
         onOpen: (to) => latest.current.onOpen(to),
-        onLost: () => latest.current.onUnavailable(),
+        onLost: (reason) => latest.current.onUnavailable(reason),
+        onInfo: (lines) => latest.current.onInfo?.(lines),
       })
       controller.current.setActive(latest.current.activeKey)
-    } catch {
-      latest.current.onUnavailable()
+    } catch (err) {
+      latest.current.onUnavailable(
+        `setup failed: ${err instanceof Error ? err.message : String(err)}`,
+      )
     }
     return () => {
       controller.current?.dispose()
