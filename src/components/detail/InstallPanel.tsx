@@ -27,7 +27,7 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
           </p>
           <p className="mt-1 leading-relaxed">
             The registry has not confirmed who @{agent.author.handle} is. Read
-            the blueprint on the Overview tab before you use this agent.
+            the agent instructions in Agent Details before you use this agent.
           </p>
         </div>
       )}

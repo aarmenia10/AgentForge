@@ -169,7 +169,7 @@ test('the install tab warns about an unverified author and says nothing extra fo
     }),
   )
   assert.match(unverified, /has not confirmed who @pat is/)
-  assert.match(unverified, /Read\s+the blueprint/)
+  assert.match(unverified, /Read\s+the agent instructions/)
   const verified = renderToStaticMarkup(
     createElement(InstallPanel, {
       agent: { ...base, author: { ...base.author, verified: true } },
@@ -178,5 +178,5 @@ test('the install tab warns about an unverified author and says nothing extra fo
   assert.doesNotMatch(verified, /not confirmed|has not confirmed/)
   assert.doesNotMatch(verified, /safety|reviewed|safe to use/i)
   // The connector card stays at the top of the install tab.
-  assert.match(verified, /Fastest: add AgentLemon as a connector/)
+  assert.match(verified, /MCP Connector \(AI Connection\)/)
 })
