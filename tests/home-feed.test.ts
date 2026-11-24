@@ -1,13 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { SEED_AGENTS } from '../src/data/seedAgents'
-import {
-  atomItems,
-  interleave,
-  trendingFrom,
-  trendingItems,
-  type HomeItem,
-} from '../src/lib/homeFeed'
+import { trendingFrom, trendingItems, type HomeItem } from '../src/lib/homeFeed'
 import type { AgentManifest } from '../src/types/agent'
 import type { CouncilIndexEntry } from '../src/types/council'
 import type { SkillIndexEntry } from '../src/types/skill'
@@ -130,37 +124,5 @@ test('cards link to the item', () => {
   assert.deepEqual(
     items.map((i) => i.to),
     ['/skills/pdf-forms', '/councils/review-team'],
-  )
-})
-
-test('the atom takes the eight most liked agents and eight most liked skills', () => {
-  const agents = Array.from({ length: 12 }, (_, i) =>
-    agent(`agent-${i}`, i, '2026-11-01T00:00:00Z'),
-  )
-  const skills = Array.from({ length: 10 }, (_, i) =>
-    skillEntry(`skill-${i}`, i, '2026-11-01T00:00:00Z'),
-  )
-  const picked = atomItems({ agents, skills })
-  assert.equal(picked.agents.length, 8)
-  assert.equal(picked.skills.length, 8)
-  assert.equal(picked.agents[0].id, 'agent-11')
-  assert.equal(picked.skills[7].id, 'skill-2')
-  assert.equal(interleave(picked).length, 16)
-  assert.deepEqual(
-    interleave(picked)
-      .slice(0, 4)
-      .map((i) => i.kind),
-    ['agent', 'skill', 'agent', 'skill'],
-  )
-})
-
-test('the atom works with agents only', () => {
-  const picked = atomItems({
-    agents: [agent('a', 0, '2026-11-01T00:00:00Z')],
-    skills: [],
-  })
-  assert.deepEqual(
-    interleave(picked).map((i) => i.id),
-    ['a'],
   )
 })

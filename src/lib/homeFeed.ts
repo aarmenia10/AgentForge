@@ -27,7 +27,6 @@ export interface HomeItem {
 }
 
 export const TRENDING_COUNT = 6
-export const ELECTRONS_PER_KIND = 8
 
 function time(value: string | undefined): number {
   const ms = value ? Date.parse(value) : NaN
@@ -111,37 +110,4 @@ export function trendingFrom(sources: HomeSources): HomeItem[] {
     ...sources.skills.map(skillItem),
     ...sources.councils.map(councilItem),
   ])
-}
-
-export interface AtomItems {
-  agents: HomeItem[]
-  skills: HomeItem[]
-}
-
-/** The electrons of the home atom: up to 8 agents and 8 skills, most liked first. */
-export function atomItems(
-  sources: Pick<HomeSources, 'agents' | 'skills'>,
-  perKind = ELECTRONS_PER_KIND,
-): AtomItems {
-  return {
-    agents: sources.agents
-      .map(agentItem)
-      .sort(byLikesThenNewest)
-      .slice(0, perKind),
-    skills: sources.skills
-      .map(skillItem)
-      .sort(byLikesThenNewest)
-      .slice(0, perKind),
-  }
-}
-
-/** Agents and skills taken in turn, so every orbital ring carries both. */
-export function interleave(items: AtomItems): HomeItem[] {
-  const out: HomeItem[] = []
-  const length = Math.max(items.agents.length, items.skills.length)
-  for (let i = 0; i < length; i++) {
-    if (items.agents[i]) out.push(items.agents[i])
-    if (items.skills[i]) out.push(items.skills[i])
-  }
-  return out
 }
