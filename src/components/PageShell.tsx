@@ -1,5 +1,21 @@
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { closeDetail, useRoute } from '@/router/Router'
+import type { RouteName } from '@/router/routes'
+
+const closeFallbacks: Partial<Record<RouteName, string>> = {
+  studio: '/agents',
+  'skill-upload': '/skills',
+  settings: '/',
+  connect: '/',
+  profile: '/',
+  'council-member': '/councils',
+  'demo-requests': '/enterprise',
+  review: '/me',
+  suggestions: '/',
+  about: '/',
+  'not-found': '/',
+}
 
 /**
  * The frame for every page except the home page: a `main` landmark, a
@@ -15,6 +31,10 @@ export function PageShell({
   children?: ReactNode
   onClose?: () => void
 }) {
+  const { route, go } = useRoute()
+  const fallback = closeFallbacks[route.name]
+  const close =
+    onClose ?? (fallback ? () => closeDetail(go, fallback) : undefined)
   return (
     <main className="mx-auto w-full flex-1 max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
       <div className="glass rounded-2xl p-6 sm:p-8">
@@ -25,10 +45,10 @@ export function PageShell({
           >
             {title}
           </h1>
-          {onClose && (
+          {close && (
             <button
               type="button"
-              onClick={onClose}
+              onClick={close}
               className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-3 text-sm font-medium text-fg hover:bg-surface"
             >
               <X className="size-5" aria-hidden="true" />

@@ -40,7 +40,7 @@ export function ManifestView({
           <Value>
             <code className="font-mono">{manifest.version}</code>
           </Value>
-          <Term>Framework</Term>
+          <Term>AI Technology</Term>
           <Value>
             <FrameworkBadge framework={manifest.framework} />
           </Value>
@@ -72,7 +72,7 @@ export function ManifestView({
         </dl>
       </Block>
 
-      <Block title="System prompt">
+      <Block title="Agent Instructions">
         <p className="whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-4">
           {system_prompt}
         </p>
@@ -138,11 +138,11 @@ export function ManifestView({
         )}
       </Block>
 
-      <Block title="Input schema">
+      <Block title="Input Format">
         <Json value={manifest.input_schema} />
         <FindingList findings={inside('input_schema')} labelled />
       </Block>
-      <Block title="Output schema">
+      <Block title="Output Format">
         <Json value={manifest.output_schema} />
         <FindingList findings={inside('output_schema')} labelled />
       </Block>

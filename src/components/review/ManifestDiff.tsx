@@ -26,13 +26,13 @@ function rows(live: AgentManifest, edit: AgentManifest): Row[] {
       after: edit.tags.join(', '),
     },
     {
-      label: 'Framework',
+      label: 'AI Technology',
       before: FRAMEWORK_LABELS[live.framework],
       after: FRAMEWORK_LABELS[edit.framework],
     },
     { label: 'Visibility', before: live.visibility, after: edit.visibility },
     {
-      label: 'System prompt',
+      label: 'Agent Instructions',
       before: live.prompt_blueprint.system_prompt,
       after: edit.prompt_blueprint.system_prompt,
     },
@@ -60,13 +60,13 @@ function rows(live: AgentManifest, edit: AgentManifest): Row[] {
       code: true,
     },
     {
-      label: 'Input schema',
+      label: 'Input Format',
       before: json(live.input_schema),
       after: json(edit.input_schema),
       code: true,
     },
     {
-      label: 'Output schema',
+      label: 'Output Format',
       before: json(live.output_schema),
       after: json(edit.output_schema),
       code: true,

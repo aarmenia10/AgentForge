@@ -27,6 +27,7 @@ import { describeServiceError } from '@/lib/studioErrors'
 import {
   isHigherVersion,
   nextPatch,
+  slugify,
   PLACEHOLDER_IDENTITY,
   type Identity,
 } from '@/lib/studioManifest'
@@ -83,7 +84,15 @@ export function SkillUpload({ editId }: { editId: string | null }) {
   )
   const [live, setLive] = useState<SkillRecord | null>(null)
   const [pendingEdit, setPendingEdit] = useState<SkillRecord | null>(null)
-  const [draft, setDraft] = useState<SkillDraft>(emptySkillDraft)
+  const [draft, setDraft] = useState<SkillDraft>(() => ({
+    ...emptySkillDraft(),
+    source: 'text',
+    text: '',
+  }))
+  const [guided, setGuided] = useState(!editing)
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [instructions, setInstructions] = useState('')
   const [profile, setProfile] = useState<UserProfile | null | undefined>(
     undefined,
   )
@@ -169,6 +178,27 @@ export function SkillUpload({ editId }: { editId: string | null }) {
     setSaveError('')
   }
 
+  function writeInstructions(
+    nextName: string,
+    nextDescription: string,
+    body: string,
+  ) {
+    setName(nextName)
+    setDescription(nextDescription)
+    setInstructions(body)
+    update({
+      source: 'text',
+      text: [
+        '---',
+        'name: ' + JSON.stringify(slugify(nextName).slice(0, 64)),
+        'description: ' + JSON.stringify(nextDescription),
+        '---',
+        '',
+        body,
+      ].join('\n'),
+    })
+  }
+
   async function takeUpload(entries: UploadEntry[]) {
     if (entries.length === 0) return
     setReading(true)
@@ -179,7 +209,10 @@ export function SkillUpload({ editId }: { editId: string | null }) {
         skipped: result.skipped,
         refused: result.refused,
       })
-      if (!result.refused) update({ source: 'files', files: result.files })
+      if (!result.refused) {
+        setGuided(false)
+        update({ source: 'files', files: result.files })
+      }
     } finally {
       setReading(false)
     }
@@ -205,6 +238,10 @@ export function SkillUpload({ editId }: { editId: string | null }) {
     setSaved(null)
     if (stale) {
       setSaveError('Still checking your changes. Press the button again.')
+      return
+    }
+    if (guided && draft.source === 'text' && !instructions.trim()) {
+      setSaveError('Add the instructions your AI should follow.')
       return
     }
     if (!canSave(check) || needsEmailVerification || !profile) return
@@ -282,11 +319,33 @@ export function SkillUpload({ editId }: { editId: string | null }) {
         onUseVersion={(version) => update({ version })}
       />
 
-      <Section id={`${ids}-files`} title="1. Your skill">
+      {guided && (
+        <Section id={`${ids}-about`} title="1. Tell Us About Your Skill">
+          <TextField
+            id={`${ids}-name`}
+            label="Skill name"
+            value={name}
+            onChange={(value) =>
+              writeInstructions(value, description, instructions)
+            }
+            hint="For example, Invoice Checker."
+            problems={shownProblems('name').map((p) => p.message)}
+          />
+          <TextField
+            id={`${ids}-description`}
+            label="Description"
+            value={description}
+            onChange={(value) => writeInstructions(name, value, instructions)}
+            hint="What does your skill help people do?"
+            problems={shownProblems('description').map((p) => p.message)}
+          />
+        </Section>
+      )}
+      <Section id={`${ids}-files`} title="2. Add Your Skill Instructions">
         <p>
-          A skill is a folder with a <code className="font-mono">SKILL.md</code>{' '}
-          file at the top. Limits: 200 KB in all, 100 KB per file, 50 files,
-          text only. Scripts are allowed only in private skills.
+          Write or paste the instructions you want your AI to follow, or upload
+          an existing skill. Limits: 200 KB total, 100 KB per file, 50 text
+          files. Scripts are allowed only in private skills.
         </p>
         <div
           role="group"
@@ -296,7 +355,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
           {(
             [
               ['files', 'Upload files'],
-              ['text', 'Write it here'],
+              ['text', 'Write Instructions'],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -375,13 +434,42 @@ export function SkillUpload({ editId }: { editId: string | null }) {
               />
             )}
           </>
+        ) : guided ? (
+          <div>
+            <label
+              htmlFor={`${ids}-plain`}
+              className="mb-1.5 block text-sm font-medium text-fg"
+            >
+              Skill Instructions
+            </label>
+            <textarea
+              id={`${ids}-plain`}
+              value={instructions}
+              onChange={(e) =>
+                writeInstructions(name, description, e.target.value)
+              }
+              rows={14}
+              className={cn(inputClass(), 'py-2')}
+            />
+            <details className="mt-3">
+              <summary>Advanced Options</summary>
+              <button
+                type="button"
+                className={smallButton}
+                onClick={() => setGuided(false)}
+              >
+                Edit the original instructions file
+              </button>
+            </details>
+            <FileNotesView check={check} path={SKILL_INSTRUCTIONS_PATH} />
+          </div>
         ) : (
           <div>
             <label
               htmlFor={`${ids}-text`}
               className="mb-1.5 block text-sm font-medium text-fg"
             >
-              SKILL.md
+              Skill Instructions
             </label>
             <textarea
               id={`${ids}-text`}
@@ -412,7 +500,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
         <ProblemLines problems={shownProblems('files').map((p) => p.message)} />
       </Section>
 
-      <Section id={`${ids}-details`} title="2. Details">
+      <Section id={`${ids}-details`} title="Skill Information">
         <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[7rem_1fr]">
           <dt className="font-medium text-fg">Name</dt>
           <dd className="min-w-0">
@@ -420,7 +508,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
               <code className="break-all font-mono">{front.name}</code>
             ) : (
               <span className="text-fg-muted">
-                Read from SKILL.md once it is added.
+                Read from your skill instructions once added.
               </span>
             )}
             <ProblemLines
@@ -431,7 +519,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
           <dd className="min-w-0 whitespace-pre-wrap break-words">
             {front?.description ?? (
               <span className="text-fg-muted">
-                Read from SKILL.md once it is added.
+                Read from your skill instructions once added.
               </span>
             )}
             <ProblemLines
@@ -444,14 +532,14 @@ export function SkillUpload({ editId }: { editId: string | null }) {
 
         <TextField
           id={`${ids}-id`}
-          label="Id"
+          label="Unique Name"
           value={editing ? draft.id : effectiveId(draft)}
           disabled={editing}
           onChange={(id) => update({ id, idTouched: true })}
           hint={
             editing
               ? 'The id cannot change after the first save.'
-              : 'Part of the skill’s address. It starts as the name in SKILL.md.'
+              : 'Part of the skill’s address. It starts as the name in your skill instructions.'
           }
           problems={shownProblems('id').map((p) => p.message)}
         />
@@ -465,7 +553,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
         />
         <TextField
           id={`${ids}-tags`}
-          label="Tags"
+          label="Category and tags"
           value={draft.tags}
           onChange={(tags) => update({ tags })}
           hint="1 to 10, separated by commas, such as pdf, forms, finance."
@@ -475,7 +563,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
         </TextField>
       </Section>
 
-      <Section id={`${ids}-who`} title="3. Who can see it">
+      <Section id={`${ids}-who`} title="3. Who Can Access This">
         <fieldset>
           <legend className="mb-3 block text-sm font-medium text-fg">
             Who can see this skill?
@@ -556,7 +644,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
           )}
       </Section>
 
-      <Section id={`${ids}-save`} title="Save">
+      <Section id={`${ids}-save`} title="4. Publish Skill">
         <p className="text-xs text-fg-muted">
           {check.findings.length === 0
             ? NO_FINDINGS_TEXT

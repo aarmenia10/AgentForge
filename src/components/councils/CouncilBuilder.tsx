@@ -223,7 +223,7 @@ export function CouncilBuilder({
         <header className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-8 sm:pt-7">
           <div className="min-w-0">
             <h2 id={titleId} className="text-2xl font-semibold tracking-tight">
-              New council
+              Build a Council
             </h2>
             <p className="mt-1 text-sm text-fg-muted">
               A private team of your agents and skills, with the order they work
@@ -265,7 +265,7 @@ export function CouncilBuilder({
             </BuilderField>
             <BuilderField
               id={field('id')}
-              label="ID"
+              label="Unique Name"
               hint="Suggested from the name. Lowercase letters, digits, and hyphens."
               errors={errors.id}
             >
@@ -309,7 +309,7 @@ export function CouncilBuilder({
 
           <BuilderField
             id={field('tags')}
-            label="Tags"
+            label="Category and tags"
             hint="Separate with commas or spaces. 1 to 10 tags."
             errors={errors.tags}
           >
@@ -328,7 +328,7 @@ export function CouncilBuilder({
 
           <BuilderField
             id={field('instructions')}
-            label="Coordination instructions"
+            label="How the Council Works"
             hint="How the members work together: who goes first, what each hands over, and how the results come together."
             errors={errors.instructions}
           >

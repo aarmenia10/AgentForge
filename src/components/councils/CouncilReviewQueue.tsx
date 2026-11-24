@@ -84,7 +84,7 @@ function ReviewCard({ row, onChange }: { row: Row; onChange: () => void }) {
       <p className="text-xs">
         @{record.author.handle} · {record.tags.join(', ')}
       </p>
-      <h3 className="font-medium">Coordination instructions</h3>
+      <h3 className="font-medium">How the Council Works</h3>
       <pre className="whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-4 text-sm">
         {record.instructions}
       </pre>

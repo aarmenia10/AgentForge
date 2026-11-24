@@ -8,15 +8,15 @@ export default function StudioPage() {
   const editId = new URLSearchParams(location.search).get('edit')
   return (
     <RequireAccount
-      title="Manifest Studio"
+      title="Create an Agent"
       purpose="Sign in to build and publish an agent with a guided form."
       reason="Sign in to publish an agent."
     >
-      <PageShell title={editId ? 'Edit an agent' : 'Manifest Studio'}>
+      <PageShell title={editId ? 'Edit an agent' : 'Create an Agent'}>
         <p>
           {editId
             ? 'Change your agent step by step, then save it.'
-            : 'Build an agent step by step. No JSON needed.'}
+            : 'Tell us what you want your agent to do.'}
         </p>
         {/* Keyed so switching between agents, or from new to edit, starts fresh. */}
         <Studio key={editId ?? 'new'} editId={editId} />

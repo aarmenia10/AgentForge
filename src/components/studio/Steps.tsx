@@ -60,7 +60,7 @@ export function StepBasics({
 
       <Field
         id="studio-id"
-        label="Id"
+        label="Unique Name"
         hint={
           editing
             ? 'The id is fixed once an agent is saved.'
@@ -206,8 +206,8 @@ export function StepBasics({
 
       <Field
         id="studio-framework"
-        label="Framework"
-        hint="What the agent was written for. Choose MCP Native if it runs in any MCP client."
+        label="AI Technology"
+        hint="The AI technology this agent uses. Choose MCP Native for compatible AI apps."
         notes={notes('framework')}
       >
         <select
@@ -234,7 +234,7 @@ export function StepPrompt({ draft, update, touch, notes }: StepProps) {
     <div className="space-y-6">
       <Field
         id="studio-system-prompt"
-        label="System prompt"
+        label="Agent Instructions"
         hint="Who the agent is and how it behaves. The AI reads this first."
         notes={notes('prompt_blueprint.system_prompt')}
       >
@@ -255,7 +255,7 @@ export function StepPrompt({ draft, update, touch, notes }: StepProps) {
         </p>
         <ListEditor
           idBase="studio-instruction"
-          label="Instructions"
+          label="Agent Instructions"
           itemNoun="step"
           items={draft.instructions}
           onChange={(instructions) => update({ instructions })}

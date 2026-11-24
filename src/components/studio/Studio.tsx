@@ -62,11 +62,11 @@ import { StepVisibility } from './StepVisibility'
 type ValidatorModule = typeof import('@/lib/validateManifest')
 
 const STEPS: { id: StepId; label: string }[] = [
-  { id: 'basics', label: 'Basics' },
-  { id: 'prompt', label: 'Prompt' },
-  { id: 'tools', label: 'Tools' },
-  { id: 'io', label: 'Input and output' },
-  { id: 'visibility', label: 'Visibility' },
+  { id: 'basics', label: 'Tell Us About Your Agent' },
+  { id: 'prompt', label: 'Agent Instructions' },
+  { id: 'tools', label: 'Required Tools' },
+  { id: 'io', label: 'Advanced Options' },
+  { id: 'visibility', label: 'Who Can Access It' },
 ]
 
 /** A message carried across the remount that follows a first save. */
@@ -598,7 +598,7 @@ export function Studio({ editId }: { editId: string | null }) {
         className="space-y-3 rounded-3xl bg-surface p-5 sm:p-6"
       >
         <h2 id="studio-save-title" className="text-lg font-semibold text-fg">
-          Save
+          Publish Agent
         </h2>
 
         <p className="text-xs text-fg-muted">

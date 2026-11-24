@@ -130,7 +130,7 @@ export default function SearchPage() {
           ) : (
             <div className="mt-8 space-y-10">
               <Group
-                title="Agents"
+                title="AI Agents"
                 browseTo="/agents"
                 load={agents}
                 count={agentHits.length}
@@ -148,7 +148,7 @@ export default function SearchPage() {
                 ))}
               </Group>
               <Group
-                title="Skills"
+                title="AI Skills"
                 browseTo="/skills"
                 load={skills}
                 count={skillHits.length}
@@ -166,7 +166,7 @@ export default function SearchPage() {
                 ))}
               </Group>
               <Group
-                title="Councils"
+                title="AI Councils"
                 browseTo="/councils"
                 load={councils}
                 count={councilHits.length}
