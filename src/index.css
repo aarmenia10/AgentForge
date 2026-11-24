@@ -95,6 +95,22 @@
   transform: none;
 }
 
+/* Light mode's drifting patch of space behind the home atom (HeroAtom). */
+@keyframes nebula-turn {
+  from {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.05);
+  }
+  to {
+    transform: rotate(360deg) scale(1);
+  }
+}
+.nebula-blob {
+  animation: nebula-turn 40s linear infinite;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
