@@ -9,14 +9,14 @@ export default function SkillUploadPage() {
   return (
     <RequireAccount
       title="Upload a skill"
-      purpose="Sign in to upload a skill folder and choose who can see it."
+      purpose="Sign in to create a skill and choose who can access it."
       reason="Sign in to upload a skill."
     >
       <PageShell title={editId ? 'Edit a skill' : 'Upload a skill'}>
         <p>
           {editId
             ? 'Change your skill, then save it.'
-            : 'Upload your skill files or write your instructions here.'}
+            : 'A skill teaches your AI how to complete a specific task. Tell us what your skill does and add the instructions your AI should follow.'}
         </p>
         {/* Keyed so switching between skills, or from new to edit, starts fresh. */}
         <SkillUpload key={editId ?? 'new'} editId={editId} />

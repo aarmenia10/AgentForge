@@ -60,7 +60,7 @@ export function StepBasics({
 
       <Field
         id="studio-id"
-        label="Id"
+        label="Unique Name"
         hint={
           editing
             ? 'The id is fixed once an agent is saved.'
@@ -234,7 +234,7 @@ export function StepPrompt({ draft, update, touch, notes }: StepProps) {
     <div className="space-y-6">
       <Field
         id="studio-system-prompt"
-        label="System prompt"
+        label="Agent Instructions"
         hint="Who the agent is and how it behaves. The AI reads this first."
         notes={notes('prompt_blueprint.system_prompt')}
       >
