@@ -88,7 +88,7 @@ export function CouncilEditor({
         </label>
       ))}
       <fieldset className="space-y-2">
-        <legend className="font-medium">Pinned members</legend>
+        <legend className="font-medium">Council Members</legend>
         {members.map((member) => (
           <div
             key={member.key}

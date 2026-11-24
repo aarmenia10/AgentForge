@@ -59,7 +59,7 @@ function AppsPanel({ uid }: { uid: string }) {
         </summary>
         <div className="mt-3 space-y-3">
           <p>
-            Add this connector address in your AI app to access your items and
+            Add this AI connection link in your AI app to access your items and
             save from chat.
           </p>
           <input

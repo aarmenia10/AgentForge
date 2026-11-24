@@ -64,10 +64,10 @@ export const ACADEMY_STEPS: readonly AcademyStep[] = [
     title: 'Connect AgentLemon to your AI',
     minutes: 3,
     body: [
-      'A connector is a link that lets your AI app read AgentLemon for you.',
+      'An MCP Connector (AI Connection) lets your AI app access AgentLemon.',
       'Open your AI app’s settings, find Connectors, add a custom connector, paste this link, and sign in with your AgentLemon account.',
     ],
-    copy: { label: 'Copy the connector link', text: ACADEMY_CONNECTOR_URL },
+    copy: { label: 'Copy the connection link', text: ACADEMY_CONNECTOR_URL },
   },
 ]
 

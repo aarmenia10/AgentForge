@@ -63,8 +63,8 @@ type ValidatorModule = typeof import('@/lib/validateManifest')
 
 const STEPS: { id: StepId; label: string }[] = [
   { id: 'basics', label: 'Basics' },
-  { id: 'prompt', label: 'Prompt' },
-  { id: 'tools', label: 'Tools' },
+  { id: 'prompt', label: 'Agent Instructions' },
+  { id: 'tools', label: 'Required Tools' },
   { id: 'io', label: 'Input and output' },
   { id: 'visibility', label: 'Visibility' },
 ]

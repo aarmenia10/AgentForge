@@ -7,9 +7,9 @@ import { cn, CodeBlock } from './ui'
 type Variant = 'install' | 'settings' | 'welcome'
 
 const TITLES: Record<Variant, string> = {
-  install: 'Fastest: add AgentLemon as a connector',
+  install: 'MCP Connector (AI Connection)',
   settings: 'Connect AgentLemon to your AI',
-  welcome: 'Your connector link',
+  welcome: 'MCP Connector (AI Connection)',
 }
 
 /**

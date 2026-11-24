@@ -328,7 +328,7 @@ export function CouncilBuilder({
 
           <BuilderField
             id={field('instructions')}
-            label="Coordination instructions"
+            label="How the Council Works"
             hint="How the members work together: who goes first, what each hands over, and how the results come together."
             errors={errors.instructions}
           >
