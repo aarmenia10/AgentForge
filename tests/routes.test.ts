@@ -1,12 +1,21 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { matchRoute, routeTitle, SIGNED_IN_ROUTES } from '../src/router/routes'
+import {
+  legacyRedirect,
+  matchRoute,
+  routeTitle,
+  SIGNED_IN_ROUTES,
+} from '../src/router/routes'
 
 test('static pages match, with or without one trailing slash', () => {
   for (const [path, name] of [
     ['/', 'home'],
     ['', 'home'],
     ['/index.html', 'home'],
+    ['/agents', 'agents'],
+    ['/agents/', 'agents'],
+    ['/search', 'search'],
+    ['/search/', 'search'],
     ['/about', 'about'],
     ['/about/', 'about'],
     ['/me', 'me'],
@@ -24,6 +33,32 @@ test('static pages match, with or without one trailing slash', () => {
   ] as const) {
     assert.deepEqual(matchRoute(path), { name, params: {} }, path)
   }
+})
+
+test('Agents and Search have titles, and Settings is open to signed-out visitors', () => {
+  assert.equal(routeTitle(matchRoute('/agents')), 'Agents · AgentLemon')
+  assert.equal(routeTitle(matchRoute('/search')), 'Search · AgentLemon')
+  assert.equal(routeTitle(matchRoute('/settings')), 'Settings · AgentLemon')
+  assert.ok(!SIGNED_IN_ROUTES.includes('settings'))
+  assert.ok(!SIGNED_IN_ROUTES.includes('agents'))
+  assert.ok(!SIGNED_IN_ROUTES.includes('search'))
+})
+
+test('the old home-page agent link redirects to /agents and keeps other parameters', () => {
+  assert.equal(
+    legacyRedirect('/', '?agent=sql-helper'),
+    '/agents?agent=sql-helper',
+  )
+  assert.equal(
+    legacyRedirect('/', '?utm=x&agent=sql-helper&tab=install', '#top'),
+    '/agents?utm=x&agent=sql-helper&tab=install#top',
+  )
+  assert.equal(legacyRedirect('/index.html', '?agent=a'), '/agents?agent=a')
+  // Nothing to redirect: no agent parameter, or not the home page.
+  assert.equal(legacyRedirect('/', ''), null)
+  assert.equal(legacyRedirect('/', '?utm=x'), null)
+  assert.equal(legacyRedirect('/agents', '?agent=a'), null)
+  assert.equal(legacyRedirect('/skills', '?agent=a'), null)
 })
 
 test('profiles match valid handles only', () => {
@@ -77,7 +112,6 @@ test('every route has a title and the gated set is exact', () => {
     'friends',
     'me',
     'review',
-    'settings',
     'skill-upload',
     'studio',
     'suggestions',

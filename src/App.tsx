@@ -1,15 +1,16 @@
-import { lazy, Suspense, useCallback, useState, type ComponentType } from 'react'
+import { lazy, Suspense, useLayoutEffect, type ComponentType } from 'react'
 import { PageHold } from './components/PageShell'
 import { TopNav } from './components/TopNav'
 import { GitHubIcon } from './components/ui'
-import { DEFAULT_QUERY, type CatalogQuery } from './lib/catalog'
 import { HomePage } from './pages/HomePage'
 import { Link, useRoute } from './router/Router'
-import type { RouteName } from './router/routes'
+import { legacyRedirect, type RouteName } from './router/routes'
 
 // Every page but the home page is its own chunk. None of them, and nothing
 // that reaches Firebase, is in the startup bundle (tests/auth-ui.test.ts).
 const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
+  agents: lazy(() => import('./pages/AgentsPage')),
+  search: lazy(() => import('./pages/SearchPage')),
   about: lazy(() => import('./pages/AboutPage')),
   me: lazy(() => import('./pages/MePage')),
   settings: lazy(() => import('./pages/SettingsPage')),
@@ -32,40 +33,28 @@ const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
 
 /** The shell: nav, the routed page, the footer. */
 export default function App() {
-  const { route, location } = useRoute()
-  // Lives here, not in HomePage, because the nav's search box drives it. It
-  // also means a search survives a trip to another page and back.
-  const [query, setQuery] = useState<CatalogQuery>(DEFAULT_QUERY)
+  const { route, location, go } = useRoute()
 
-  const patchQuery = useCallback(
-    (patch: Partial<CatalogQuery>) => setQuery((current) => ({ ...current, ...patch })),
-    [],
+  // The catalog moved to /agents, so an old /?agent=<id> link goes there.
+  const redirect = legacyRedirect(
+    location.pathname,
+    location.search,
+    window.location.hash,
   )
-  const resetQuery = useCallback(
-    () => setQuery((current) => ({ ...DEFAULT_QUERY, sort: current.sort })),
-    [],
-  )
+  useLayoutEffect(() => {
+    if (redirect) go(redirect, { replace: true })
+  }, [redirect, go])
 
-  const isHome = route.name === 'home'
   const Page = route.name === 'home' ? null : PAGES[route.name]
 
   return (
     // A column so the footer sits at the bottom of short pages.
     <div className="flex min-h-dvh flex-col">
-      <TopNav
-        search={
-          isHome
-            ? {
-                keyword: query.keyword,
-                onKeywordChange: (keyword) => patchQuery({ keyword }),
-                category: query.category,
-                onCategoryChange: (category) => patchQuery({ category }),
-              }
-            : undefined
-        }
-      />
+      <TopNav />
 
-      {Page ? (
+      {redirect ? (
+        <PageHold />
+      ) : Page ? (
         <Suspense fallback={<PageHold />}>
           {/* Keyed so each arrival mounts fresh, e.g. /u/a to /u/b. */}
           <Page
@@ -73,7 +62,7 @@ export default function App() {
           />
         </Suspense>
       ) : (
-        <HomePage query={query} patchQuery={patchQuery} resetQuery={resetQuery} />
+        <HomePage />
       )}
 
       <footer className="mx-auto mb-4 w-full max-w-7xl px-4 sm:px-6">
