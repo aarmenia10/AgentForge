@@ -786,7 +786,7 @@ test('the detail view says how to use a public skill and lists the files', async
     }),
   )
   assert.ok(markup.includes(loadPrompt({ id: 'pdf-forms', version: '1.0.0' })))
-  assert.ok(markup.includes('Use AgentLemon to find a skill for ...'))
+  assert.match(markup, /Install Skill/)
   assert.match(markup, /references\/fields\.md/)
   assert.match(markup, /Loading the files/)
   assert.doesNotMatch(markup, NO_PASS)
@@ -797,8 +797,9 @@ test('the detail view says how to use a public skill and lists the files', async
       loadFiles: async () => [],
     }),
   )
-  assert.match(priv, /used from this website/)
-  assert.doesNotMatch(priv, /Connector link/)
+  assert.match(priv, /Install Skill/)
+  assert.match(priv, /This content is restricted/)
+  assert.doesNotMatch(priv, /Copy Connection Link/)
 })
 
 test('the review view shows each file with its finding and the author label in full', async () => {

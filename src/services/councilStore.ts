@@ -18,10 +18,11 @@ import {
   type QueryConstraint,
   type Transaction,
 } from 'firebase/firestore'
-import { agentIdSchema } from '../lib/manifestSchema'
+import { agentIdSchema, storedAgentRecordSchema } from '../lib/manifestSchema'
 import { validateCouncilRecord } from '../lib/councilSchema'
 import { compareVersions } from '../lib/semver'
-import { formatItemRef } from '../lib/skillSchema'
+import { formatItemRef, skillRecordSchema } from '../lib/skillSchema'
+import { publicCouncils, type CouncilItem } from './councilPublic'
 import type { CouncilManifest, CouncilRecord } from '../types/council'
 import type { ItemRef } from '../types/skill'
 import { lintCouncil } from './councilSafety'
@@ -259,6 +260,27 @@ export function createCouncilStore(db: Firestore, uid: string) {
         ],
         afterId,
       ),
+    async installMember(ref: ItemRef): Promise<CouncilItem> {
+      const snapshot = await getDocFromServer(memberRef(ref))
+      if (!snapshot.exists()) throw new Error('Member unavailable.')
+      const data = snapshot.data()
+      if (data.version !== ref.version) {
+        if (data.visibility !== 'public' || data.review_status !== 'approved')
+          throw new Error('Pinned member unavailable.')
+        const pinned = await publicCouncils.member(ref)
+        if (pinned.item.author.uid !== data.owner_uid)
+          throw new Error('Member identity mismatch.')
+        return pinned
+      }
+      if (ref.kind === 'agent') {
+        const item = storedAgentRecordSchema().parse(data)
+        if (item.id === ref.id) return { kind: 'agent', item }
+      } else {
+        const item = skillRecordSchema.parse(data)
+        if (item.id === ref.id) return { kind: 'skill', item }
+      }
+      throw new Error('Member identity mismatch.')
+    },
     async memberStatus(ref: ItemRef) {
       const member = await getDocFromServer(memberRef(ref)).catch(
         (error: unknown) => {

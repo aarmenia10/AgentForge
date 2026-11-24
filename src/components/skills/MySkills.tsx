@@ -353,6 +353,10 @@ export function SkillRow({
             loadFiles={() => Promise.resolve(record.files)}
             heading="h4"
             showAuthor={false}
+            connectable={
+              record.visibility === 'public' &&
+              record.review_status === 'approved'
+            }
           />
         </div>
       )}
