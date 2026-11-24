@@ -1,6 +1,7 @@
 import {
   Building2,
   Bot,
+  GraduationCap,
   Layers,
   UsersRound,
   type LucideIcon,
@@ -23,6 +24,12 @@ export interface SiteLink {
  * renamed separately.
  */
 export const SITE_LINKS: readonly SiteLink[] = [
+  {
+    to: '/academy',
+    label: 'Academy',
+    icon: GraduationCap,
+    routes: ['academy'],
+  },
   { to: '/agents', label: 'Agents', icon: Bot, routes: ['agents'] },
   { to: '/skills', label: 'Skills', icon: Layers, routes: ['skills', 'skill'] },
   {

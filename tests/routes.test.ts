@@ -30,6 +30,8 @@ test('static pages match, with or without one trailing slash', () => {
     ['/review/', 'review'],
     ['/suggestions', 'suggestions'],
     ['/suggestions/', 'suggestions'],
+    ['/academy', 'academy'],
+    ['/academy/', 'academy'],
   ] as const) {
     assert.deepEqual(matchRoute(path), { name, params: {} }, path)
   }
@@ -108,6 +110,10 @@ test('every route has a title and the gated set is exact', () => {
   assert.equal(routeTitle(matchRoute('/u/ada')), '@ada · AgentLemon')
   assert.match(routeTitle(matchRoute('/x')), /not found/)
   assert.equal(routeTitle(matchRoute('/friends')), 'Friends · AgentLemon')
+  assert.equal(
+    routeTitle(matchRoute('/academy')),
+    'AI made simple · AgentLemon',
+  )
   assert.deepEqual([...SIGNED_IN_ROUTES].sort(), [
     'friends',
     'me',

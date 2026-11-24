@@ -28,6 +28,7 @@ const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
   'demo-requests': lazy(() => import('./pages/DemoRequestsPage')),
   enterprise: lazy(() => import('./pages/EnterprisePage')),
   suggestions: lazy(() => import('./pages/SuggestionsPage')),
+  academy: lazy(() => import('./pages/AcademyPage')),
   'not-found': lazy(() => import('./pages/NotFoundPage')),
 }
 
