@@ -548,6 +548,7 @@ What is being built right now. One row per claim. Add yours before you start and
 
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
+| atom-v2 (home atom restyle) | Aidan | Claude Code | `task/atom-v2` | `src/components/home/atomScene.ts`, `AtomCanvas.tsx`, `HeroAtom.tsx`, `AtomFallback.tsx`, `src/theme/atomPalette.ts`, `tests/atom-palette.test.ts`, `src/components/Hero.tsx` (layout and atom size only) | 2026-11-24 |
 
 ### 8.2 Ideas inbox
 
