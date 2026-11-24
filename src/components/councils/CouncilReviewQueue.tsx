@@ -75,7 +75,7 @@ function ReviewCard({ row, onChange }: { row: Row; onChange: () => void }) {
     }
   }
   return (
-    <details className="glass space-y-3 rounded-2xl p-4">
+    <details className="space-y-3 rounded-3xl bg-surface p-5">
       <summary className="cursor-pointer font-semibold">
         {record.name} · {record.version} ·{' '}
         {edit ? 'Proposed edit' : record.review_status}
@@ -85,7 +85,7 @@ function ReviewCard({ row, onChange }: { row: Row; onChange: () => void }) {
         @{record.author.handle} · {record.tags.join(', ')}
       </p>
       <h3 className="font-medium">Coordination instructions</h3>
-      <pre className="whitespace-pre-wrap break-words rounded-xl bg-slate-900/5 p-4 text-sm dark:bg-white/5">
+      <pre className="whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-4 text-sm">
         {record.instructions}
       </pre>
       <button
@@ -122,7 +122,7 @@ function ReviewCard({ row, onChange }: { row: Row; onChange: () => void }) {
         </ul>
       )}
       {error && (
-        <p role="alert" className="text-rose-700 dark:text-rose-300">
+        <p role="alert" className="text-fg">
           {error}
         </p>
       )}

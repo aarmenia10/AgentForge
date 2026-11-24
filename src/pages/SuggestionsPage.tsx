@@ -79,13 +79,13 @@ function SuggestionsContent() {
 
   if (loadState.state === 'loading')
     return (
-      <p aria-busy="true" className="mt-6 text-sm text-slate-500">
+      <p aria-busy="true" className="mt-6 text-sm text-fg-muted">
         Loading suggestions…
       </p>
     )
   if (loadState.state === 'error')
     return (
-      <p role="alert" className="mt-6 text-sm text-rose-700 dark:text-rose-300">
+      <p role="alert" className="mt-6 text-sm text-fg">
         {loadState.message}
       </p>
     )
@@ -94,11 +94,11 @@ function SuggestionsContent() {
   return (
     <div className="mt-6 space-y-10">
       {result.few_matches && (
-        <p className="text-sm text-slate-600 dark:text-slate-300">
+        <p className="text-sm text-fg-muted">
           More will appear as people publish.{' '}
           <Link
             to="/settings#settings-preferences"
-            className="underline hover:text-teal-600 dark:hover:text-teal-300"
+            className="text-accent-fg underline"
           >
             Change your answers
           </Link>{' '}
@@ -110,7 +110,7 @@ function SuggestionsContent() {
         <section aria-labelledby="suggested-agents-heading">
           <h2
             id="suggested-agents-heading"
-            className="mb-4 text-lg font-semibold text-slate-900 dark:text-white"
+            className="mb-4 text-lg font-semibold text-fg"
           >
             Suggested agents
           </h2>
@@ -130,7 +130,7 @@ function SuggestionsContent() {
         <section aria-labelledby="suggested-skills-heading">
           <h2
             id="suggested-skills-heading"
-            className="mb-4 text-lg font-semibold text-slate-900 dark:text-white"
+            className="mb-4 text-lg font-semibold text-fg"
           >
             Suggested skills
           </h2>
@@ -145,15 +145,15 @@ function SuggestionsContent() {
       )}
 
       {result.agents.length === 0 && result.skills.length === 0 && (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-fg-muted">
           No suggestions yet. More will appear as people publish.
         </p>
       )}
 
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-fg-muted">
         <Link
           to="/settings#settings-preferences"
-          className="underline hover:text-teal-600 dark:hover:text-teal-300"
+          className="text-accent-fg underline"
         >
           Change your answers
         </Link>{' '}

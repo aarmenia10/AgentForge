@@ -99,14 +99,11 @@ export function ManifestDiff({
         {shown.map((row) => {
           const same = row.before === row.after
           return (
-            <li
-              key={row.label}
-              className="rounded-lg border border-slate-900/10 p-3 dark:border-white/10"
-            >
-              <p className="mb-2 font-semibold text-slate-900 dark:text-white">
+            <li key={row.label} className="rounded-3xl bg-surface p-4">
+              <p className="mb-2 font-semibold text-fg">
                 {row.label}
                 {same && (
-                  <span className="ml-2 font-normal text-slate-600 dark:text-slate-400">
+                  <span className="ml-2 font-normal text-fg-muted">
                     unchanged
                   </span>
                 )}
@@ -116,13 +113,13 @@ export function ManifestDiff({
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
-                    <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+                    <p className="mb-1 text-xs font-medium text-fg-muted">
                       Live now
                     </p>
                     <Cell text={row.before} code={row.code} tone="before" />
                   </div>
                   <div>
-                    <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+                    <p className="mb-1 text-xs font-medium text-fg-muted">
                       Proposed
                     </p>
                     <Cell text={row.after} code={row.code} tone="after" />
@@ -156,13 +153,13 @@ function Cell({
   return (
     <pre
       className={cn(
-        'max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md border-l-2 p-2 text-xs leading-relaxed',
+        'max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-2xl border-l-2 p-3 text-xs leading-relaxed',
         code ? 'font-mono' : 'font-sans',
         tone === 'before'
-          ? 'border-rose-500 bg-rose-500/5'
+          ? 'border-line bg-surface-2'
           : tone === 'after'
-            ? 'border-teal-600 bg-teal-500/5'
-            : 'border-slate-300 bg-slate-900/5 dark:border-white/20 dark:bg-white/5',
+            ? 'border-accent-fg bg-accent/10'
+            : 'border-line bg-surface-2',
       )}
     >
       {text}

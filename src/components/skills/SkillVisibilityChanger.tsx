@@ -56,8 +56,8 @@ export function SkillVisibilityChanger({
   }
 
   return (
-    <fieldset className="mt-3 space-y-3 rounded-xl border border-slate-300 p-3 dark:border-white/15">
-      <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-white">
+    <fieldset className="mt-3 space-y-3 rounded-3xl bg-surface p-5">
+      <legend className="px-1 text-sm font-semibold text-fg">
         Change who can see {record.name}
       </legend>
       <div className="space-y-2">
@@ -68,13 +68,10 @@ export function SkillVisibilityChanger({
               name={name}
               checked={choice === value}
               onChange={() => setChoice(value)}
-              className="mt-1 size-4 accent-teal-700 dark:accent-teal-400"
+              className="mt-1 size-4 accent-[var(--lm-accent)]"
             />
             <span>
-              <span className="font-semibold text-slate-900 dark:text-white">
-                {label}.
-              </span>{' '}
-              {line}
+              <span className="font-semibold text-fg">{label}.</span> {line}
             </span>
           </label>
         ))}
@@ -88,10 +85,7 @@ export function SkillVisibilityChanger({
         </ul>
       )}
       {shareBlocked && (
-        <p
-          className="text-sm text-rose-700 dark:text-rose-300"
-          aria-live="polite"
-        >
+        <p className="text-sm text-fg" aria-live="polite">
           {scripts > 0
             ? `This skill has ${scripts === 1 ? 'a script' : `${scripts} scripts`}. Remove ${scripts === 1 ? 'it' : 'them'} with Edit before sharing. Private is still allowed.`
             : 'This skill has a blocked finding from the safety linter. Fix it with Edit before sharing. Private is still allowed.'}

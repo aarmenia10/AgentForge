@@ -79,10 +79,10 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
         onClick={onClick}
         aria-pressed={selected}
         className={[
-          'rounded-lg border px-3 py-1.5 text-sm transition',
+          'rounded-full border px-4 py-2 text-sm transition',
           selected
-            ? 'border-teal-500 bg-teal-500/10 text-teal-700 dark:border-teal-400 dark:bg-teal-400/10 dark:text-teal-300'
-            : 'border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-white/5',
+            ? 'border-accent-fg bg-accent/10 text-accent-fg'
+            : 'border-line bg-surface text-fg hover:bg-surface-2',
         ].join(' ')}
       >
         {multi ? '☑' : '◉'} {value}
@@ -92,13 +92,13 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-slate-600 dark:text-slate-300">
+      <p className="text-sm text-fg-muted">
         We use these to suggest relevant agents and skills. All optional.
       </p>
 
       {/* Q1: use_for, multi pick */}
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-900 dark:text-white">
+        <legend className="mb-2 text-sm font-medium text-fg">
           What will you use AgentLemon for?
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -132,7 +132,7 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
               placeholder="What else?"
               value={useForOther}
               onChange={(e) => setUseForOther(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="mt-1 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-accent-fg"
             />
           )}
         </div>
@@ -140,7 +140,7 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
 
       {/* Q2: goals, multi pick */}
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-900 dark:text-white">
+        <legend className="mb-2 text-sm font-medium text-fg">
           What do you want AgentLemon for?
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
               placeholder="What else?"
               value={goalsOther}
               onChange={(e) => setGoalsOther(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="mt-1 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-accent-fg"
             />
           )}
         </div>
@@ -179,7 +179,7 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
 
       {/* Q3: ai_apps, multi pick */}
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-900 dark:text-white">
+        <legend className="mb-2 text-sm font-medium text-fg">
           Which AI apps do you use?
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -205,7 +205,7 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
               placeholder="Which app?"
               value={aiAppsOther}
               onChange={(e) => setAiAppsOther(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="mt-1 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-accent-fg"
             />
           )}
         </div>
@@ -213,7 +213,7 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
 
       {/* Q4: help_topics, multi pick */}
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-900 dark:text-white">
+        <legend className="mb-2 text-sm font-medium text-fg">
           What do you want help with?
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -246,7 +246,7 @@ export function PreferencesStep({ onDone }: PreferencesStepProps) {
               placeholder="What else?"
               value={helpTopicsOther}
               onChange={(e) => setHelpTopicsOther(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="mt-1 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-accent-fg"
             />
           )}
         </div>

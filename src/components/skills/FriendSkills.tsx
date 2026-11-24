@@ -55,9 +55,7 @@ export function FriendSkills({ uid, name }: { uid: string; name: string }) {
 
   return (
     <div className="space-y-2">
-      <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-        Skills
-      </h4>
+      <h4 className="text-sm font-semibold text-fg">Skills</h4>
       {error && (
         <Notice tone="error" role="alert">
           {error}
@@ -67,7 +65,7 @@ export function FriendSkills({ uid, name }: { uid: string; name: string }) {
         <p>{name} has not shared any skills with friends yet.</p>
       )}
       {refused > 0 && (
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-fg-muted">
           {refused === 1 ? 'One skill was' : `${refused} skills were`} left out
           because {refused === 1 ? 'it breaks' : 'they break'} the skill rules.
         </p>
@@ -77,13 +75,13 @@ export function FriendSkills({ uid, name }: { uid: string; name: string }) {
           {skills.map((skill) => (
             <li
               key={skill.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-900/5 px-3 py-2 dark:bg-white/5"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-2 px-4 py-3"
             >
               <span className="min-w-0">
-                <span className="block break-words font-medium text-slate-900 dark:text-white">
+                <span className="block break-words font-medium text-fg">
                   {skill.name}
                 </span>
-                <span className="font-mono text-xs text-slate-600 dark:text-slate-400">
+                <span className="font-mono text-xs text-fg-muted">
                   v{skill.version}
                 </span>
               </span>
@@ -102,10 +100,7 @@ export function FriendSkills({ uid, name }: { uid: string; name: string }) {
         </ul>
       )}
       {opened && (
-        <div
-          id={panel}
-          className="rounded-xl border border-slate-900/10 p-3 dark:border-white/10"
-        >
+        <div id={panel} className="rounded-3xl bg-surface p-4">
           <SkillDetail
             key={opened.id}
             skill={toIndexEntry(opened)}

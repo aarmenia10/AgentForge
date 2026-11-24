@@ -13,8 +13,7 @@ import type { StepProps } from './context'
 import { ListEditor } from './ListEditor'
 import { Field, inputClass, smallButton } from './parts'
 
-const legendClass =
-  'mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-100'
+const legendClass = 'mb-1.5 block text-sm font-medium text-fg'
 
 export function StepBasics({
   draft,
@@ -117,7 +116,7 @@ export function StepBasics({
 
       <fieldset>
         <legend className={legendClass}>Categories</legend>
-        <p className="mb-2 text-xs text-slate-600 dark:text-slate-400">
+        <p className="mb-2 text-xs text-fg-muted">
           Pick any that fit. Each one is also a tag.
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -126,12 +125,12 @@ export function StepBasics({
             return (
               <label
                 key={tag}
-                className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm has-[:checked]:border-teal-600 has-[:checked]:bg-teal-500/10 dark:border-white/15 dark:has-[:checked]:border-teal-400"
+                className="flex cursor-pointer items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm has-[:checked]:border-accent-fg has-[:checked]:bg-accent/10"
               >
                 <input
                   type="checkbox"
                   checked={checked}
-                  className="size-4 accent-teal-700 dark:accent-teal-400"
+                  className="size-4 accent-[var(--lm-accent)]"
                   onChange={() => {
                     update({
                       categories: checked
@@ -177,7 +176,7 @@ export function StepBasics({
             Add
           </button>
         </div>
-        <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400">
+        <p className="mt-1.5 text-xs text-fg-muted">
           Press Enter to add. Tags are lowercase words joined by hyphens.
         </p>
         {draft.tags.length > 0 && (
@@ -185,7 +184,7 @@ export function StepBasics({
             {draft.tags.map((tag) => (
               <li
                 key={tag}
-                className="inline-flex items-center gap-1 rounded-md bg-slate-900/5 py-0.5 pl-2 pr-0.5 text-xs text-slate-700 dark:bg-white/10 dark:text-slate-200"
+                className="inline-flex items-center gap-1 rounded-full bg-surface-2 py-1 pl-3 pr-1 text-xs text-fg"
               >
                 #{tag}
                 <button
@@ -194,7 +193,7 @@ export function StepBasics({
                   onClick={() =>
                     update({ tags: draft.tags.filter((t) => t !== tag) })
                   }
-                  className="grid size-6 place-items-center rounded hover:bg-slate-900/10 dark:hover:bg-white/15"
+                  className="grid size-6 place-items-center rounded-full hover:bg-surface"
                 >
                   <X className="size-3" aria-hidden="true" />
                 </button>
@@ -251,7 +250,7 @@ export function StepPrompt({ draft, update, touch, notes }: StepProps) {
 
       <fieldset>
         <legend className={legendClass}>Instructions</legend>
-        <p className="mb-3 text-xs text-slate-600 dark:text-slate-400">
+        <p className="mb-3 text-xs text-fg-muted">
           The steps the agent follows, in order.
         </p>
         <ListEditor
@@ -268,7 +267,7 @@ export function StepPrompt({ draft, update, touch, notes }: StepProps) {
 
       <fieldset>
         <legend className={legendClass}>Verification rules</legend>
-        <p className="mb-3 text-xs text-slate-600 dark:text-slate-400">
+        <p className="mb-3 text-xs text-fg-muted">
           Checks the agent makes before it answers, for example “Every figure
           has a source”.
         </p>
@@ -302,7 +301,7 @@ export function StepTools({ draft, update, touch, notes }: StepProps) {
         server or an API. Leave this empty if the agent runs on the model alone.
       </p>
       {draft.tools.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-sm dark:border-white/15">
+        <p className="rounded-3xl bg-surface p-5 text-center text-sm text-fg-muted">
           No tools yet.
         </p>
       )}
@@ -311,12 +310,9 @@ export function StepTools({ draft, update, touch, notes }: StepProps) {
           const base = `tools_required.${index}`
           const id = `studio-tool-${tool.key}`
           return (
-            <li
-              key={tool.key}
-              className="rounded-xl border border-slate-300 p-4 dark:border-white/15"
-            >
+            <li key={tool.key} className="rounded-3xl bg-surface p-5">
               <fieldset className="space-y-4">
-                <legend className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                <legend className="text-sm font-semibold text-fg">
                   Tool {index + 1}
                 </legend>
                 <div className="grid gap-4 sm:grid-cols-2">

@@ -508,10 +508,10 @@ export function Studio({ editId }: { editId: string | null }) {
                   onClick={() => goToStep(s.id)}
                   aria-current={current ? 'step' : undefined}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition',
+                    'flex w-full items-center gap-2 rounded-full border px-3 py-2 text-left transition',
                     current
-                      ? 'border-teal-600 bg-teal-500/10 dark:border-teal-400'
-                      : 'border-transparent hover:bg-slate-900/5 dark:hover:bg-white/5',
+                      ? 'border-accent-fg bg-accent/10'
+                      : 'border-transparent hover:bg-surface-2',
                   )}
                 >
                   <span
@@ -519,14 +519,14 @@ export function Studio({ editId }: { editId: string | null }) {
                     className={cn(
                       'grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold',
                       current
-                        ? 'bg-teal-700 text-white dark:bg-teal-400 dark:text-navy-950'
-                        : 'bg-slate-900/10 text-slate-700 dark:bg-white/10 dark:text-slate-200',
+                        ? 'bg-accent text-accent-ink'
+                        : 'bg-surface-2 text-fg',
                     )}
                   >
                     {i + 1}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-xs font-semibold text-slate-900 dark:text-white">
+                    <span className="block text-xs font-semibold text-fg">
                       <span className="sr-only">Step {i + 1}: </span>
                       {s.label}
                     </span>
@@ -535,8 +535,8 @@ export function Studio({ editId }: { editId: string | null }) {
                         className={cn(
                           'block text-[11px]',
                           stepProblems.length || stepBlocked
-                            ? 'text-rose-700 dark:text-rose-300'
-                            : 'text-amber-800 dark:text-amber-200',
+                            ? 'text-fg'
+                            : 'text-fg-muted',
                         )}
                       >
                         {status}
@@ -552,13 +552,13 @@ export function Studio({ editId }: { editId: string | null }) {
 
       <section
         aria-labelledby="studio-step-title"
-        className="rounded-2xl border border-slate-900/10 p-4 sm:p-5 dark:border-white/10"
+        className="rounded-3xl bg-surface p-5 sm:p-6"
       >
         <h2
           id="studio-step-title"
           ref={stepHeading}
           tabIndex={-1}
-          className="mb-4 text-lg font-semibold text-slate-900 outline-none dark:text-white"
+          className="mb-4 text-lg font-semibold text-fg outline-none"
         >
           {stepIndex + 1}. {STEPS[stepIndex].label}
         </h2>
@@ -595,16 +595,13 @@ export function Studio({ editId }: { editId: string | null }) {
 
       <section
         aria-labelledby="studio-save-title"
-        className="space-y-3 rounded-2xl border border-slate-900/10 p-4 sm:p-5 dark:border-white/10"
+        className="space-y-3 rounded-3xl bg-surface p-5 sm:p-6"
       >
-        <h2
-          id="studio-save-title"
-          className="text-lg font-semibold text-slate-900 dark:text-white"
-        >
+        <h2 id="studio-save-title" className="text-lg font-semibold text-fg">
           Save
         </h2>
 
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-fg-muted">
           {findings.length === 0
             ? NO_FINDINGS_TEXT
             : `The safety linter flagged ${blockCount ? `${blockCount} item${blockCount > 1 ? 's' : ''} that block${blockCount > 1 ? '' : 's'} sharing` : ''}${blockCount && warnCount ? ' and ' : ''}${warnCount ? `${warnCount} item${warnCount > 1 ? 's' : ''} for a reviewer to check` : ''}. Each one is shown beside its field.`}
@@ -744,7 +741,7 @@ export function Studio({ editId }: { editId: string | null }) {
           {saveLabel}
         </button>
         {editing && dirty && !saving && (
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-fg-muted">
             You have unsaved changes. They are kept on this device until you
             save.
           </p>

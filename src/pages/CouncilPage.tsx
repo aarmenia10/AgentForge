@@ -209,7 +209,7 @@ export default function CouncilPage() {
           </div>
         )}
         {owned && (
-          <div className="glass space-y-3 rounded-2xl p-4">
+          <div className="space-y-3 rounded-3xl bg-surface p-5">
             <div className="flex flex-wrap items-center gap-3">
               <VisibilityLabel visibility={owned.visibility} />
               {owned.visibility === 'public' && (
@@ -304,7 +304,7 @@ export default function CouncilPage() {
           </p>
         )}
         {error && (
-          <p role="alert" className="text-rose-700 dark:text-rose-300">
+          <p role="alert" className="text-fg">
             {error}
           </p>
         )}
@@ -314,7 +314,7 @@ export default function CouncilPage() {
         </section>
         <section className="space-y-3" aria-label="Coordination instructions">
           <h2 className="text-lg font-semibold">Coordination instructions</h2>
-          <pre className="glass whitespace-pre-wrap break-words rounded-2xl p-4 text-sm">
+          <pre className="whitespace-pre-wrap break-words rounded-3xl bg-surface p-5 text-sm">
             {council.instructions}
           </pre>
         </section>

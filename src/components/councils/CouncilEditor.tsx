@@ -162,10 +162,7 @@ export function CouncilEditor({
         </button>
       </fieldset>
       {error && (
-        <p
-          role="alert"
-          className="whitespace-pre-wrap text-rose-700 dark:text-rose-300"
-        >
+        <p role="alert" className="whitespace-pre-wrap text-fg">
           {error}
         </p>
       )}

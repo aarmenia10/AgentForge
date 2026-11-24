@@ -79,7 +79,7 @@ export function SkillReviewQueue() {
         role="tablist"
         aria-label="Skill review lists"
         onKeyDown={onKeyDown}
-        className="-mx-1 flex gap-1 overflow-x-auto border-b border-slate-900/10 px-1 dark:border-white/10"
+        className="-mx-1 flex gap-1 overflow-x-auto border-b border-line px-1"
       >
         {TABS.map((t) => (
           <button
@@ -94,8 +94,8 @@ export function SkillReviewQueue() {
             className={cn(
               '-mb-px shrink-0 border-b-2 px-2 py-2.5 text-sm font-medium transition sm:px-3',
               tab === t.id
-                ? 'border-teal-600 text-teal-800 dark:border-teal-400 dark:text-teal-200'
-                : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
+                ? 'border-accent-fg text-accent-fg'
+                : 'border-transparent text-fg-muted hover:text-fg',
             )}
           >
             {t.label}
@@ -157,7 +157,7 @@ function ReviewList({ kind, empty }: { kind: Kind; empty: string }) {
         </Notice>
       )}
       {!loading && !error && items.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-white/15">
+        <p className="rounded-3xl bg-surface p-6 text-center text-fg-muted">
           {empty}
         </p>
       )}
@@ -275,14 +275,14 @@ function ReviewItem({ kind, record }: { kind: Kind; record: SkillRecord }) {
   }
 
   return (
-    <li className="rounded-xl border border-slate-900/10 dark:border-white/10">
+    <li className="rounded-3xl bg-surface">
       <h3>
         <button
           type="button"
           aria-expanded={expanded}
           aria-controls={panelId}
           onClick={() => setExpanded(!expanded)}
-          className="flex w-full items-start gap-2 rounded-xl px-4 py-3 text-left hover:bg-slate-900/5 dark:hover:bg-white/5"
+          className="flex w-full items-start gap-2 rounded-3xl px-5 py-4 text-left hover:bg-surface-2"
         >
           {expanded ? (
             <ChevronDown
@@ -296,13 +296,13 @@ function ReviewItem({ kind, record }: { kind: Kind; record: SkillRecord }) {
             />
           )}
           <span className="min-w-0 flex-1">
-            <span className="block break-words font-semibold text-slate-900 dark:text-white">
+            <span className="block break-words font-semibold text-fg">
               {record.name}{' '}
-              <span className="font-mono text-xs font-normal text-slate-600 dark:text-slate-400">
+              <span className="font-mono text-xs font-normal text-fg-muted">
                 v{record.version}
               </span>
             </span>
-            <span className="block break-all text-xs text-slate-600 dark:text-slate-400">
+            <span className="block break-all text-xs text-fg-muted">
               {record.id} · @{record.author.handle}
               {own ? ' (you)' : ''} · {record.files.length}{' '}
               {record.files.length === 1 ? 'file' : 'files'}
@@ -351,7 +351,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: SkillRecord }) {
               leaves out anything with a blocked finding.
             </Notice>
           )}
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-fg-muted">
             {blocks + warns === 0
               ? `The safety linter (version ${LINTER_VERSION}) has nothing to flag. That is not a safety check: read every file.`
               : `Safety linter version ${LINTER_VERSION}: ${blocks} blocked, ${warns} to check. Each one is shown beside its file below.`}
@@ -359,7 +359,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: SkillRecord }) {
 
           {kind === 'edit' && (
             <section>
-              <h4 className="mb-2 text-base font-semibold text-slate-900 dark:text-white">
+              <h4 className="mb-2 text-base font-semibold text-fg">
                 Changes from the live version
               </h4>
               {live === undefined && (
@@ -375,7 +375,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: SkillRecord }) {
           )}
 
           <section>
-            <h4 className="mb-2 text-base font-semibold text-slate-900 dark:text-white">
+            <h4 className="mb-2 text-base font-semibold text-fg">
               {kind === 'edit'
                 ? 'The proposed version in full'
                 : 'The skill in full'}
@@ -392,7 +392,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: SkillRecord }) {
             </Notice>
           )}
           {message && (
-            <p role="status" className="text-teal-800 dark:text-teal-200">
+            <p role="status" className="text-accent-fg">
               {message}
             </p>
           )}
@@ -494,7 +494,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: SkillRecord }) {
               )}
               {kind === 'published' &&
                 (confirmTakeDown ? (
-                  <div className="w-full space-y-2 rounded-xl border border-rose-500/40 p-3">
+                  <div className="w-full space-y-2 rounded-3xl bg-surface-2 p-4">
                     <p>
                       Take down {record.name}? It leaves the skills page on the
                       next refresh, within about an hour, and the author sees it
@@ -569,30 +569,24 @@ export function SkillReviewView({
   return (
     <div className="space-y-5 text-sm">
       <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[8rem_1fr]">
-        <dt className="font-medium text-slate-800 dark:text-slate-100">Name</dt>
+        <dt className="font-medium text-fg">Name</dt>
         <dd className="min-w-0">
           <code className="break-all font-mono">{record.name}</code>
           <Findings list={review.byField('name')} />
         </dd>
-        <dt className="font-medium text-slate-800 dark:text-slate-100">Id</dt>
+        <dt className="font-medium text-fg">Id</dt>
         <dd className="min-w-0">
           <code className="break-all font-mono">{record.id}</code>
         </dd>
-        <dt className="font-medium text-slate-800 dark:text-slate-100">
-          Version
-        </dt>
+        <dt className="font-medium text-fg">Version</dt>
         <dd>
           <code className="font-mono">{record.version}</code>
         </dd>
-        <dt className="font-medium text-slate-800 dark:text-slate-100">
-          Visibility
-        </dt>
+        <dt className="font-medium text-fg">Visibility</dt>
         <dd>
           <VisibilityLabel visibility={record.visibility} />
         </dd>
-        <dt className="font-medium text-slate-800 dark:text-slate-100">
-          Author
-        </dt>
+        <dt className="font-medium text-fg">Author</dt>
         <dd className="min-w-0 break-words">
           @{record.author.handle} ({record.author.name}){' '}
           {record.author.verified ? (
@@ -601,14 +595,12 @@ export function SkillReviewView({
             <StatusText>Not marked {VERIFIED_AUTHOR_LABEL}</StatusText>
           )}
         </dd>
-        <dt className="font-medium text-slate-800 dark:text-slate-100">Tags</dt>
+        <dt className="font-medium text-fg">Tags</dt>
         <dd className="min-w-0 break-words">
           {record.tags.map((t) => `#${t}`).join(' ')}
           <Findings list={review.byField('tags')} />
         </dd>
-        <dt className="font-medium text-slate-800 dark:text-slate-100">
-          Description
-        </dt>
+        <dt className="font-medium text-fg">Description</dt>
         <dd className="min-w-0 whitespace-pre-wrap break-words">
           {record.description}
           <Findings list={review.byField('description')} />
@@ -637,14 +629,14 @@ function ReviewFile({
   const [open, setOpen] = useState(file.kind === 'instructions')
   const panel = useId()
   return (
-    <li className="rounded-lg border border-slate-900/10 p-3 dark:border-white/10">
+    <li className="rounded-3xl bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <code className="min-w-0 break-all font-mono text-xs font-semibold text-slate-900 dark:text-white">
+        <code className="min-w-0 break-all font-mono text-xs font-semibold text-fg">
           {file.path}
         </code>
         <span className="flex flex-wrap items-center gap-x-3">
           <KindLabel kind={file.kind} />
-          <span className="font-mono text-xs tabular-nums text-slate-600 dark:text-slate-400">
+          <span className="font-mono text-xs tabular-nums text-fg-muted">
             {formatBytes(utf8ByteLength(file.content))}
           </span>
         </span>
@@ -674,7 +666,7 @@ function Findings({ list }: { list: ReturnType<ReviewFindings['byField']> }) {
   return (
     <div className="mt-2 space-y-1.5">
       {list.issues.map((issue, i) => (
-        <p key={`i${i}`} className="text-xs text-rose-700 dark:text-rose-300">
+        <p key={`i${i}`} className="text-xs text-fg">
           {issue.message}
         </p>
       ))}

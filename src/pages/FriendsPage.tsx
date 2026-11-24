@@ -208,10 +208,7 @@ function Friends() {
   return (
     <div className="mt-6 space-y-10 text-sm">
       <section aria-labelledby="friends-find" className="space-y-3">
-        <h2
-          id="friends-find"
-          className="text-lg font-semibold text-slate-900 dark:text-white"
-        >
+        <h2 id="friends-find" className="text-lg font-semibold text-fg">
           Find people
         </h2>
         <p>
@@ -219,7 +216,7 @@ function Friends() {
           when one of you sends a request and the other accepts it.
         </p>
         {blocker && (
-          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-900 dark:text-amber-100">
+          <p className="rounded-3xl bg-surface p-4 text-fg">
             {blocker}{' '}
             <Link
               to="/settings"
@@ -240,7 +237,7 @@ function Friends() {
       </section>
 
       {actionError && (
-        <p role="alert" className="text-rose-700 dark:text-rose-300">
+        <p role="alert" className="text-fg">
           {actionError}
         </p>
       )}
@@ -256,10 +253,7 @@ function Friends() {
               type="button"
               onClick={() => accept(uid)}
               aria-disabled={busy(uid) || undefined}
-              className={cn(
-                smallButton,
-                'bg-teal-700 text-white hover:bg-teal-800 dark:bg-teal-400 dark:text-navy-950 dark:hover:bg-teal-300',
-              )}
+              className={cn(primaryButton, 'h-9 px-4 text-xs')}
             >
               Accept
             </button>
@@ -306,9 +300,7 @@ function Friends() {
             <PersonRow key={uid} person={person}>
               {confirmRemove === uid ? (
                 <>
-                  <span className="text-slate-700 dark:text-slate-200">
-                    Remove {name}?
-                  </span>
+                  <span className="text-fg">Remove {name}?</span>
                   <button
                     type="button"
                     onClick={() => remove(uid, 'Could not remove this friend.')}
@@ -370,21 +362,14 @@ function PeopleList({
 }) {
   return (
     <section aria-labelledby={id}>
-      <h2
-        id={id}
-        className="text-lg font-semibold text-slate-900 dark:text-white"
-      >
+      <h2 id={id} className="text-lg font-semibold text-fg">
         {title}{' '}
-        <span className="font-normal text-slate-500 dark:text-slate-400">
-          ({children.length})
-        </span>
+        <span className="font-normal text-fg-muted">({children.length})</span>
       </h2>
       {children.length === 0 ? (
         <p className="mt-2">{empty}</p>
       ) : (
-        <ul className="mt-1 divide-y divide-slate-900/10 dark:divide-white/10">
-          {children}
-        </ul>
+        <ul className="mt-1 divide-y divide-line">{children}</ul>
       )}
     </section>
   )
@@ -445,7 +430,7 @@ function FindPeople({
         </label>
         <div className="relative min-w-0 flex-1">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-muted"
             aria-hidden="true"
           />
           <input
@@ -471,11 +456,7 @@ function FindPeople({
         </button>
       </form>
       {error && (
-        <p
-          id={hintId}
-          role="alert"
-          className="text-rose-700 dark:text-rose-300"
-        >
+        <p id={hintId} role="alert" className="text-fg">
           {error}
         </p>
       )}
@@ -484,10 +465,7 @@ function FindPeople({
           {results.length === 0 ? (
             <p>No one has a username starting with that.</p>
           ) : (
-            <ul
-              aria-label="Search results"
-              className="divide-y divide-slate-900/10 dark:divide-white/10"
-            >
+            <ul aria-label="Search results" className="divide-y divide-line">
               {results.map((person) => (
                 <PersonRow key={person.uid} person={person}>
                   <ResultAction
@@ -523,7 +501,7 @@ function ResultAction({
   onAccept: () => void
   handle: string
 }) {
-  const quiet = 'text-xs text-slate-600 dark:text-slate-400'
+  const quiet = 'text-xs text-fg-muted'
   switch (state) {
     case 'self':
       return <span className={quiet}>This is you</span>

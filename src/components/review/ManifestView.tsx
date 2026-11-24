@@ -73,7 +73,7 @@ export function ManifestView({
       </Block>
 
       <Block title="System prompt">
-        <p className="whitespace-pre-wrap break-words rounded-lg bg-slate-900/5 p-3 dark:bg-white/5">
+        <p className="whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-4">
           {system_prompt}
         </p>
         <FindingList findings={at('prompt_blueprint.system_prompt')} />
@@ -111,10 +111,7 @@ export function ManifestView({
         ) : (
           <ul className="space-y-3">
             {manifest.tools_required.map((tool, i) => (
-              <li
-                key={i}
-                className="rounded-lg border border-slate-900/10 p-3 dark:border-white/10"
-              >
+              <li key={i} className="rounded-3xl bg-surface p-4">
                 <p className="flex flex-wrap items-center gap-2">
                   <code className="break-all font-mono font-medium">
                     {tool.name}
@@ -156,7 +153,7 @@ export function ManifestView({
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-muted">
         {title}
       </h4>
       {children}
@@ -165,11 +162,7 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Term({ children }: { children: ReactNode }) {
-  return (
-    <dt className="font-medium text-slate-700 dark:text-slate-300">
-      {children}
-    </dt>
-  )
+  return <dt className="font-medium text-fg-muted">{children}</dt>
 }
 
 function Value({
@@ -180,7 +173,7 @@ function Value({
   findings?: LintFinding[]
 }) {
   return (
-    <dd className="min-w-0 text-slate-900 dark:text-slate-100">
+    <dd className="min-w-0 text-fg">
       {children}
       <FindingList findings={findings} />
     </dd>
@@ -210,7 +203,7 @@ export function FindingList({
 
 export function Json({ value }: { value: unknown }) {
   return (
-    <pre className="max-h-80 overflow-auto rounded-lg bg-slate-950 p-3 font-mono text-xs leading-relaxed text-slate-100">
+    <pre className="max-h-80 overflow-auto rounded-2xl bg-surface-2 p-4 font-mono text-xs leading-relaxed text-fg">
       {JSON.stringify(value, null, 2)}
     </pre>
   )

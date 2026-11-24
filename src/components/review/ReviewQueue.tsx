@@ -79,7 +79,7 @@ export function ReviewQueue() {
         role="tablist"
         aria-label="Review lists"
         onKeyDown={onKeyDown}
-        className="-mx-1 flex gap-1 overflow-x-auto border-b border-slate-900/10 px-1 dark:border-white/10"
+        className="-mx-1 flex gap-1 overflow-x-auto border-b border-line px-1"
       >
         {TABS.map((t) => (
           <button
@@ -94,8 +94,8 @@ export function ReviewQueue() {
             className={cn(
               '-mb-px shrink-0 border-b-2 px-2 py-2.5 text-sm font-medium transition sm:px-3',
               tab === t.id
-                ? 'border-teal-600 text-teal-800 dark:border-teal-400 dark:text-teal-200'
-                : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
+                ? 'border-accent-fg text-accent-fg'
+                : 'border-transparent text-fg-muted hover:text-fg',
             )}
           >
             {t.label}
@@ -166,7 +166,7 @@ function ReviewList({ kind, empty }: { kind: Kind; empty: string }) {
         </Notice>
       )}
       {!loading && !error && items.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-white/15">
+        <p className="rounded-3xl bg-surface p-6 text-center text-fg-muted">
           {empty}
         </p>
       )}
@@ -294,14 +294,14 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
   }
 
   return (
-    <li className="rounded-xl border border-slate-900/10 dark:border-white/10">
+    <li className="rounded-3xl bg-surface">
       <h3>
         <button
           type="button"
           aria-expanded={expanded}
           aria-controls={panelId}
           onClick={() => setExpanded(!expanded)}
-          className="flex w-full items-start gap-2 rounded-xl px-4 py-3 text-left hover:bg-slate-900/5 dark:hover:bg-white/5"
+          className="flex w-full items-start gap-2 rounded-3xl px-5 py-4 text-left hover:bg-surface-2"
         >
           {expanded ? (
             <ChevronDown
@@ -315,13 +315,13 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
             />
           )}
           <span className="min-w-0 flex-1">
-            <span className="block break-words font-semibold text-slate-900 dark:text-white">
+            <span className="block break-words font-semibold text-fg">
               {record.name}{' '}
-              <span className="font-mono text-xs font-normal text-slate-600 dark:text-slate-400">
+              <span className="font-mono text-xs font-normal text-fg-muted">
                 v{record.version}
               </span>
             </span>
-            <span className="block break-all text-xs text-slate-600 dark:text-slate-400">
+            <span className="block break-all text-xs text-fg-muted">
               {record.id} · @{record.author.handle}
               {own ? ' (you)' : ''}
             </span>
@@ -346,7 +346,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
               catalog build leaves out anything with a blocked finding.
             </Notice>
           )}
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-fg-muted">
             {findings.length === 0
               ? `The safety linter (version ${LINTER_VERSION}) has nothing to flag. That is not a safety check: read the whole manifest.`
               : `Safety linter version ${LINTER_VERSION}: ${blocks} blocked, ${warns} to check. Each one is shown beside its field below.`}
@@ -354,7 +354,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
 
           {kind === 'edit' && (
             <section>
-              <h4 className="mb-2 text-base font-semibold text-slate-900 dark:text-white">
+              <h4 className="mb-2 text-base font-semibold text-fg">
                 Changes from the live version
               </h4>
               {live === undefined && (
@@ -370,7 +370,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
           )}
 
           <section>
-            <h4 className="mb-2 text-base font-semibold text-slate-900 dark:text-white">
+            <h4 className="mb-2 text-base font-semibold text-fg">
               {kind === 'edit'
                 ? 'The proposed version in full'
                 : 'The manifest in full'}
@@ -387,7 +387,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
             </Notice>
           )}
           {message && (
-            <p role="status" className="text-teal-800 dark:text-teal-200">
+            <p role="status" className="text-accent-fg">
               {message}
             </p>
           )}
@@ -465,7 +465,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
               )}
               {kind === 'published' &&
                 (confirmTakeDown ? (
-                  <div className="w-full space-y-2 rounded-xl border border-rose-500/40 p-3">
+                  <div className="w-full space-y-2 rounded-3xl bg-surface-2 p-4">
                     <p>
                       Take down {record.name}? It leaves the catalog on the next
                       refresh, within about an hour, and the author sees it as

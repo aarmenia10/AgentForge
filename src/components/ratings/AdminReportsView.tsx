@@ -39,7 +39,7 @@ export function AdminReportsView() {
   if (loading) {
     return (
       <div
-        className="flex items-center gap-2 py-8 text-sm text-slate-500"
+        className="flex items-center gap-2 py-8 text-sm text-fg-muted"
         role="status"
       >
         <Loader2 className="size-4 animate-spin" />
@@ -49,22 +49,16 @@ export function AdminReportsView() {
   }
 
   if (error) {
-    return (
-      <p className="py-4 text-sm text-rose-600 dark:text-rose-400">{error}</p>
-    )
+    return <p className="py-4 text-sm text-fg">{error}</p>
   }
 
   if (!reports || reports.length === 0) {
-    return (
-      <p className="py-8 text-sm text-slate-500 dark:text-slate-400">
-        No reported items.
-      </p>
-    )
+    return <p className="py-8 text-sm text-fg-muted">No reported items.</p>
   }
 
   return (
     <div className="space-y-4 pt-2">
-      <p className="text-sm text-slate-600 dark:text-slate-300">
+      <p className="text-sm text-fg-muted">
         Reported items ordered by report count. Review reported items and take
         down violating public submissions through the review queue. To clear
         resolved reports, remove the report documents via the Firebase console.
@@ -74,43 +68,41 @@ export function AdminReportsView() {
         {reports.map((item) => (
           <li
             key={`${item.kind}:${item.id}`}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-navy-800"
+            className="rounded-3xl bg-surface p-5"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <span className="font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span className="font-mono text-xs uppercase tracking-wider text-fg-muted">
                   {item.kind}
                 </span>
-                <h4 className="text-base font-semibold text-slate-900 dark:text-white">
-                  {item.id}
-                </h4>
+                <h4 className="text-base font-semibold text-fg">{item.id}</h4>
               </div>
 
               <div className="flex items-center gap-2 text-sm">
-                <span className="font-semibold text-rose-600 dark:text-rose-400">
+                <span className="font-semibold text-fg">
                   {item.count} {item.count === 1 ? 'report' : 'reports'}
                 </span>
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-fg-muted">
               {item.reasons.spam ? (
-                <span className="rounded bg-slate-100 px-2 py-0.5 dark:bg-white/10">
+                <span className="rounded-full bg-surface-2 px-3 py-1">
                   Spam: {item.reasons.spam}
                 </span>
               ) : null}
               {item.reasons.harmful ? (
-                <span className="rounded bg-slate-100 px-2 py-0.5 dark:bg-white/10">
+                <span className="rounded-full bg-surface-2 px-3 py-1">
                   Harmful: {item.reasons.harmful}
                 </span>
               ) : null}
               {item.reasons.misleading ? (
-                <span className="rounded bg-slate-100 px-2 py-0.5 dark:bg-white/10">
+                <span className="rounded-full bg-surface-2 px-3 py-1">
                   Misleading: {item.reasons.misleading}
                 </span>
               ) : null}
               {item.reasons.other ? (
-                <span className="rounded bg-slate-100 px-2 py-0.5 dark:bg-white/10">
+                <span className="rounded-full bg-surface-2 px-3 py-1">
                   Other: {item.reasons.other}
                 </span>
               ) : null}
@@ -123,7 +115,7 @@ export function AdminReportsView() {
                     ? `/?agent=${item.id}`
                     : `/skills/${item.id}`
                 }
-                className="text-teal-600 hover:underline dark:text-teal-400"
+                className="text-accent-fg hover:underline"
               >
                 View {item.kind}
               </Link>

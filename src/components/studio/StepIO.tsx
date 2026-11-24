@@ -110,16 +110,13 @@ function SchemaEditor({
   return (
     <section aria-labelledby={`${idBase}-title`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3
-          id={`${idBase}-title`}
-          className="text-base font-semibold text-slate-900 dark:text-white"
-        >
+        <h3 id={`${idBase}-title`} className="text-base font-semibold text-fg">
           {title}
         </h3>
         <div
           role="group"
           aria-label={`How to edit the ${title.toLowerCase()} schema`}
-          className="inline-flex rounded-lg bg-slate-900/5 p-0.5 dark:bg-white/10"
+          className="inline-flex rounded-full bg-surface-2 p-1"
         >
           {(['fields', 'json'] as const).map((mode) => (
             <button
@@ -134,10 +131,10 @@ function SchemaEditor({
                     : toFields()
               }
               className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium transition',
+                'rounded-full px-4 py-2 text-xs font-medium transition',
                 value.mode === mode
-                  ? 'bg-white text-slate-900 shadow-sm dark:bg-navy-700 dark:text-white'
-                  : 'text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',
+                  ? 'bg-surface text-fg'
+                  : 'text-fg-muted hover:text-fg',
               )}
             >
               {mode === 'fields' ? 'Field builder' : 'Edit as JSON'}
@@ -147,10 +144,7 @@ function SchemaEditor({
       </div>
       <p className="mt-1 text-sm">{intro}</p>
       {switchMessage && (
-        <p
-          role="status"
-          className="mt-2 text-xs text-amber-800 dark:text-amber-200"
-        >
+        <p role="status" className="mt-2 text-xs text-fg-muted">
           {switchMessage}
         </p>
       )}
@@ -173,7 +167,7 @@ function SchemaEditor({
       ) : (
         <div className="mt-3 space-y-3">
           {value.fields.length === 0 && (
-            <p className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-sm dark:border-white/15">
+            <p className="rounded-3xl bg-surface p-5 text-center text-sm text-fg-muted">
               No fields. Add one, or leave it empty if there is nothing to pass.
             </p>
           )}
@@ -187,10 +181,7 @@ function SchemaEditor({
                   )
                 : []
               return (
-                <li
-                  key={field.key}
-                  className="rounded-xl border border-slate-300 p-3 dark:border-white/15"
-                >
+                <li key={field.key} className="rounded-3xl bg-surface p-4">
                   <fieldset>
                     <legend className="sr-only">
                       {title} field {index + 1}
@@ -199,7 +190,7 @@ function SchemaEditor({
                       <div>
                         <label
                           htmlFor={`${id}-name`}
-                          className="mb-1 block text-xs font-medium text-slate-800 dark:text-slate-100"
+                          className="mb-1 block text-xs font-medium text-fg"
                         >
                           Field name
                         </label>
@@ -221,7 +212,7 @@ function SchemaEditor({
                       <div>
                         <label
                           htmlFor={`${id}-type`}
-                          className="mb-1 block text-xs font-medium text-slate-800 dark:text-slate-100"
+                          className="mb-1 block text-xs font-medium text-fg"
                         >
                           Type
                         </label>
@@ -248,7 +239,7 @@ function SchemaEditor({
                     <div className="mt-3">
                       <label
                         htmlFor={`${id}-description`}
-                        className="mb-1 block text-xs font-medium text-slate-800 dark:text-slate-100"
+                        className="mb-1 block text-xs font-medium text-fg"
                       >
                         Description (optional)
                       </label>
@@ -275,7 +266,7 @@ function SchemaEditor({
                           onChange={(e) =>
                             patchField(index, { required: e.target.checked })
                           }
-                          className="size-4 accent-teal-700 dark:accent-teal-400"
+                          className="size-4 accent-[var(--lm-accent)]"
                         />
                         Required
                       </label>
@@ -309,10 +300,10 @@ function SchemaEditor({
             Add a field
           </button>
           <details className="text-sm">
-            <summary className="cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
+            <summary className="cursor-pointer text-xs font-medium text-fg-muted">
               Show the JSON Schema this makes
             </summary>
-            <pre className="mt-2 max-h-72 overflow-auto rounded-xl bg-slate-950 p-3 font-mono text-xs text-slate-100">
+            <pre className="mt-2 max-h-72 overflow-auto rounded-2xl bg-surface-2 p-4 font-mono text-xs text-fg">
               {JSON.stringify(fieldsToSchema(value.fields), null, 2)}
             </pre>
           </details>

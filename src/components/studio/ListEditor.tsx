@@ -48,7 +48,7 @@ export function ListEditor({
           <li key={index} className="flex gap-3">
             <span
               aria-hidden="true"
-              className="mt-2 grid size-6 shrink-0 place-items-center rounded-full bg-teal-500/15 text-xs font-semibold text-teal-800 dark:text-teal-200"
+              className="mt-2 grid size-6 shrink-0 place-items-center rounded-full bg-accent/15 text-xs font-semibold text-accent-fg"
             >
               {index + 1}
             </span>

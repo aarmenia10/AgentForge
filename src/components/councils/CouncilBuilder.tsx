@@ -207,7 +207,7 @@ export function CouncilBuilder({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-page/80 backdrop-blur-sm"
         onClick={() => !saving && onClose()}
         aria-hidden="true"
       />
@@ -218,7 +218,7 @@ export function CouncilBuilder({
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={onDialogKeyDown}
-        className="relative flex max-h-[94dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-4xl bg-surface shadow-[var(--lm-shadow)] focus:outline-none sm:rounded-4xl"
+        className="relative flex max-h-[94dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-surface shadow-[var(--lm-shadow)] focus:outline-none sm:rounded-3xl"
       >
         <header className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-8 sm:pt-7">
           <div className="min-w-0">
@@ -411,7 +411,7 @@ export function CouncilBuilder({
           {saveError && (
             <p
               role="alert"
-              className="whitespace-pre-wrap rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300"
+              className="whitespace-pre-wrap rounded-3xl bg-surface-2 px-5 py-4 text-sm text-fg"
             >
               {saveError}
             </p>

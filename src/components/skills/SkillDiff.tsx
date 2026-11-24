@@ -44,13 +44,8 @@ export function SkillDiff({
       {meta.length > 0 && (
         <ul className="space-y-2">
           {meta.map((row) => (
-            <li
-              key={row.label}
-              className="rounded-lg border border-slate-900/10 p-3 dark:border-white/10"
-            >
-              <p className="mb-2 font-semibold text-slate-900 dark:text-white">
-                {row.label}
-              </p>
+            <li key={row.label} className="rounded-3xl bg-surface p-4">
+              <p className="mb-2 font-semibold text-fg">{row.label}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <Side label="Live now" text={row.before} tone="before" />
                 <Side label="Proposed" text={row.after} tone="after" />
@@ -85,9 +80,9 @@ function FileDiff({ change }: { change: FileChange }) {
   const kindChanged =
     change.before && change.after && change.before.kind !== change.after.kind
   return (
-    <li className="rounded-lg border border-slate-900/10 p-3 dark:border-white/10">
+    <li className="rounded-3xl bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <code className="min-w-0 break-all font-mono text-xs font-semibold text-slate-900 dark:text-white">
+        <code className="min-w-0 break-all font-mono text-xs font-semibold text-fg">
           {change.path}
         </code>
         <span className="flex flex-wrap items-center gap-x-3">
@@ -96,7 +91,7 @@ function FileDiff({ change }: { change: FileChange }) {
         </span>
       </div>
       {kindChanged && (
-        <p className="mb-2 text-xs text-rose-700 dark:text-rose-300">
+        <p className="mb-2 text-xs text-fg">
           Kind changed from {change.before!.kind} to {change.after!.kind}.
         </p>
       )}
@@ -147,7 +142,7 @@ function LineDiff({
   const removed = lines.filter((l) => l.type === 'del').length
   return (
     <div>
-      <p className="mb-1 text-xs text-slate-600 dark:text-slate-400">
+      <p className="mb-1 text-xs text-fg-muted">
         {added} line{added === 1 ? '' : 's'} added, {removed} removed. Removed
         lines start with −, added lines with +.
       </p>
@@ -155,14 +150,11 @@ function LineDiff({
         role="region"
         aria-label={`Changes to ${path}`}
         tabIndex={0}
-        className="max-h-[28rem] overflow-auto rounded-lg bg-slate-900/5 py-2 font-mono text-xs leading-relaxed focus-visible:outline-2 focus-visible:outline-teal-500 dark:bg-white/5"
+        className="max-h-[28rem] overflow-auto rounded-2xl bg-surface-2 py-2 font-mono text-xs leading-relaxed focus-visible:outline-2 focus-visible:outline-accent-fg"
       >
         {foldDiff(lines).map((line, i) =>
           line.type === 'fold' ? (
-            <div
-              key={i}
-              className="px-3 italic text-slate-500 dark:text-slate-400"
-            >
+            <div key={i} className="px-3 italic text-fg-muted">
               … {line.count} unchanged line{line.count === 1 ? '' : 's'}
             </div>
           ) : (
@@ -170,10 +162,8 @@ function LineDiff({
               key={i}
               className={cn(
                 'whitespace-pre-wrap break-words px-3',
-                line.type === 'add' &&
-                  'bg-teal-500/10 text-teal-900 dark:text-teal-100',
-                line.type === 'del' &&
-                  'bg-rose-500/10 text-rose-900 dark:text-rose-100',
+                line.type === 'add' && 'bg-accent/10 text-fg',
+                line.type === 'del' && 'bg-surface text-fg-muted',
               )}
             >
               <span aria-hidden="true" className="select-none">
@@ -205,16 +195,14 @@ function Side({
 }) {
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
-        {label}
-      </p>
+      <p className="mb-1 text-xs font-medium text-fg-muted">{label}</p>
       <pre
         className={cn(
-          'max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md border-l-2 p-2 text-xs leading-relaxed',
+          'max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-2xl border-l-2 p-3 text-xs leading-relaxed',
           code ? 'font-mono' : 'font-sans',
           tone === 'before'
-            ? 'border-rose-500 bg-rose-500/5'
-            : 'border-teal-600 bg-teal-500/5',
+            ? 'border-line bg-surface-2'
+            : 'border-accent-fg bg-accent/10',
         )}
       >
         {text}

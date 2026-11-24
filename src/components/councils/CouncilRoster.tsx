@@ -28,9 +28,9 @@ export function CouncilRoster({
         .map(({ ref, order, role, detail }) => (
           <li
             key={formatItemRef(ref)}
-            className="glass min-w-0 space-y-1 rounded-2xl p-4"
+            className="min-w-0 space-y-1 rounded-3xl bg-surface p-5"
           >
-            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            <div className="text-xs font-medium text-fg-muted">
               Stage {order} · {ref.kind}
             </div>
             <Link className={textLink} to={memberLink(ref)}>

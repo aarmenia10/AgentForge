@@ -88,7 +88,7 @@ export function SkillDetail({
   return (
     <div className="space-y-6 text-sm">
       <div className="space-y-3">
-        <p className="whitespace-pre-wrap break-words text-base text-slate-700 dark:text-slate-200">
+        <p className="whitespace-pre-wrap break-words text-base text-fg">
           {skill.description}
         </p>
         <dl className="grid gap-x-4 gap-y-1.5 sm:grid-cols-[7rem_1fr]">
@@ -96,9 +96,7 @@ export function SkillDetail({
             <Row term="Author">
               <span className="inline-flex flex-wrap items-center gap-2">
                 <AuthorLink author={skill.author} showVerifiedLabel />
-                <span className="text-slate-600 dark:text-slate-400">
-                  {skill.author.name}
-                </span>
+                <span className="text-fg-muted">{skill.author.name}</span>
               </span>
             </Row>
           )}
@@ -130,7 +128,7 @@ export function SkillDetail({
                 <button
                   type="button"
                   onClick={() => setShowReport(true)}
-                  className="text-xs text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400"
+                  className="rounded-full bg-surface-2 px-3 py-1 text-xs text-fg-muted hover:text-fg"
                 >
                   Report
                 </button>
@@ -147,7 +145,7 @@ export function SkillDetail({
               {skill.tags.map((tag) => (
                 <li
                   key={tag}
-                  className="rounded-md bg-slate-900/5 px-2 py-0.5 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300"
+                  className="rounded-full bg-surface-2 px-3 py-1 text-xs text-fg-muted"
                 >
                   #{tag}
                 </li>
@@ -156,22 +154,20 @@ export function SkillDetail({
           </Row>
         </dl>
         {skill.author.verified && (
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-fg-muted">
             {VERIFIED_AUTHOR_LABEL} means the registry confirmed who the author
             is. It is not a safety check or a review of the skill.
           </p>
         )}
         {isPublic && publicOriginLabel(skill.origin_app) && (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-fg-muted">
             {publicOriginLabel(skill.origin_app)}
           </p>
         )}
       </div>
 
       <section className="space-y-3">
-        <H className="text-lg font-semibold text-slate-900 dark:text-white">
-          Use it from an AI app
-        </H>
+        <H className="text-lg font-semibold text-fg">Use it from an AI app</H>
         {isPublic ? (
           <>
             <p>
@@ -185,7 +181,7 @@ export function SkillDetail({
             />
             <p>
               Or describe the job and let it compare skills:{' '}
-              <span className="font-mono text-[13px] text-slate-800 dark:text-slate-100">
+              <span className="font-mono text-[13px] text-fg">
                 {FIND_PROMPT}
               </span>
             </p>
@@ -194,7 +190,7 @@ export function SkillDetail({
               title="Connector link"
               copyLabel="Copy link"
             />
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-xs text-fg-muted">
               In your AI app&apos;s settings, add a custom connector and paste
               the link. Apps without a skills feature can still follow a skill,
               because it is plain text.
@@ -211,9 +207,7 @@ export function SkillDetail({
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <H className="text-lg font-semibold text-slate-900 dark:text-white">
-            SKILL.md
-          </H>
+          <H className="text-lg font-semibold text-fg">SKILL.md</H>
           {instructions && (
             <CopyButton text={instructions.content} label="Copy SKILL.md" />
           )}
@@ -234,9 +228,7 @@ export function SkillDetail({
       </section>
 
       <section className="space-y-3">
-        <H className="text-lg font-semibold text-slate-900 dark:text-white">
-          Other files
-        </H>
+        <H className="text-lg font-semibold text-fg">Other files</H>
         {others.length === 0 ? (
           <p>This skill is a single SKILL.md file.</p>
         ) : (
@@ -274,10 +266,8 @@ export function SkillDetail({
         )}
       </section>
 
-      <section className="space-y-3 pt-4 border-t border-slate-900/10 dark:border-white/10">
-        <H className="text-lg font-semibold text-slate-900 dark:text-white">
-          Comments
-        </H>
+      <section className="space-y-3 border-t border-line pt-4">
+        <H className="text-lg font-semibold text-fg">Comments</H>
         <CommentsSection
           kind="skill"
           itemId={skill.id}
@@ -302,7 +292,7 @@ export function SkillDetail({
 function Row({ term, children }: { term: string; children: ReactNode }) {
   return (
     <>
-      <dt className="font-medium text-slate-800 dark:text-slate-100">{term}</dt>
+      <dt className="font-medium text-fg">{term}</dt>
       <dd className="min-w-0 break-words">{children}</dd>
     </>
   )
@@ -322,14 +312,14 @@ function FileLine({
   onToggle: () => void
 }) {
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-900/5 px-3 py-2 dark:bg-white/5">
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-2 px-4 py-3">
       <span className="min-w-0 space-y-0.5">
-        <code className="block break-all font-mono text-xs text-slate-900 dark:text-white">
+        <code className="block break-all font-mono text-xs text-fg">
           {file.path}
         </code>
         <span className="flex flex-wrap items-center gap-x-3">
           <KindLabel kind={file.kind} />
-          <span className="font-mono text-xs tabular-nums text-slate-600 dark:text-slate-400">
+          <span className="font-mono text-xs tabular-nums text-fg-muted">
             {formatBytes(file.bytes)}
           </span>
         </span>

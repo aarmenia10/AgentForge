@@ -15,26 +15,24 @@ import type { AgentManifest, AgentRecord } from '@/types/agent'
 /* Shared pieces for the Studio, My agents, and the review queue. */
 
 export const primaryButton =
-  'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white shadow-lg shadow-teal-500/20 transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-teal-400 dark:text-navy-950 dark:hover:bg-teal-300'
+  'inline-flex h-10 items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_var(--lm-accent)] disabled:cursor-not-allowed disabled:opacity-50'
 
 export const secondaryButton =
-  'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-900/5 px-4 text-sm font-medium text-slate-800 transition hover:bg-slate-900/10 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15'
+  'inline-flex h-10 items-center justify-center gap-2 rounded-full bg-surface px-5 text-sm font-medium text-fg transition duration-200 hover:-translate-y-0.5 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0'
 
 export const dangerButton =
-  'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-sm font-semibold text-white transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-rose-400 dark:text-navy-950 dark:hover:bg-rose-300'
+  'inline-flex h-10 items-center justify-center gap-2 rounded-full bg-surface-2 px-5 text-sm font-semibold text-fg transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--lm-shadow)] disabled:cursor-not-allowed disabled:opacity-50'
 
 export const smallButton =
-  'inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-900/5 px-3 text-xs font-medium text-slate-800 transition hover:bg-slate-900/10 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15'
+  'inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-surface-2 px-4 text-xs font-medium text-fg transition duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0'
 
 export const textLink =
-  'font-medium text-teal-700 underline-offset-2 hover:underline dark:text-teal-300'
+  'font-medium text-accent-fg underline-offset-2 hover:underline'
 
 export function inputClass(invalid = false) {
   return cn(
-    'w-full rounded-xl border bg-white/70 px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-teal-500 disabled:opacity-60 dark:bg-white/5 dark:text-slate-100 dark:placeholder:text-slate-400',
-    invalid
-      ? 'border-rose-500 dark:border-rose-400'
-      : 'border-slate-300 dark:border-white/15',
+    'w-full rounded-2xl border bg-surface px-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-2 focus:ring-accent-fg disabled:opacity-60',
+    invalid ? 'border-accent-fg' : 'border-line',
   )
 }
 
@@ -52,11 +50,11 @@ export function StatusText({
   children: ReactNode
 }) {
   const color = {
-    slate: 'text-slate-600 dark:text-slate-300',
-    teal: 'text-teal-700 dark:text-teal-300',
-    amber: 'text-amber-700 dark:text-amber-300',
-    rose: 'text-rose-700 dark:text-rose-300',
-    indigo: 'text-indigo-700 dark:text-indigo-300',
+    slate: 'text-fg-muted',
+    teal: 'text-accent-fg',
+    amber: 'text-fg',
+    rose: 'text-fg',
+    indigo: 'text-fg-muted',
   }[tone]
   return (
     <span
@@ -118,18 +116,11 @@ export function Field({
 }) {
   return (
     <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-100"
-      >
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-fg">
         {label}
       </label>
       {children}
-      {hint && (
-        <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400">
-          {hint}
-        </p>
-      )}
+      {hint && <p className="mt-1.5 text-xs text-fg-muted">{hint}</p>}
       {notes}
     </div>
   )
@@ -154,10 +145,7 @@ export function FindingNote({
   return (
     <div
       className={cn(
-        'flex gap-2 rounded-lg border px-3 py-2 text-xs',
-        block
-          ? 'border-rose-500/40 bg-rose-500/10 text-rose-900 dark:text-rose-100'
-          : 'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100',
+        'flex gap-2 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-xs text-fg',
       )}
     >
       <Icon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
@@ -181,11 +169,7 @@ export function FindingNote({
 }
 
 export function ProblemNote({ problem }: { problem: Problem }) {
-  return (
-    <p className="text-xs text-rose-700 dark:text-rose-300">
-      {problem.message}
-    </p>
-  )
+  return <p className="text-xs text-fg">{problem.message}</p>
 }
 
 /** The notes under a field: its validation problems, then its findings. */
@@ -222,18 +206,17 @@ export function Notice({
   role?: 'status' | 'alert'
 }) {
   const styles = {
-    info: 'border-slate-300 bg-white/50 text-slate-700 dark:border-white/15 dark:bg-white/5 dark:text-slate-200',
-    warn: 'border-amber-500/40 bg-amber-500/10 text-amber-950 dark:text-amber-100',
-    error: 'border-rose-500/40 bg-rose-500/10 text-rose-900 dark:text-rose-100',
-    success:
-      'border-teal-500/40 bg-teal-500/10 text-teal-950 dark:text-teal-100',
+    info: 'border-line bg-surface-2 text-fg',
+    warn: 'border-line bg-surface-2 text-fg',
+    error: 'border-line bg-surface-2 text-fg',
+    success: 'border-line bg-surface-2 text-fg',
   }[tone]
   const Icon =
     tone === 'error' ? OctagonAlert : tone === 'warn' ? TriangleAlert : Info
   return (
     <div
       role={role}
-      className={cn('flex gap-3 rounded-xl border p-3 text-sm', styles)}
+      className={cn('flex gap-3 rounded-3xl border p-4 text-sm', styles)}
     >
       <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <div className="min-w-0 space-y-1.5">
