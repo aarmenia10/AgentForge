@@ -65,8 +65,8 @@ export default function SkillsPage() {
               Skills
             </h1>
             <p className="mt-3 text-fg-muted">
-              Discover skills that teach your AI how to complete specific
-              tasks, from analyzing spreadsheets to writing emails.
+              Discover skills that teach your AI how to complete specific tasks,
+              from analyzing spreadsheets to writing emails.
             </p>
           </div>
           <Link to="/skills/new" className={primaryButton}>

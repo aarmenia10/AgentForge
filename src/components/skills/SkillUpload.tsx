@@ -284,10 +284,9 @@ export function SkillUpload({ editId }: { editId: string | null }) {
 
       <Section id={`${ids}-files`} title="1. Your skill">
         <p>
-          Upload your skill instructions or write them here. Your main file
-          must be named <code className="font-mono">SKILL.md</code> when
-          uploading files. Limits: 200 KB total, 100 KB per file, 50 files,
-          text only. Scripts are allowed only in private skills.
+          Use a folder with a <code className="font-mono">SKILL.md</code>{' '}
+          instruction file at the top. Limits: 200 KB in all, 100 KB per file,
+          50 files, text only. Scripts are allowed only in private skills.
         </p>
         <div
           role="group"

@@ -195,7 +195,9 @@ export function SkillDetail({
         </summary>
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <H className="text-lg font-semibold text-fg">Skill Instructions (SKILL.md)</H>
+            <H className="text-lg font-semibold text-fg">
+              Skill Instructions (SKILL.md)
+            </H>
             {instructions && (
               <CopyButton
                 text={instructions.content}
@@ -224,9 +226,7 @@ export function SkillDetail({
             <p>This skill contains only its instruction file.</p>
           ) : (
             <>
-              <p>
-                The skill instructions explain when to read each file.
-              </p>
+              <p>The skill instructions explain when to read each file.</p>
               <ul className="space-y-2" aria-label="Other files">
                 {others.map((f) => (
                   <FileLine
