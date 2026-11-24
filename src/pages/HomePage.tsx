@@ -1,35 +1,104 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { CATEGORY_ICONS, categoryPillClass } from '@/components/CategoryPills'
 import { Hero } from '@/components/Hero'
-import { agentRepository } from '@/lib/agentRepository'
+import { TrendingSection } from '@/components/home/TrendingSection'
+import { ArrowIcon, primaryButtonClass } from '@/components/ui'
+import { atomItems, trendingFrom, type HomeSources } from '@/lib/homeFeed'
+import { Link } from '@/router/Router'
+import { AGENT_CATEGORIES } from '@/types/agent'
 
-// Kept for the session so returning to the home page shows the count at once.
-let cachedCount: number | null = null
+// Kept for the session so returning to the home page shows everything at once.
+let cached: HomeSources | null = null
 
 /**
- * The landing page: the hero and its three ways in (Agents, Skills, Councils).
- * The agent catalog lives at `/agents`. The only data read here is the agent
- * count, from the static `catalog.json` (invariant 3).
+ * Reads the three public files after first paint. The loader (and the schema
+ * code it needs) is its own chunk. Static files only: zero Firestore reads
+ * (invariant 3).
  */
-export function HomePage() {
-  const [agentCount, setAgentCount] = useState(cachedCount ?? 0)
-
+function useHomeSources(): HomeSources | null {
+  const [sources, setSources] = useState<HomeSources | null>(cached)
   useEffect(() => {
+    if (cached) return
     let cancelled = false
-    agentRepository
-      .listAgents()
-      .then((list) => {
-        cachedCount = list.length
-        if (!cancelled) setAgentCount(list.length)
+    import('@/lib/homeData')
+      .then((module) => module.loadHomeSources())
+      .then((loaded) => {
+        cached = loaded
+        if (!cancelled) setSources(loaded)
       })
-      .catch(() => {})
+      .catch(() => {
+        // Without the files the page shows the hero and the buttons only.
+        if (!cancelled) setSources({ agents: [], skills: [], councils: [] })
+      })
     return () => {
       cancelled = true
     }
   }, [])
+  return sources
+}
+
+/**
+ * The landing page, top to bottom: the hero with its atom, "Start building"
+ * and its three buttons, Trending, and the category buttons.
+ */
+export function HomePage() {
+  const sources = useHomeSources()
+  const atom = useMemo(() => (sources ? atomItems(sources) : null), [sources])
+  const trending = useMemo(
+    () => (sources ? trendingFrom(sources) : null),
+    [sources],
+  )
 
   return (
     <main className="flex-1">
-      <Hero agentCount={agentCount} />
+      <Hero atom={atom} />
+
+      <section
+        aria-labelledby="home-start-building"
+        className="mx-auto max-w-7xl px-4 pb-14 text-center sm:px-6"
+      >
+        <h2
+          id="home-start-building"
+          className="text-2xl font-semibold tracking-tight sm:text-3xl"
+        >
+          Start building
+        </h2>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Link to="/agents" className={primaryButtonClass}>
+            Explore Agents
+            <ArrowIcon />
+          </Link>
+          <Link to="/skills" className={primaryButtonClass}>
+            Explore Skills
+            <ArrowIcon />
+          </Link>
+          <Link to="/councils" className={primaryButtonClass}>
+            Explore Councils
+            <ArrowIcon />
+          </Link>
+        </div>
+      </section>
+
+      <TrendingSection items={trending} />
+
+      <nav
+        aria-label="Browse agents by category"
+        className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2.5 px-4 pb-16 sm:px-6"
+      >
+        {AGENT_CATEGORIES.map(({ tag, label }) => {
+          const Icon = CATEGORY_ICONS[tag]
+          return (
+            <Link
+              key={tag}
+              to={`/agents?category=${tag}`}
+              className={categoryPillClass(false)}
+            >
+              <Icon className="size-4" aria-hidden="true" />
+              {label}
+            </Link>
+          )
+        })}
+      </nav>
     </main>
   )
 }

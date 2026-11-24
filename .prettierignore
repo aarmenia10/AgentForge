@@ -26,7 +26,6 @@ src/components/detail/AgentDetailModal.tsx
 src/components/detail/InstallPanel.tsx
 src/components/detail/SchemaViewer.tsx
 src/components/ExplorerToolbar.tsx
-src/components/Hero.tsx
 src/components/TopNav.tsx
 src/components/ui.tsx
 src/data/seedAgents.ts

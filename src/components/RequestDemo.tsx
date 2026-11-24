@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { submitDemoRequest } from '@/services/demoRequests'
 
 const input =
@@ -31,14 +31,33 @@ const fields = [
   },
 ]
 
+interface RequestDemoProps {
+  triggerClassName?: string
+  /**
+   * Controlled mode, for a trigger that lives elsewhere (the home page hero
+   * loads this form only when its own button is pressed). When `open` is set,
+   * no trigger button is rendered; `onClosed` runs when the dialog closes.
+   */
+  open?: boolean
+  onClosed?: () => void
+}
+
 export default function RequestDemo({
   triggerClassName = 'fixed right-4 bottom-4 z-40 rounded-full bg-teal-600 px-6 py-3 font-semibold text-white shadow-lg hover:bg-teal-700 sm:right-8 sm:bottom-8',
-}: { triggerClassName?: string } = {}) {
+  open,
+  onClosed,
+}: RequestDemoProps = {}) {
+  const controlled = open !== undefined
   const dialog = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const pending = useRef(false)
   const [status, setStatus] = useState<'idle' | 'sending' | 'success'>('idle')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const element = dialog.current
+    if (open && element && !element.open) element.showModal()
+  }, [open])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -62,19 +81,21 @@ export default function RequestDemo({
 
   return (
     <>
-      <button
-        ref={trigger}
-        type="button"
-        className={triggerClassName}
-        onClick={() => dialog.current?.showModal()}
-      >
-        Request a Demo
-      </button>
+      {!controlled && (
+        <button
+          ref={trigger}
+          type="button"
+          className={triggerClassName}
+          onClick={() => dialog.current?.showModal()}
+        >
+          Request a Demo
+        </button>
+      )}
       <dialog
         ref={dialog}
         aria-labelledby="request-demo-title"
         className="fixed m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl bg-white p-6 text-slate-900 shadow-2xl backdrop:bg-black/60 dark:bg-slate-900 dark:text-white"
-        onClose={() => trigger.current?.focus()}
+        onClose={() => (controlled ? onClosed?.() : trigger.current?.focus())}
       >
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 id="request-demo-title" className="text-xl font-semibold">
