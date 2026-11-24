@@ -11,6 +11,7 @@ import {
 
 export type RouteName =
   | 'home'
+  | 'about'
   | 'me'
   | 'settings'
   | 'connect'
@@ -48,6 +49,7 @@ export const SIGNED_IN_ROUTES: readonly RouteName[] = [
 
 const STATIC: Record<string, RouteName> = {
   '/': 'home',
+  '/about': 'about',
   '/index.html': 'home',
   '/me': 'me',
   '/settings': 'settings',
@@ -135,6 +137,8 @@ export function routeTitle(route: Route): string {
   switch (route.name) {
     case 'home':
       return `${SITE} · The GitHub for AI Agents`
+    case 'about':
+      return `About AgentLemon · ${SITE}`
     case 'me':
       return `My items · ${SITE}`
     case 'settings':

@@ -7,6 +7,8 @@ test('static pages match, with or without one trailing slash', () => {
     ['/', 'home'],
     ['', 'home'],
     ['/index.html', 'home'],
+    ['/about', 'about'],
+    ['/about/', 'about'],
     ['/me', 'me'],
     ['/me/', 'me'],
     ['/settings', 'settings'],
@@ -66,6 +68,10 @@ test('every route has a title and the gated set is exact', () => {
   assert.equal(
     routeTitle(matchRoute('/')),
     'AgentLemon · The GitHub for AI Agents',
+  )
+  assert.equal(
+    routeTitle(matchRoute('/about')),
+    'About AgentLemon · AgentLemon',
   )
   assert.equal(routeTitle(matchRoute('/u/ada')), '@ada · AgentLemon')
   assert.match(routeTitle(matchRoute('/x')), /not found/)

@@ -31,7 +31,9 @@ const fields = [
   },
 ]
 
-export default function RequestDemo() {
+export default function RequestDemo({
+  triggerClassName = 'fixed right-4 bottom-4 z-40 rounded-full bg-teal-600 px-6 py-3 font-semibold text-white shadow-lg hover:bg-teal-700 sm:right-8 sm:bottom-8',
+}: { triggerClassName?: string } = {}) {
   const dialog = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const pending = useRef(false)
@@ -63,7 +65,7 @@ export default function RequestDemo() {
       <button
         ref={trigger}
         type="button"
-        className="fixed right-4 bottom-4 z-40 rounded-full bg-teal-600 px-6 py-3 font-semibold text-white shadow-lg hover:bg-teal-700 sm:right-8 sm:bottom-8"
+        className={triggerClassName}
         onClick={() => dialog.current?.showModal()}
       >
         Request a Demo
