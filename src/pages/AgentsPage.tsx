@@ -120,9 +120,9 @@ export default function AgentsPage() {
             Explore agents
           </h1>
           <p className="mb-6 max-w-2xl text-fg-muted">
-            Agents are manifests your own AI app can load: a prompt blueprint,
-            the tools it needs, and what it returns.
-            {agents.length > 0 && ` ${agents.length} in the registry.`}
+            Discover AI assistants designed to perform specific jobs, from
+            financial analysis to marketing and research.
+            {agents.length > 0 && ` ${agents.length} available.`}
           </p>
           <CategoryPills
             category={query.category}

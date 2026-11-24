@@ -137,7 +137,7 @@ export function InstallDialog({
                   ))}
                 </select>
               </label>
-              <h4 className="text-sm font-semibold">1. Connect AgentLemon</h4>
+              <h4 className="text-sm font-semibold">1. MCP Connector (AI Connection)</h4>
               <p className="text-sm">{guidance[platform]}</p>
               <p className="text-xs text-fg-muted">
                 {account

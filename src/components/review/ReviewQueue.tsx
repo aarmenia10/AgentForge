@@ -373,7 +373,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
             <h4 className="mb-2 text-base font-semibold text-fg">
               {kind === 'edit'
                 ? 'The proposed version in full'
-                : 'The manifest in full'}
+                : 'Agent Details'}
             </h4>
             <ManifestView
               manifest={{ ...record, author: { ...record.author, verified } }}

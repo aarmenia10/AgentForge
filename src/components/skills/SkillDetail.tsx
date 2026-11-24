@@ -195,7 +195,7 @@ export function SkillDetail({
         </summary>
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <H className="text-lg font-semibold text-fg">SKILL.md</H>
+            <H className="text-lg font-semibold text-fg">Skill Instructions (SKILL.md)</H>
             {instructions && (
               <CopyButton
                 text={instructions.content}
@@ -214,18 +214,18 @@ export function SkillDetail({
               Loading the files…
             </p>
           ) : instructions ? (
-            <FileText text={instructions.content} label="Text of SKILL.md" />
+            <FileText text={instructions.content} label="Skill Instructions" />
           ) : null}
         </section>
 
         <section className="space-y-3">
           <H className="text-lg font-semibold text-fg">Other files</H>
           {others.length === 0 ? (
-            <p>This skill is a single SKILL.md file.</p>
+            <p>This skill contains only its instruction file.</p>
           ) : (
             <>
               <p>
-                SKILL.md says when to read each one. Open them one at a time.
+                The skill instructions explain when to read each file.
               </p>
               <ul className="space-y-2" aria-label="Other files">
                 {others.map((f) => (

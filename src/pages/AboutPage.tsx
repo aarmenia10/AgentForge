@@ -16,9 +16,9 @@ const secondary =
   'inline-flex items-center justify-center rounded-full border border-line px-5 py-3 text-sm font-semibold text-fg hover:bg-surface-2'
 
 const introduction =
-  'AgentLemon was created to make artificial intelligence accessible to everyone. Our platform makes it easy to discover, share, and download AI agents and skills that help individuals and businesses work smarter.'
+  'AgentLemon was created to make artificial intelligence accessible to everyone. Our platform makes it easy to discover, share, and download AI agents, skills, and councils that help individuals and businesses work smarter.'
 const comparison =
-  'An AI agent is your digital assistant. An AI skill teaches that assistant how to do a particular job.'
+  'An AI agent is your digital assistant. An AI skill teaches it a task. An AI council is a team of agents and skills that work together.'
 const enterprise =
   'AgentForce Enterprise gives companies a private space to upload, organize, and share AI agents and skills with their employees. Instead of every employee creating their own AI tools from scratch, teams can collaborate and reuse tools internally.'
 

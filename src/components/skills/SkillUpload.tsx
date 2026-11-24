@@ -284,8 +284,9 @@ export function SkillUpload({ editId }: { editId: string | null }) {
 
       <Section id={`${ids}-files`} title="1. Your skill">
         <p>
-          A skill is a folder with a <code className="font-mono">SKILL.md</code>{' '}
-          file at the top. Limits: 200 KB in all, 100 KB per file, 50 files,
+          Upload your skill instructions or write them here. Your main file
+          must be named <code className="font-mono">SKILL.md</code> when
+          uploading files. Limits: 200 KB total, 100 KB per file, 50 files,
           text only. Scripts are allowed only in private skills.
         </p>
         <div
@@ -381,7 +382,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
               htmlFor={`${ids}-text`}
               className="mb-1.5 block text-sm font-medium text-fg"
             >
-              SKILL.md
+              Skill Instructions
             </label>
             <textarea
               id={`${ids}-text`}
@@ -420,7 +421,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
               <code className="break-all font-mono">{front.name}</code>
             ) : (
               <span className="text-fg-muted">
-                Read from SKILL.md once it is added.
+                Read from your skill instructions once added.
               </span>
             )}
             <ProblemLines
@@ -431,7 +432,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
           <dd className="min-w-0 whitespace-pre-wrap break-words">
             {front?.description ?? (
               <span className="text-fg-muted">
-                Read from SKILL.md once it is added.
+                Read from your skill instructions once added.
               </span>
             )}
             <ProblemLines
@@ -451,7 +452,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
           hint={
             editing
               ? 'The id cannot change after the first save.'
-              : 'Part of the skill’s address. It starts as the name in SKILL.md.'
+              : 'Part of the skill’s address. It starts as the name in your skill instructions.'
           }
           problems={shownProblems('id').map((p) => p.message)}
         />

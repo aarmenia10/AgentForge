@@ -33,7 +33,7 @@ export function ExplorerToolbar({ query, onChange, onReset, resultCount }: Explo
         </label>
 
         <label className="flex items-center gap-2 text-sm text-fg-muted">
-          <span className="shrink-0">Framework</span>
+          <span className="shrink-0">AI Technology</span>
           <select
             value={query.framework}
             onChange={(event) =>
@@ -41,7 +41,7 @@ export function ExplorerToolbar({ query, onChange, onReset, resultCount }: Explo
             }
             className={cn(fieldClass, 'w-full lg:w-40 dark:[&>option]:bg-navy-900')}
           >
-            <option value="all">All frameworks</option>
+            <option value="all">All AI technologies</option>
             {AGENT_FRAMEWORKS.map((framework) => (
               <option key={framework} value={framework}>
                 {FRAMEWORK_LABELS[framework]}

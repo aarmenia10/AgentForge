@@ -16,7 +16,7 @@ export default function SkillUploadPage() {
         <p>
           {editId
             ? 'Change your skill, then save it.'
-            : 'Choose your skill folder or write SKILL.md here. No JSON needed.'}
+            : 'Upload your skill files or write your instructions here.'}
         </p>
         {/* Keyed so switching between skills, or from new to edit, starts fresh. */}
         <SkillUpload key={editId ?? 'new'} editId={editId} />

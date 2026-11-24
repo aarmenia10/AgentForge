@@ -88,7 +88,7 @@ export function MyAgents() {
         <p>You have not made an agent yet.</p>
         <p className="mt-2">
           <Link to="/studio" className={textLink}>
-            Build one in the Manifest Studio
+            Build one in the Agent Studio
           </Link>
           . It walks you through each part, and you choose who can see it.
         </p>

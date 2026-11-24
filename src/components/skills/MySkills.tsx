@@ -96,7 +96,7 @@ export function MySkills() {
           <Link to="/skills/new" className={textLink}>
             Upload a skill folder
           </Link>
-          , or write a SKILL.md on the page. You choose who can see it.
+          , or write your skill instructions on the page. You choose who can see it.
         </p>
       </div>
     )

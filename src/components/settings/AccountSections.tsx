@@ -107,7 +107,7 @@ export default function AccountSections() {
         <EmailSettings />
       </Section>
 
-      <Section id="settings-connector" title="Connector link">
+      <Section id="settings-connector" title="MCP Connector (AI Connection)">
         <ConnectorCard />
       </Section>
       <ConnectedApps />

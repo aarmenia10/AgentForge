@@ -65,10 +65,8 @@ export default function SkillsPage() {
               Skills
             </h1>
             <p className="mt-3 text-fg-muted">
-              A skill is a folder of instructions an AI follows for one kind of
-              job, with a SKILL.md at the top. Any AI app connected to
-              AgentLemon can load one, even apps with no skills feature of their
-              own.
+              Discover skills that teach your AI how to complete specific
+              tasks, from analyzing spreadsheets to writing emails.
             </p>
           </div>
           <Link to="/skills/new" className={primaryButton}>
