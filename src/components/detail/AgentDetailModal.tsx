@@ -31,8 +31,8 @@ import { SchemaViewer } from './SchemaViewer'
 type TabId = 'overview' | 'tools' | 'schema' | 'install'
 
 const TABS: readonly { id: TabId; label: string; icon: LucideIcon }[] = [
-  { id: 'overview', label: 'Overview', icon: FileText },
-  { id: 'tools', label: 'Tools & MCP', icon: Wrench },
+  { id: 'overview', label: 'Agent Details', icon: FileText },
+  { id: 'tools', label: 'Required Tools', icon: Wrench },
   { id: 'schema', label: 'Output Format', icon: Braces },
   { id: 'install', label: 'Advanced Options', icon: PlugZap },
 ]

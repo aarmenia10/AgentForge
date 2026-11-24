@@ -32,7 +32,7 @@ function rows(live: AgentManifest, edit: AgentManifest): Row[] {
     },
     { label: 'Visibility', before: live.visibility, after: edit.visibility },
     {
-      label: 'System prompt',
+      label: 'Agent Instructions',
       before: live.prompt_blueprint.system_prompt,
       after: edit.prompt_blueprint.system_prompt,
     },

@@ -72,7 +72,7 @@ export function ManifestView({
         </dl>
       </Block>
 
-      <Block title="System prompt">
+      <Block title="Agent Instructions">
         <p className="whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-4">
           {system_prompt}
         </p>
