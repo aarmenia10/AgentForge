@@ -4,12 +4,13 @@ import { TopNav } from './components/TopNav'
 import { GitHubIcon } from './components/ui'
 import { DEFAULT_QUERY, type CatalogQuery } from './lib/catalog'
 import { HomePage } from './pages/HomePage'
-import { useRoute } from './router/Router'
+import { Link, useRoute } from './router/Router'
 import type { RouteName } from './router/routes'
 
 // Every page but the home page is its own chunk. None of them, and nothing
 // that reaches Firebase, is in the startup bundle (tests/auth-ui.test.ts).
 const PAGES: Record<Exclude<RouteName, 'home'>, ComponentType> = {
+  about: lazy(() => import('./pages/AboutPage')),
   me: lazy(() => import('./pages/MePage')),
   settings: lazy(() => import('./pages/SettingsPage')),
   connect: lazy(() => import('./pages/ConnectPage')),
@@ -78,6 +79,9 @@ export default function App() {
       <footer className="mx-auto mb-4 w-full max-w-7xl px-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-3xl bg-surface px-6 py-6 text-sm text-fg-muted sm:rounded-4xl sm:px-8">
           <p>AgentLemon is open source under the MIT license.</p>
+          <Link to="/about" className="rounded-full hover:text-fg">
+            About AgentLemon
+          </Link>
           <a
             href="https://github.com/aarmenia10/AgentForge"
             target="_blank"
@@ -88,6 +92,9 @@ export default function App() {
             Source on GitHub
           </a>
         </div>
+        <p className="mt-4 text-center text-xs text-fg-muted">
+          An Aidan Armenia and Thomas Certo Production.
+        </p>
       </footer>
     </div>
   )
