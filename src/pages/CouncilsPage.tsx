@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { PageShell } from '@/components/PageShell'
 import { inputClass, textLink } from '@/components/studio/parts'
+import { queryCouncils } from '@/lib/councilSearch'
 import { Link } from '@/router/Router'
 import { publicCouncils } from '@/services/councilPublic'
 import type { CouncilIndexEntry } from '@/types/council'
@@ -23,21 +24,7 @@ export default function CouncilsPage() {
       active = false
     }
   }, [])
-  const terms = search.toLowerCase().trim().split(/\s+/)
-  const visible = entries?.filter(
-    ({ id, name, description, tags, members }) => {
-      const text = [
-        id,
-        name,
-        description,
-        ...tags,
-        ...members.flatMap(({ ref, role }) => [ref.id, role]),
-      ]
-        .join(' ')
-        .toLowerCase()
-      return terms.every((term) => text.includes(term))
-    },
-  )
+  const visible = entries ? queryCouncils(entries, search) : undefined
   return (
     <PageShell title="Councils">
       <div className="space-y-5">

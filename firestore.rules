@@ -455,7 +455,7 @@ service cloud.firestore {
           && request.auth.uid != get(agentPath(agentId)).data.owner_uid
           && validReport(request.resource.data)
           && request.resource.data.created_at == resource.data.created_at;
-        allow delete: if false;
+        allow delete: if isAdmin();
       }
     }
     match /skill_versions/{versionId} {
@@ -667,7 +667,7 @@ service cloud.firestore {
           && request.auth.uid != get(skillPath(skillId)).data.owner_uid
           && validReport(request.resource.data)
           && request.resource.data.created_at == resource.data.created_at;
-        allow delete: if false;
+        allow delete: if isAdmin();
       }
     }
     match /{path=**}/reports/{userId} {

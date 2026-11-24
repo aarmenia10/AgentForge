@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { smallButton } from '@/components/studio/parts'
 import { Link } from '@/router/Router'
-import { listReports, type ReportedItemSummary } from '@/services/ratings'
+import {
+  deleteItemReports,
+  listReports,
+  type ReportedItemSummary,
+} from '@/services/ratings'
 
 export function AdminReportsView() {
   const [reports, setReports] = useState<ReportedItemSummary[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [handlingKey, setHandlingKey] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -36,6 +43,32 @@ export function AdminReportsView() {
     }
   }, [])
 
+  async function markHandled(item: ReportedItemSummary) {
+    if (!window.confirm('Mark these reports handled? They will be removed.'))
+      return
+
+    const key = `${item.kind}:${item.id}`
+    setHandlingKey(key)
+    setActionError(null)
+    try {
+      const { getFirebaseServices } = await import('@/lib/firebase')
+      await deleteItemReports(getFirebaseServices().db, item.kind, item.id)
+      setReports(
+        (current) =>
+          current?.filter(
+            (reported) =>
+              reported.kind !== item.kind || reported.id !== item.id,
+          ) ?? null,
+      )
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'Could not mark reports handled.',
+      )
+    } finally {
+      setHandlingKey(null)
+    }
+  }
+
   if (loading) {
     return (
       <div
@@ -60,9 +93,15 @@ export function AdminReportsView() {
     <div className="space-y-4 pt-2">
       <p className="text-sm text-fg-muted">
         Reported items ordered by report count. Review reported items and take
-        down violating public submissions through the review queue. To clear
-        resolved reports, remove the report documents via the Firebase console.
+        down violating public submissions through the review queue. Mark
+        resolved reports handled to remove them.
       </p>
+
+      {actionError ? (
+        <p className="text-sm text-fg" role="alert">
+          {actionError}
+        </p>
+      ) : null}
 
       <ul className="space-y-3" aria-label="Reported items">
         {reports.map((item) => (
@@ -119,6 +158,21 @@ export function AdminReportsView() {
               >
                 View {item.kind}
               </Link>
+              <button
+                type="button"
+                className={smallButton}
+                disabled={handlingKey !== null}
+                onClick={() => markHandled(item)}
+              >
+                {handlingKey === `${item.kind}:${item.id}` ? (
+                  <>
+                    <Loader2 className="size-3 animate-spin" />
+                    Handling…
+                  </>
+                ) : (
+                  'Mark handled'
+                )}
+              </button>
             </div>
           </li>
         ))}

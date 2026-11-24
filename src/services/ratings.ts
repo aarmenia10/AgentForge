@@ -408,6 +408,27 @@ export async function listReports(
 }
 
 /**
+ * Deletes all reports for an item in bounded batches.
+ */
+export async function deleteItemReports(
+  db: Firestore,
+  kind: ItemKind,
+  itemId: string,
+): Promise<void> {
+  const { collection, query, limit, getDocs, writeBatch } = await fs()
+  const reportsRef = collection(db, collectionName(kind), itemId, 'reports')
+
+  while (true) {
+    const snapshot = await getDocs(query(reportsRef, limit(50)))
+    if (snapshot.empty) return
+
+    const batch = writeBatch(db)
+    for (const report of snapshot.docs) batch.delete(report.ref)
+    await batch.commit()
+  }
+}
+
+/**
  * Net score (thumbs_up minus thumbs_down) sort comparator per docs/RATINGS.md §7.
  */
 export function topRatedSort<
