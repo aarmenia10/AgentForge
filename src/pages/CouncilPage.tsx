@@ -218,7 +218,7 @@ export default function CouncilPage() {
               connectedText={prompt}
               account={!view.public}
               restricted={!view.public}
-              limitation="Includes the exact pinned members and coordination instructions. AI apps without separate agents may simulate their roles; external tools require integrations."
+              limitation="Includes council members and instructions for working together. AI apps without separate agents may simulate their roles; external tools require integrations."
             />
             {view.public && (
               <button
@@ -332,12 +332,12 @@ export default function CouncilPage() {
             {error}
           </p>
         )}
-        <section className="space-y-3" aria-label="Members">
-          <h2 className="text-lg font-semibold">Members</h2>
+        <section className="space-y-3" aria-label="Council Members">
+          <h2 className="text-lg font-semibold">Council Members</h2>
           <CouncilRoster members={council.members} details={details} />
         </section>
-        <section className="space-y-3" aria-label="Coordination instructions">
-          <h2 className="text-lg font-semibold">Coordination instructions</h2>
+        <section className="space-y-3" aria-label="How the Council Works">
+          <h2 className="text-lg font-semibold">How the Council Works</h2>
           <pre className="whitespace-pre-wrap break-words rounded-3xl bg-surface p-5 text-sm">
             {council.instructions}
           </pre>

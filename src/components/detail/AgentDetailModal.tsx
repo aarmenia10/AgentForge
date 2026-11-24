@@ -31,9 +31,9 @@ import { SchemaViewer } from './SchemaViewer'
 type TabId = 'overview' | 'tools' | 'schema' | 'install'
 
 const TABS: readonly { id: TabId; label: string; icon: LucideIcon }[] = [
-  { id: 'overview', label: 'Overview', icon: FileText },
-  { id: 'tools', label: 'Tools & MCP', icon: Wrench },
-  { id: 'schema', label: 'Schema Contract', icon: Braces },
+  { id: 'overview', label: 'Agent Details', icon: FileText },
+  { id: 'tools', label: 'Required Tools', icon: Wrench },
+  { id: 'schema', label: 'Output Format', icon: Braces },
   { id: 'install', label: 'Advanced Options', icon: PlugZap },
 ]
 
@@ -312,8 +312,8 @@ function OverviewPanel({
 
       <section>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold">System prompt</h3>
-          <CopyButton text={system_prompt} label="Copy prompt" />
+          <h3 className="text-sm font-semibold">Agent Instructions</h3>
+          <CopyButton text={system_prompt} label="Copy Agent Instructions" />
         </div>
         <blockquote className="rounded-2xl border-l-2 border-accent bg-page p-4 text-sm leading-relaxed text-fg">
           {system_prompt}
@@ -323,7 +323,7 @@ function OverviewPanel({
       <section>
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
           <ListChecks className="size-4 text-accent-fg" />
-          How it reasons, step by step
+          How the agent works, step by step
         </h3>
         <ol className="space-y-2.5">
           {instructions.map((step, index) => (
@@ -341,7 +341,7 @@ function OverviewPanel({
         <section>
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <ShieldCheck className="size-4 text-accent-fg" />
-            Verification rules
+            How it checks its work
           </h3>
           <ul className="space-y-2">
             {verification_rules.map((rule, index) => (

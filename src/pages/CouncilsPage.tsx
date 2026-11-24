@@ -35,8 +35,8 @@ export default function CouncilsPage() {
     <PageShell title="Councils">
       <div className="space-y-5">
         <p>
-          Find teams of agents and skills with pinned versions, defined roles,
-          and instructions for working together.
+          Discover teams of AI agents and skills that work together to complete
+          more complex tasks.
         </p>
         <label className="block max-w-lg space-y-1">
           <span>Search councils</span>

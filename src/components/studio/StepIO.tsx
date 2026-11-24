@@ -24,7 +24,7 @@ export function StepIO(props: StepProps) {
         {...props}
         root="input_schema"
         title="Input"
-        intro="What the person gives the agent. Each field becomes part of the input’s JSON Schema."
+        intro="Choose what information the agent needs to do its job."
         value={draft.input}
         onChange={(input) => update({ input })}
       />

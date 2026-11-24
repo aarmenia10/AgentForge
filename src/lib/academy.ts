@@ -75,7 +75,7 @@ export const ACADEMY_STEPS: readonly AcademyStep[] = [
       'If ChatGPT still shows Apps, go to Apps in Settings or Workspace settings. Choose Create. Paste the link. Choose OAuth, then Scan Tools. Sign in to AgentLemon. Choose Create.',
       'In other apps, look for Connectors in Settings. Some apps only allow custom connectors on paid plans. Claude’s free plan allows one.',
     ],
-    copy: { label: 'Copy the connector link', text: ACADEMY_CONNECTOR_URL },
+    copy: { label: 'Copy the connection link', text: ACADEMY_CONNECTOR_URL },
   },
   {
     id: 'agent',
