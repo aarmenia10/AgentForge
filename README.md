@@ -59,7 +59,7 @@ Verified by the orchestrator on 2026-11-17 at the P2-17 merge: `npm run lint`, `
 | Firestore | Database `(default)`, location `nam5`, currently empty |
 | MCP server install | `npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.4.tgz`. Not on the npm registry, by decision |
 | Remote connector | https://agentlemon-connector.lesslimit.workers.dev/mcp (Cloudflare Workers, free plan, account subdomain `lesslimit`). The old Worker at `agentforge-connector.lesslimit.workers.dev` keeps running, undeployed, until nobody uses it |
-| Repository | `aarmenia10/AgentForge`, default branch `main` |
+| Repository | `aarmenia10/AgentLemon` (renamed from `aarmenia10/AgentForge` on 2026-11-24; GitHub redirects the old address), default branch `main` |
 
 ---
 
@@ -511,7 +511,7 @@ The local server needs Node and a terminal, and cannot run on a phone or in a we
 - **Data.** Public tools read `catalog.json` and `skills.json` from Hosting, cached for a few minutes, with a bundled agent snapshot as fallback. Pins are fetched from version files and validated for exact id and version. Account tools use Firestore's REST API with the user's token.
 - **Cost.** Public calls cost no Firestore reads. An account call costs one read for the revocation check plus what it reads; a save about three reads and one write; a token refresh about once an hour per active connection. See `docs/CONNECTOR_AUTH.md` section 8.
 - **Limits.** 100,000 requests a day on the free plan, shared by both addresses; past that the connector stops until midnight UTC. No setting may convert overage into charges, and Firebase Authentication is never upgraded to Identity Platform.
-- **Hourly export trigger.** GitHub fires `ci.yml`'s hourly schedule only about every eight hours, so a Workers cron trigger (`17 * * * *`, set in `wrangler.toml`) calls GitHub's `workflow_dispatch` API for `ci.yml` once an hour with `scheduled=true`; CI treats that run exactly like a scheduled one. The GitHub schedule stays as a backup. The operator secret `GITHUB_DISPATCH_TOKEN` (a token that may start workflows in this repository) is set by the owner in Cloudflare, never committed. Without it the handler does nothing, so deploys and `/mcp` are unaffected. The repository comes from the plain variable `GITHUB_REPO` (`aarmenia10/AgentForge`) in `wrangler.toml`. No binding is involved, nothing is stored, and a failure logs only the HTTP status code. Logic: `packages/connector/src/exportTrigger.ts`.
+- **Hourly export trigger.** GitHub fires `ci.yml`'s hourly schedule only about every eight hours, so a Workers cron trigger (`17 * * * *`, set in `wrangler.toml`) calls GitHub's `workflow_dispatch` API for `ci.yml` once an hour with `scheduled=true`; CI treats that run exactly like a scheduled one. The GitHub schedule stays as a backup. The operator secret `GITHUB_DISPATCH_TOKEN` (a token that may start workflows in this repository) is set by the owner in Cloudflare, never committed. Without it the handler does nothing, so deploys and `/mcp` are unaffected. The repository comes from the plain variable `GITHUB_REPO` (`aarmenia10/AgentLemon`) in `wrangler.toml`. No binding is involved, nothing is stored, and a failure logs only the HTTP status code. Logic: `packages/connector/src/exportTrigger.ts`.
 - **Listing.** Adding either address as a custom connector works now. A vendor's built-in directory needs that vendor's review, later.
 
 ## 8. Who does what
