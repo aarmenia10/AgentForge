@@ -141,8 +141,8 @@ export function HeroAtom({ items }: HeroAtomProps) {
       aria-label="Agents and skills orbiting the Council"
       className={
         stage
-          ? 'mx-auto w-full max-w-[min(100%,62svh)] overflow-hidden rounded-[2rem] px-2 pb-4 sm:max-w-[34rem] lg:max-w-[38rem]'
-          : 'mx-auto w-full max-w-[min(100%,60svh)] sm:max-w-[34rem] lg:w-[calc(100%+5rem)] lg:max-w-[46rem] lg:-translate-x-6'
+          ? 'mx-auto w-full max-w-[min(100%,36svh)] overflow-hidden rounded-[2rem] px-2 pb-4 sm:max-w-[34rem] lg:max-w-[38rem]'
+          : 'mx-auto w-full max-w-[min(100%,34svh)] sm:max-w-[34rem] lg:w-[calc(100%+5rem)] lg:max-w-[46rem] lg:-translate-x-6'
       }
       style={
         stage
