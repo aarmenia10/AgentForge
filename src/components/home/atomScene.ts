@@ -671,42 +671,95 @@ export function createAtom(options: AtomOptions): AtomController {
 
   // ------------------------------------------------------------- post
 
-  // Half-float buffers keep the glow smooth, but some phone browsers cannot
-  // draw into them (Safari on iPhone among them), and multisampled float
-  // buffers fail on more. Without support, use ordinary 8-bit buffers; phones
-  // skip multisampling. Whatever happens, verifyFirstFrame() below falls back
-  // to the static atom rather than leave a blank square.
+  // Graphics drivers differ in what they can draw into, and some fail
+  // silently: on an Intel Iris Xe laptop (Windows, Direct3D 11) the first
+  // setting below produced a fully empty picture with no error. So the scene
+  // starts with the best setting and, if the draw check finds nothing on
+  // screen, steps down to the next one, rebuilding only the post-processing.
+  // Half-float buffers keep the glow smooth but need EXT_color_buffer_float;
+  // multisampling antialiases the thin orbits (never on phones); the last
+  // step draws straight to the canvas with no post-processing at all.
   const floatTargets =
     renderer.capabilities.isWebGL2 &&
     renderer.extensions.has('EXT_color_buffer_float')
-  const targetType = floatTargets ? HalfFloatType : UnsignedByteType
-  const composer = new EffectComposer(
-    renderer,
-    new WebGLRenderTarget(1, 1, { type: targetType }),
-  )
-  // Only the buffer the scene and the bloom draw into is multisampled (it
-  // antialiases the thin orbits); the later passes use plain buffers. Two
-  // passes swap buffers each frame (output, alpha), an even number, so this
-  // stays the read buffer the scene renders into.
-  const sceneTarget = new WebGLRenderTarget(1, 1, {
-    type: targetType,
-    samples: phone || !floatTargets ? 0 : 4,
-  })
-  composer.renderTarget2.dispose()
-  composer.renderTarget2 = sceneTarget
-  composer.readBuffer = sceneTarget
-  composer.addPass(new RenderPass(scene, camera))
-  const bloom = new UnrealBloomPass(new Vector2(1, 1), 0.5, 0.42, 0.82)
-  // The bloom already starts at half resolution; phones halve it again.
-  const bloomSetSize = bloom.setSize.bind(bloom)
-  const bloomScale = phone ? 0.5 : 1
-  bloom.setSize = (w: number, h: number) =>
-    bloomSetSize(Math.max(1, w * bloomScale), Math.max(1, h * bloomScale))
-  // The bloom pass keeps its own half-float buffers, so skip it without them.
-  bloom.enabled = floatTargets
-  composer.addPass(bloom)
-  composer.addPass(new OutputPass())
-  composer.addPass(new ShaderPass(ALPHA_SHADER))
+  interface Quality {
+    label: string
+    float: boolean
+    samples: number
+    bloom: boolean
+    post: boolean
+  }
+  const ladder: Quality[] = [
+    ...(floatTargets && !phone
+      ? [
+          {
+            label: 'float + msaa',
+            float: true,
+            samples: 4,
+            bloom: true,
+            post: true,
+          },
+        ]
+      : []),
+    ...(floatTargets
+      ? [{ label: 'float', float: true, samples: 0, bloom: true, post: true }]
+      : []),
+    {
+      label: '8-bit, no bloom',
+      float: false,
+      samples: 0,
+      bloom: false,
+      post: true,
+    },
+    { label: 'direct', float: false, samples: 0, bloom: false, post: false },
+  ]
+  let level = 0
+
+  function buildComposer(quality: Quality): EffectComposer | null {
+    if (!quality.post) return null
+    const type = quality.float ? HalfFloatType : UnsignedByteType
+    const built = new EffectComposer(
+      renderer,
+      new WebGLRenderTarget(1, 1, { type }),
+    )
+    // Only the buffer the scene and the bloom draw into may be multisampled
+    // (it antialiases the thin orbits); the later passes use plain buffers.
+    // Two passes swap buffers each frame (output, alpha), an even number, so
+    // this stays the read buffer the scene renders into.
+    const sceneTarget = new WebGLRenderTarget(1, 1, {
+      type,
+      samples: quality.samples,
+    })
+    built.renderTarget2.dispose()
+    built.renderTarget2 = sceneTarget
+    built.readBuffer = sceneTarget
+    built.addPass(new RenderPass(scene, camera))
+    if (quality.bloom) {
+      const bloom = new UnrealBloomPass(new Vector2(1, 1), 0.5, 0.42, 0.82)
+      // The bloom already starts at half resolution; phones halve it again.
+      const bloomSetSize = bloom.setSize.bind(bloom)
+      const bloomScale = phone ? 0.5 : 1
+      bloom.setSize = (w: number, h: number) =>
+        bloomSetSize(Math.max(1, w * bloomScale), Math.max(1, h * bloomScale))
+      built.addPass(bloom)
+    }
+    built.addPass(new OutputPass())
+    built.addPass(new ShaderPass(ALPHA_SHADER))
+    return built
+  }
+
+  function disposeComposer(old: EffectComposer | null) {
+    if (!old) return
+    for (const pass of old.passes) pass.dispose()
+    old.dispose()
+  }
+
+  let composer = buildComposer(ladder[level])
+
+  function draw(dt: number) {
+    if (composer) composer.render(dt)
+    else renderer.render(scene, camera)
+  }
 
   // ------------------------------------------------------------- colors
 
@@ -883,8 +936,8 @@ export function createAtom(options: AtomOptions): AtomController {
     const ratio = Math.min(window.devicePixelRatio || 1, pixelRatioCap)
     renderer.setPixelRatio(ratio)
     renderer.setSize(width, height, false)
-    composer.setPixelRatio(ratio)
-    composer.setSize(width, height)
+    composer?.setPixelRatio(ratio)
+    composer?.setSize(width, height)
     camera.aspect = width / height
     // Keep the whole atom in view when the box is wider than tall or the reverse.
     camera.fov =
@@ -1060,7 +1113,7 @@ export function createAtom(options: AtomOptions): AtomController {
     }
     time += dt
     update(dt)
-    composer.render(dt)
+    draw(dt)
     if (!verified && ++renderedFrames >= 10) verifyFirstFrame()
   }
 
@@ -1082,7 +1135,7 @@ export function createAtom(options: AtomOptions): AtomController {
       const debugInfo = gl.getExtension('WEBGL_debug_renderer_info')
       info.push(
         `renderer: ${String(gl.getParameter(debugInfo ? debugInfo.UNMASKED_RENDERER_WEBGL : gl.RENDERER))}`,
-        `webgl2: ${renderer.capabilities.isWebGL2}, float buffers: ${floatTargets}, phone: ${phone}`,
+        `webgl2: ${renderer.capabilities.isWebGL2}, float buffers: ${floatTargets}, phone: ${phone}, quality: ${ladder[level].label}`,
         `buffer: ${gl.drawingBufferWidth}x${gl.drawingBufferHeight}, pixel ratio: ${renderer.getPixelRatio()}`,
       )
       renderer.setRenderTarget(null)
@@ -1103,11 +1156,26 @@ export function createAtom(options: AtomOptions): AtomController {
         : `draw check: ${drawn} pixels drawn, max alpha ${maxAlpha}`,
       `gl error: ${gl.getError()}, context lost: ${gl.isContextLost()}`,
     )
-    onInfo?.(info)
     // An unreadable frame is not proof of failure: keep the atom.
-    if (error || drawn > 0) return
+    if (error || drawn > 0) {
+      onInfo?.(info)
+      return
+    }
+    if (level < ladder.length - 1) {
+      // Nothing on screen: try the next, simpler setting and check again.
+      level++
+      info.push(`nothing drawn: trying quality "${ladder[level].label}"`)
+      onInfo?.(info)
+      disposeComposer(composer)
+      composer = buildComposer(ladder[level])
+      size()
+      verified = false
+      renderedFrames = 0
+      return
+    }
+    onInfo?.(info)
     stop()
-    onLost('nothing was drawn')
+    onLost('nothing was drawn at any quality')
   }
 
   function start() {
@@ -1125,7 +1193,7 @@ export function createAtom(options: AtomOptions): AtomController {
 
   function renderStill() {
     update(0)
-    composer.render(0)
+    draw(0)
   }
 
   // Render only while the tab is visible and the atom is on screen.
@@ -1187,8 +1255,7 @@ export function createAtom(options: AtomOptions): AtomController {
       nucleons.dispose()
       for (const texture of Object.values(textures)) texture.dispose()
       envTarget.dispose()
-      for (const pass of composer.passes) pass.dispose()
-      composer.dispose()
+      disposeComposer(composer)
       renderer.dispose()
       renderer.forceContextLoss()
     },
