@@ -83,7 +83,7 @@ export default function App() {
             About AgentLemon
           </Link>
           <a
-            href="https://github.com/aarmenia10/AgentForge"
+            href="https://github.com/aarmenia10/AgentLemon"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 rounded-full hover:text-fg"

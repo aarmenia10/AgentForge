@@ -8,10 +8,10 @@ import {
 
 const TOKEN = 'ghp_test_token_value_that_must_never_be_logged'
 const URL_OF_CI =
-  'https://api.github.com/repos/aarmenia10/AgentForge/actions/workflows/ci.yml/dispatches'
+  'https://api.github.com/repos/aarmenia10/AgentLemon/actions/workflows/ci.yml/dispatches'
 const env: ExportTriggerEnv = {
   GITHUB_DISPATCH_TOKEN: TOKEN,
-  GITHUB_REPO: 'aarmenia10/AgentForge',
+  GITHUB_REPO: 'aarmenia10/AgentLemon',
 }
 
 interface Call {
@@ -168,7 +168,7 @@ test('wrangler.toml has one cron at minute 17 and no bindings', async () => {
 
   assert.deepEqual(settings.match(/crons\s*=.*/g), ['crons = ["17 * * * *"]'])
   assert.match(settings, /^\[triggers\]$/m)
-  assert.match(settings, /^GITHUB_REPO = "aarmenia10\/AgentForge"$/m)
+  assert.match(settings, /^GITHUB_REPO = "aarmenia10\/AgentLemon"$/m)
 
   // Only these tables may exist. Any binding needs its own table or array.
   assert.deepEqual(settings.match(/^\[.*\]$/gm), [
@@ -182,7 +182,7 @@ test('wrangler.toml has one cron at minute 17 and no bindings', async () => {
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean),
-    ['GITHUB_REPO = "aarmenia10/AgentForge"'],
+    ['GITHUB_REPO = "aarmenia10/AgentLemon"'],
   )
   // A token must never be committed.
   assert.doesNotMatch(settings, /GITHUB_DISPATCH_TOKEN|ghp_|github_pat_/)

@@ -11,7 +11,7 @@ preview_urls = false
 # Hourly export trigger (README section 7.6). Plain variable, not a binding.
 # The secret GITHUB_DISPATCH_TOKEN is set by the owner in Cloudflare, never here.
 [vars]
-GITHUB_REPO = "aarmenia10/AgentForge"
+GITHUB_REPO = "aarmenia10/AgentLemon"
 
 [triggers]
 crons = ["17 * * * *"]
