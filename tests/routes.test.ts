@@ -69,7 +69,10 @@ test('every route has a title and the gated set is exact', () => {
     routeTitle(matchRoute('/')),
     'AgentLemon · The GitHub for AI Agents',
   )
-  assert.equal(routeTitle(matchRoute('/about')), 'About AgentLemon · AgentLemon')
+  assert.equal(
+    routeTitle(matchRoute('/about')),
+    'About AgentLemon · AgentLemon',
+  )
   assert.equal(routeTitle(matchRoute('/u/ada')), '@ada · AgentLemon')
   assert.match(routeTitle(matchRoute('/x')), /not found/)
   assert.equal(routeTitle(matchRoute('/friends')), 'Friends · AgentLemon')
