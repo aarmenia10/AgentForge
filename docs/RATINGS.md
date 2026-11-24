@@ -615,7 +615,7 @@ Each row shows:
 - Report count and the breakdown by reason
 - A link to the item's detail view
 - A link to the item's review page (for takedown)
-- A "Clear reports" button (deletes all report documents for the item — Admin SDK operation, not available in browser rules; for the first version this is a note to the admin to use the Firebase console or a future admin tool)
+- A "Mark handled" button (built 2026-11-24, PR #53): deletes all report documents for the item in batches of 50. The rules allow report deletes for admins only
 
 **First-version limitation:** the browser client cannot delete report documents (rules deny it). The admin view is read-only except through the existing review/takedown flow. A future admin tool will add the clear button.
 
