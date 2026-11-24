@@ -179,6 +179,7 @@ export function CopyButton({
             : tone === 'surface' &&
               'bg-slate-900/5 text-slate-700 hover:bg-slate-900/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15',
         copied && tone === 'onDark' && 'text-emerald-300',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lm-accent-text)]',
       )}
     >
       {copied ? (

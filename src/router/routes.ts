@@ -30,6 +30,7 @@ export type RouteName =
   | 'enterprise'
   | 'demo-requests'
   | 'suggestions'
+  | 'academy'
   | 'not-found'
 
 export interface Route {
@@ -69,6 +70,7 @@ const STATIC: Record<string, RouteName> = {
   // Matched before /skills/<id>, so "new" can never be a skill's page.
   '/skills/new': 'skill-upload',
   '/suggestions': 'suggestions',
+  '/academy': 'academy',
   '/enterprise': 'enterprise',
   '/admin/demo-requests': 'demo-requests',
 }
@@ -197,6 +199,8 @@ export function routeTitle(route: Route): string {
       return `AgentForce Enterprise · ${SITE}`
     case 'suggestions':
       return `Suggestions · ${SITE}`
+    case 'academy':
+      return `AI made simple · ${SITE}`
     case 'not-found':
       return `Page not found · ${SITE}`
   }

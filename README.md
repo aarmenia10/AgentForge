@@ -555,7 +555,6 @@ What is being built right now. One row per claim. Add yours before you start and
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
 | Academy content | Aidan | Codex | `task/academy-content` | `src/lib/academy.ts` (owns it), `tests/academy.test.ts`, `docs/ACADEMY.md` | 2026-11-24 |
-| Academy page | Aidan | Copilot | `copilot/academy-page` | New `src/pages/AcademyPage.tsx` and `src/components/academy/`, route, top bar and sidebar link, welcome dialog's last step | 2026-11-24 |
 
 ### 8.2 Ideas inbox
 

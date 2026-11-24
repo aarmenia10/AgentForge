@@ -91,6 +91,13 @@ export function WelcomeDialog({
               Three things worth doing now. All are optional, and you can find
               them later in Settings.
             </p>
+            <p className="mt-2 text-sm text-fg-muted">
+              New to this? Take the{' '}
+              <Link to="/academy" onClick={onClose} className={textLink}>
+                10-minute Academy
+              </Link>
+              .
+            </p>
           </div>
           <button
             type="button"
@@ -150,7 +157,7 @@ export function WelcomeDialog({
             <PreferencesStep
               onDone={(savedAnswers) => {
                 onClose()
-                if (savedAnswers) go('/suggestions')
+                if (savedAnswers) go('/academy')
               }}
             />
           </section>
