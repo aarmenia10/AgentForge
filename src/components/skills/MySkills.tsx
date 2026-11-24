@@ -42,12 +42,20 @@ export function skillBlockers(record: SkillRecord): {
 }
 
 /** The signed-in user's skills, 20 to a page, beside their agents on /me. */
-export function MySkills() {
+export function MySkills({
+  onCount,
+}: {
+  onCount?: (count: number, hasMore: boolean, loading: boolean) => void
+} = {}) {
   const [items, setItems] = useState<SkillRecord[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [edits, setEdits] = useState<Map<string, SkillRecord>>(new Map())
+
+  useEffect(() => {
+    onCount?.(items.length, Boolean(cursor), loading)
+  }, [cursor, items.length, loading, onCount])
 
   const loadPage = useCallback(async (after?: string) => {
     setLoading(true)
@@ -108,7 +116,7 @@ export function MySkills() {
           {error}
         </Notice>
       )}
-      <ul className="space-y-3">
+      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {items.map((record) => (
           <SkillRow
             key={record.id}
@@ -231,7 +239,7 @@ export function SkillRow({
   }
 
   return (
-    <li className="rounded-3xl bg-surface p-5">
+    <li className="h-full rounded-3xl bg-surface p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="min-w-0 break-words text-base font-semibold text-fg">
           {record.name}
@@ -241,7 +249,10 @@ export function SkillRow({
         </span>
       </div>
       <p className="break-all font-mono text-xs text-fg-muted">{record.id}</p>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+      <p className="mt-2 line-clamp-3 text-sm text-fg-muted">
+        {record.description}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
         <StatusText tone="indigo">Skill</StatusText>
         <VisibilityLabel visibility={record.visibility} />
         <SkillReviewLabel record={record} />

@@ -15,12 +15,23 @@ async function page(owner?: string, after?: string) {
   return owner ? store.listShared(owner, after) : store.listMine(after)
 }
 
-export function MyCouncils({ owner }: { owner?: string }) {
+export function MyCouncils({
+  owner,
+  onCount,
+}: {
+  owner?: string
+  onCount?: (count: number, hasMore: boolean, loading: boolean) => void
+}) {
   const [items, setItems] = useState<CouncilRecord[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
   const [deleting, setDeleting] = useState<string | null>(null)
+
+  useEffect(() => {
+    onCount?.(items.length, Boolean(cursor), busy)
+  }, [busy, cursor, items.length, onCount])
+
   useEffect(() => {
     let active = true
     page(owner)
@@ -93,42 +104,58 @@ export function MyCouncils({ owner }: { owner?: string }) {
             : 'Export a council from a connected AI app or save a public council to see it here.'}
         </p>
       )}
-      {items.map((item) => (
-        <article
-          key={item.id}
-          className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-surface p-5"
-        >
-          <div className="min-w-0">
-            <Link
-              to={'/councils/' + item.id + (owner ? '?shared=1' : '?mine=1')}
-              className={textLink}
-            >
-              {item.name}
-            </Link>
-            <p className="break-all text-xs">
-              {item.id}@{item.version} · {item.members.length} members
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <VisibilityLabel visibility={item.visibility} />
-            {item.visibility === 'public' && <span>{item.review_status}</span>}
-            {originLabel(item.origin_app, item.saved_from_chat) && (
-              <span>{originLabel(item.origin_app, item.saved_from_chat)}</span>
-            )}
-            {!owner && (
-              <button
-                type="button"
-                className={smallButton}
-                disabled={deleting !== null}
-                onClick={() => void remove(item)}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {items.map((item) => (
+          <article key={item.id} className="h-full rounded-3xl bg-surface p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <Link
+                to={'/councils/' + item.id + (owner ? '?shared=1' : '?mine=1')}
+                className={`${textLink} break-words font-semibold`}
               >
-                Delete
-                <span className="sr-only"> {item.name}</span>
-              </button>
+                {item.name}
+              </Link>
+              <span className="font-mono text-xs text-fg-muted">
+                v{item.version}
+              </span>
+            </div>
+            <p className="mt-1 break-all font-mono text-xs text-fg-muted">
+              {item.id} · {item.members.length} members
+            </p>
+            <p className="mt-2 line-clamp-3 text-sm text-fg-muted">
+              {item.description}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-fg-muted">
+                Council
+              </span>
+              <VisibilityLabel visibility={item.visibility} />
+              {item.visibility === 'public' && (
+                <span className="text-sm text-fg-muted">
+                  {item.review_status}
+                </span>
+              )}
+              {originLabel(item.origin_app, item.saved_from_chat) && (
+                <span className="text-sm text-fg-muted">
+                  {originLabel(item.origin_app, item.saved_from_chat)}
+                </span>
+              )}
+            </div>
+            {!owner && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  className={smallButton}
+                  disabled={deleting !== null}
+                  onClick={() => void remove(item)}
+                >
+                  Delete
+                  <span className="sr-only"> {item.name}</span>
+                </button>
+              </div>
             )}
-          </div>
-        </article>
-      ))}
+          </article>
+        ))}
+      </div>
       {busy && <p role="status">Loading councils…</p>}
       {cursor && (
         <button
