@@ -351,6 +351,8 @@ export function createAtom(options: AtomOptions): AtomController {
     (window.matchMedia?.('(pointer: coarse)').matches ?? false) ||
     window.innerWidth < 640
   const maxPixelRatio = phone ? 1.5 : 2
+  // Lowered at run time if frames are slow (see frame()).
+  let pixelRatioCap = maxPixelRatio
 
   const renderer = new WebGLRenderer({
     canvas,
@@ -666,11 +668,21 @@ export function createAtom(options: AtomOptions): AtomController {
 
   // ------------------------------------------------------------- post
 
-  const target = new WebGLRenderTarget(1, 1, {
+  const composer = new EffectComposer(
+    renderer,
+    new WebGLRenderTarget(1, 1, { type: HalfFloatType }),
+  )
+  // Only the buffer the scene and the bloom draw into is multisampled (it
+  // antialiases the thin orbits); the later passes use plain buffers. Two
+  // passes swap buffers each frame (output, alpha), an even number, so this
+  // stays the read buffer the scene renders into.
+  const sceneTarget = new WebGLRenderTarget(1, 1, {
     type: HalfFloatType,
     samples: 4,
   })
-  const composer = new EffectComposer(renderer, target)
+  composer.renderTarget2.dispose()
+  composer.renderTarget2 = sceneTarget
+  composer.readBuffer = sceneTarget
   composer.addPass(new RenderPass(scene, camera))
   const bloom = new UnrealBloomPass(new Vector2(1, 1), 0.5, 0.42, 0.82)
   // The bloom already starts at half resolution; phones halve it again.
@@ -854,7 +866,7 @@ export function createAtom(options: AtomOptions): AtomController {
   function size() {
     const width = Math.max(1, box.clientWidth)
     const height = Math.max(1, box.clientHeight)
-    const ratio = Math.min(window.devicePixelRatio || 1, maxPixelRatio)
+    const ratio = Math.min(window.devicePixelRatio || 1, pixelRatioCap)
     renderer.setPixelRatio(ratio)
     renderer.setSize(width, height, false)
     composer.setPixelRatio(ratio)
@@ -1013,10 +1025,25 @@ export function createAtom(options: AtomOptions): AtomController {
     placeLabel(active)
   }
 
+  // Adaptive quality: over each run of 90 frames, if most took longer than
+  // 1/40 s, render at a lower pixel ratio (half a step at a time, down to 1).
+  let sampled = 0
+  let slow = 0
+
   function frame(now: number) {
     raf = requestAnimationFrame(frame)
-    const dt = Math.min(0.05, (now - last) / 1000)
+    const raw = (now - last) / 1000
+    const dt = Math.min(0.05, raw)
     last = now
+    sampled++
+    if (raw > 1 / 40) slow++
+    if (sampled === 90) {
+      if (slow > 60 && pixelRatioCap > 1) {
+        pixelRatioCap = Math.max(1, pixelRatioCap - 0.5)
+        size()
+      }
+      sampled = slow = 0
+    }
     time += dt
     update(dt)
     composer.render(dt)
@@ -1025,6 +1052,7 @@ export function createAtom(options: AtomOptions): AtomController {
   function start() {
     if (running) return
     running = true
+    sampled = slow = 0
     last = performance.now()
     raf = requestAnimationFrame(frame)
   }
@@ -1100,7 +1128,6 @@ export function createAtom(options: AtomOptions): AtomController {
       envTarget.dispose()
       for (const pass of composer.passes) pass.dispose()
       composer.dispose()
-      target.dispose()
       renderer.dispose()
       renderer.forceContextLoss()
     },
