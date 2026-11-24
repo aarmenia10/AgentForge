@@ -2,9 +2,14 @@
  * Colors of the home page atom, derived from the Appearance variables so every
  * background and accent choice works. Pure: no React and no DOM.
  *
- * The nucleus is the accent. Skills use the page text color. Agents use a hue
- * turned away from the accent, kept at 3:1 contrast against the background
- * (WCAG non-text contrast) and clearly different from both of the others.
+ * The atom is always drawn on a dark stage, because glow does not read on a
+ * light page: in dark mode the stage is the page itself, in light mode it is a
+ * dark rounded panel. So every scene color is chosen against the stage.
+ *
+ * The nucleus is warm (the accent, a deeper neighbour of it, and a glossy
+ * graphite). Agents get a hue turned away from the accent; skills are a cool
+ * white. Orbits come in two tones: a pale version of the agent hue and a pale
+ * version of the accent.
  */
 import {
   contrast,
@@ -16,20 +21,27 @@ import {
 } from './appearance'
 
 export interface AtomPalette {
+  /** The page background. */
   bg: Rgb
-  text: Rgb
   accent: Rgb
-  /** Black or white, readable on the accent: the "Council" label color. */
-  accentInk: Rgb
+  /** What the atom is drawn on: the page in dark mode, a dark panel in light mode. */
+  stage: Rgb
+  /** Glossy nucleon tones: the accent, a deeper neighbour, and graphite. */
+  nucleons: readonly [Rgb, Rgb, Rgb]
   agent: Rgb
   skill: Rgb
-  /** Orbital rings: a quiet line between the page and its text. */
-  ring: Rgb
+  /** Orbit tones: cool (from the agent hue) and warm (from the accent). */
+  ringCool: Rgb
+  ringWarm: Rgb
+  /** The page is dark. In light mode the atom sits on its own dark stage. */
   dark: boolean
 }
 
-const BLACK: Rgb = [0, 0, 0]
 const WHITE: Rgb = [255, 255, 255]
+/** The light-mode stage: near black with a faint cool cast. */
+export const LIGHT_MODE_STAGE: Rgb = [10, 11, 16]
+const SKILL: Rgb = [236, 242, 250]
+const GRAPHITE: Rgb = [44, 44, 52]
 const MIN_SEPARATION = 100
 const MIN_CONTRAST = 3
 
@@ -73,25 +85,24 @@ function fromHsl(h: number, s: number, l: number): Rgb {
   ]
 }
 
-/** The agent color for an accent, page, and text color. */
-export function agentColor(accent: Rgb, bg: Rgb, text: Rgb): Rgb {
-  const dark = isDarkColor(bg)
+/** The agent color for an accent, a dark stage, and the skill color. */
+export function agentColor(accent: Rgb, stage: Rgb, skill: Rgb): Rgb {
   const [h, s] = toHsl(accent)
-  const toward = dark ? WHITE : BLACK
-  let best: Rgb = mix(accent, text, 0.5)
-  // Try the opposite hue first, then neighbours, until the color stands apart.
-  for (const turn of [180, 130, 230, 90, 270]) {
+  let best: Rgb = mix(accent, skill, 0.5)
+  // A little short of the opposite hue first (lemon gives an electric azure
+  // rather than a periwinkle), then neighbours, until the color stands apart.
+  for (const turn of [165, 180, 130, 230, 90, 270]) {
     const candidate = ensureContrast(
-      fromHsl((h + turn) % 360, Math.max(s, 0.62), dark ? 0.66 : 0.4),
-      [bg],
+      fromHsl((h + turn) % 360, Math.max(s, 0.62), 0.64),
+      [stage],
       MIN_CONTRAST,
-      toward,
+      WHITE,
     )
     best = candidate
     if (
       distance(candidate, accent) >= MIN_SEPARATION &&
-      distance(candidate, text) >= MIN_SEPARATION &&
-      contrast(candidate, bg) >= MIN_CONTRAST
+      distance(candidate, skill) >= MIN_SEPARATION &&
+      contrast(candidate, stage) >= MIN_CONTRAST
     )
       return candidate
   }
@@ -101,17 +112,24 @@ export function agentColor(accent: Rgb, bg: Rgb, text: Rgb): Rgb {
 /** Builds the palette from `tokensFor(state).tokens`. */
 export function atomPalette(tokens: Record<string, string>): AtomPalette {
   const bg = hexOr(tokens, '--lm-bg', [10, 10, 10])
-  const text = hexOr(tokens, '--lm-text', [246, 246, 246])
   const accent = hexOr(tokens, '--lm-accent', [250, 214, 40])
-  const accentInk = hexOr(tokens, '--lm-accent-ink', BLACK)
+  const dark = isDarkColor(bg)
+  const stage = dark ? bg : LIGHT_MODE_STAGE
+  const agent = agentColor(accent, stage, SKILL)
+  const [h, s, l] = toHsl(accent)
   return {
     bg,
-    text,
     accent,
-    accentInk,
-    agent: agentColor(accent, bg, text),
-    skill: text,
-    ring: mix(bg, text, 0.38),
-    dark: isDarkColor(bg),
+    stage,
+    nucleons: [
+      accent,
+      fromHsl((h + 346) % 360, Math.min(1, s * 1.05), l * 0.62),
+      GRAPHITE,
+    ],
+    agent,
+    skill: SKILL,
+    ringCool: mix(agent, WHITE, 0.3),
+    ringWarm: mix(accent, WHITE, 0.2),
+    dark,
   }
 }

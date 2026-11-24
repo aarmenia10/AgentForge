@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import type { HomeItem } from '@/lib/homeFeed'
-import { toHex } from '@/theme/appearance'
 import type { AtomPalette } from '@/theme/atomPalette'
 import { createAtom, type AtomController } from './atomScene'
 
@@ -8,7 +7,7 @@ interface AtomCanvasProps {
   /** Agents and skills in turn: every electron is a real catalog item. */
   items: HomeItem[]
   palette: AtomPalette
-  /** `kind:id` of the electron whose keyboard link has focus, if any. */
+  /** `kind:id` (or `council`) of the keyboard link that has focus, if any. */
   activeKey: string | null
   onOpen: (to: string) => void
   /** WebGL is missing or was lost. The caller shows the static atom. */
@@ -20,7 +19,9 @@ interface AtomCanvasProps {
  * file and `atomScene.ts` (three.js) are the added chunk.
  *
  * The canvas takes horizontal drags only on touch (`touch-action: pan-y`), so
- * a vertical swipe still scrolls the page. There is no zoom and no pan.
+ * a vertical swipe still scrolls the page. There is no zoom and no pan. The
+ * nucleus is "Council": hovering it shows that label, clicking it opens
+ * `/councils`.
  */
 export default function AtomCanvas({
   items,
@@ -72,16 +73,6 @@ export default function AtomCanvas({
   return (
     <>
       <div ref={host} className="absolute inset-0" />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold tracking-tight"
-        style={{
-          color: toHex(palette.accentInk),
-          fontSize: 'clamp(12px, 3.6cqw, 18px)',
-        }}
-      >
-        Council
-      </span>
       <span
         ref={label}
         aria-hidden="true"

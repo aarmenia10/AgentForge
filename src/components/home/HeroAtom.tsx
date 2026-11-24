@@ -9,10 +9,19 @@ import {
 } from 'react'
 import { interleave, type AtomItems } from '@/lib/homeFeed'
 import { Link, useRoute } from '@/router/Router'
-import { toHex, tokensFor } from '@/theme/appearance'
+import { mix, toHex, tokensFor } from '@/theme/appearance'
 import { atomPalette } from '@/theme/atomPalette'
 import { useTheme } from '@/theme/ThemeProvider'
-import { AtomFallback } from './AtomFallback'
+
+// The static SVG atom is a small chunk of its own too, so the richer drawing
+// does not grow the startup bundle. Until it arrives (a moment), the box shows
+// a soft accent glow, in the same reserved square, so nothing shifts.
+const AtomFallback = lazy(() =>
+  import('./AtomFallback').then((m) => ({ default: m.AtomFallback })),
+)
+
+/** The keyboard list's key for the nucleus (matches `atomScene.ts`). */
+const COUNCIL_KEY = 'council'
 
 // The 3D atom and three.js are their own chunk, fetched after first paint.
 const loadAtom = () => import('./AtomCanvas')
@@ -106,19 +115,52 @@ export function HeroAtom({ items }: HeroAtomProps) {
   }, [interactive3d])
 
   const show3d = interactive3d && list.length > 0
+  const glow = (
+    <div
+      aria-hidden="true"
+      className="absolute inset-[30%] rounded-full blur-2xl"
+      style={{ backgroundColor: toHex(palette.accent), opacity: 0.22 }}
+    />
+  )
   const staticAtom = (
-    <AtomFallback palette={palette} items={items} interactive={!show3d} />
+    <Suspense fallback={glow}>
+      <AtomFallback palette={palette} items={items} interactive={!show3d} />
+    </Suspense>
   )
   const hasAgents = (items?.agents.length ?? 0) > 0
   const hasSkills = (items?.skills.length ?? 0) > 0
+  // Glow does not read on a light page, so in light mode the atom sits on its
+  // own dark rounded stage. In dark mode the page is the stage, and the atom
+  // may spill past its column (the hero clips it at the page edge).
+  const stage = !palette.dark
+  const stageColor = toHex(palette.stage)
 
   return (
     <div
       role="group"
       aria-label="Agents and skills orbiting the Council"
-      className="mx-auto w-full max-w-[19rem] sm:max-w-[26rem] lg:max-w-[32rem]"
+      className={
+        stage
+          ? 'mx-auto w-full max-w-[min(100%,62svh)] overflow-hidden rounded-[2rem] px-2 pb-4 sm:max-w-[34rem] lg:max-w-[38rem]'
+          : 'mx-auto w-full max-w-[min(100%,60svh)] sm:max-w-[34rem] lg:w-[calc(100%+5rem)] lg:max-w-[46rem] lg:-translate-x-6'
+      }
+      style={
+        stage
+          ? {
+              backgroundColor: stageColor,
+              backgroundImage: `radial-gradient(circle at 50% 44%, ${toHex(mix(palette.stage, palette.accent, 0.1))} 0%, ${stageColor} 62%)`,
+            }
+          : undefined
+      }
     >
-      <div className="relative aspect-square w-full [container-type:inline-size]">
+      <div
+        className="relative aspect-square w-full [container-type:inline-size]"
+        // Fade the very edge, so dust and glow never end in a hard line.
+        style={{
+          maskImage:
+            'radial-gradient(closest-side, #000 84%, transparent 100%)',
+        }}
+      >
         {show3d ? (
           <AtomBoundary fallback={staticAtom}>
             <Suspense fallback={staticAtom}>
@@ -137,8 +179,18 @@ export function HeroAtom({ items }: HeroAtomProps) {
       </div>
 
       {show3d && (
-        // The same links as the electrons, for keyboards and screen readers.
+        // The same links as the nucleus and electrons, for keyboards and
+        // screen readers.
         <ul className="sr-only" aria-label="Agents and skills in the atom">
+          <li>
+            <Link
+              to="/councils"
+              onFocus={() => setActiveKey(COUNCIL_KEY)}
+              onBlur={() => setActiveKey(null)}
+            >
+              Council: all councils
+            </Link>
+          </li>
           {list.map((item) => (
             <li key={`${item.kind}:${item.id}`}>
               <Link
@@ -154,7 +206,13 @@ export function HeroAtom({ items }: HeroAtomProps) {
       )}
 
       {(hasAgents || hasSkills) && (
-        <p className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-fg-muted">
+        <p
+          className={`relative mt-1 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs ${stage ? 'text-white/70' : 'text-fg-muted'}`}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <Dot color={toHex(palette.accent)} />
+            Council
+          </span>
           {hasAgents && (
             <span className="inline-flex items-center gap-1.5">
               <Dot color={toHex(palette.agent)} />
@@ -179,7 +237,7 @@ function Dot({ color }: { color: string }) {
     <span
       aria-hidden="true"
       className="size-2.5 rounded-full"
-      style={{ backgroundColor: color }}
+      style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
     />
   )
 }

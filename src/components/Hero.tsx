@@ -24,7 +24,7 @@ export function Hero({ atom }: HeroProps) {
   return (
     <Reveal
       as="section"
-      className="mx-auto grid max-w-7xl items-center gap-8 px-4 pb-10 pt-10 sm:px-6 sm:pt-16 lg:grid-cols-2 lg:gap-12 lg:pt-20"
+      className="mx-auto grid max-w-7xl items-center gap-6 overflow-x-clip px-4 pb-10 pt-6 sm:px-6 sm:pt-12 lg:grid-cols-2 lg:gap-12 lg:pt-10"
     >
       {/* The text comes first in the page order; on phones the atom sits above it. */}
       <div className="text-center lg:text-left">
