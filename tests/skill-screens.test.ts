@@ -721,21 +721,22 @@ async function render(node: () => ReactNode) {
 
 const NO_PASS = /passed|✓|lucide-check\b|lucide-circle-check|badge-check/i
 
-test('the upload screen offers every input, the limits, and the script rule', async () => {
+test('the upload screen offers guided instructions, the limits, and the script rule', async () => {
   const { SkillUpload } = await import('../src/components/skills/SkillUpload')
   const markup = await render(() =>
     createElement(SkillUpload, { editId: null }),
   )
   for (const text of [
-    'Choose folder',
-    'Choose files',
-    'Drop your skill folder here',
-    'Write it here',
-    '200 KB in all, 100 KB per file, 50 files',
-    'unzip it and choose the folder instead',
+    'Tell Us About Your Skill',
+    'Skill name',
+    'Upload files',
+    'Write Instructions',
+    'Skill Instructions',
+    'Advanced Options',
+    '200 KB total, 100 KB per file, 50 text files',
     'Scripts can stay in a private skill; remove them to share it with friends or submit it for public review.',
     'of 200 KB',
-    '0 of 50',
+    '1 of 50',
   ])
     assert.ok(markup.includes(text), text)
   assert.match(markup, /role="meter"/)
