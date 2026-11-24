@@ -130,9 +130,11 @@ export function HeroAtom({ items, onUnavailable, onInfo }: HeroAtomProps) {
   )
   const hasAgents = (items?.agents.length ?? 0) > 0
   const hasSkills = (items?.skills.length ?? 0) > 0
-  // Glow does not read on a light page, so in light mode the atom sits on its
-  // own dark rounded stage. In dark mode the page is the stage, and the atom
-  // may spill past its column (the hero clips it at the page edge).
+  // Glow does not read on a light page, so in light mode the atom floats in
+  // its own patch of dark space: a soft cloud with no hard edge, whose rim
+  // drifts slowly (owner request 2026-11-24, replacing a rounded box). In dark
+  // mode the page is the space, and the atom may spill past its column (the
+  // hero clips it at the page edge).
   const stage = !palette.dark
   const stageColor = toHex(palette.stage)
 
@@ -142,42 +144,42 @@ export function HeroAtom({ items, onUnavailable, onInfo }: HeroAtomProps) {
       aria-label="Agents and skills orbiting the Council"
       className={
         stage
-          ? 'mx-auto w-full max-w-[min(100%,36svh)] overflow-hidden rounded-[2rem] px-2 pb-4 sm:max-w-[34rem] lg:max-w-[38rem]'
+          ? 'mx-auto w-full max-w-[min(100%,36svh)] sm:max-w-[34rem] lg:max-w-[38rem]'
           : 'mx-auto w-full max-w-[min(100%,34svh)] sm:max-w-[34rem] lg:w-[calc(100%+5rem)] lg:max-w-[46rem] lg:-translate-x-6'
       }
-      style={
-        stage
-          ? {
-              backgroundColor: stageColor,
-              backgroundImage: `radial-gradient(circle at 50% 44%, ${toHex(mix(palette.stage, palette.accent, 0.1))} 0%, ${stageColor} 62%)`,
-            }
-          : undefined
-      }
     >
-      <div
-        className="relative aspect-square w-full [container-type:inline-size]"
-        // Fade the very edge, so dust and glow never end in a hard line.
-        style={{
-          maskImage:
-            'radial-gradient(closest-side, #000 84%, transparent 100%)',
-        }}
-      >
-        {show3d ? (
-          <AtomBoundary onError={onUnavailable}>
-            <Suspense fallback={glow}>
-              <AtomCanvas
-                items={list}
-                palette={palette}
-                activeKey={activeKey}
-                onOpen={go}
-                onUnavailable={onUnavailable}
-                onInfo={onInfo}
-              />
-            </Suspense>
-          </AtomBoundary>
-        ) : (
-          glow
+      <div className="relative">
+        {stage && (
+          <Nebula
+            color={stageColor}
+            core={toHex(mix(palette.stage, palette.accent, 0.16))}
+          />
         )}
+        <div
+          className="relative aspect-square w-full [container-type:inline-size]"
+          // Fade the very edge, so dust and glow never end in a hard line.
+          style={{
+            maskImage:
+              'radial-gradient(closest-side, #000 84%, transparent 100%)',
+          }}
+        >
+          {show3d ? (
+            <AtomBoundary onError={onUnavailable}>
+              <Suspense fallback={glow}>
+                <AtomCanvas
+                  items={list}
+                  palette={palette}
+                  activeKey={activeKey}
+                  onOpen={go}
+                  onUnavailable={onUnavailable}
+                  onInfo={onInfo}
+                />
+              </Suspense>
+            </AtomBoundary>
+          ) : (
+            glow
+          )}
+        </div>
       </div>
 
       {show3d && (
@@ -209,21 +211,21 @@ export function HeroAtom({ items, onUnavailable, onInfo }: HeroAtomProps) {
 
       {show3d && (hasAgents || hasSkills) && (
         <p
-          className={`relative mt-1 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs ${stage ? 'text-white/70' : 'text-fg-muted'}`}
+          className={`relative flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-fg-muted ${stage ? 'mt-6' : 'mt-1'}`}
         >
           <span className="inline-flex items-center gap-1.5">
-            <Dot color={toHex(palette.accent)} />
+            <Dot color={toHex(palette.accent)} ring={stage} />
             Council
           </span>
           {hasAgents && (
             <span className="inline-flex items-center gap-1.5">
-              <Dot color={toHex(palette.agent)} />
+              <Dot color={toHex(palette.agent)} ring={stage} />
               Agents
             </span>
           )}
           {hasSkills && (
             <span className="inline-flex items-center gap-1.5">
-              <Dot color={toHex(palette.skill)} />
+              <Dot color={toHex(palette.skill)} ring={stage} />
               Skills
             </span>
           )}
@@ -234,12 +236,63 @@ export function HeroAtom({ items, onUnavailable, onInfo }: HeroAtomProps) {
   )
 }
 
-function Dot({ color }: { color: string }) {
+function Dot({ color, ring }: { color: string; ring: boolean }) {
+  // On a light page a white dot needs an edge to be seen.
   return (
     <span
       aria-hidden="true"
-      className="size-2.5 rounded-full"
-      style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+      className={`size-2.5 rounded-full ${ring ? 'ring-1 ring-black/20' : ''}`}
+      style={{
+        backgroundColor: color,
+        boxShadow: ring ? undefined : `0 0 8px ${color}`,
+      }}
     />
+  )
+}
+
+/**
+ * Light mode's patch of space: three blurred, slightly lopsided discs of the
+ * stage color turning at different speeds, so the rim never ends in a hard
+ * line and keeps drifting, plus a faint accent tint at the centre. Only
+ * transforms animate (cheap to composite); the atom itself is never shown
+ * with reduced motion, so neither is this.
+ */
+function Nebula({ color, core }: { color: string; core: string }) {
+  const blob =
+    'nebula-blob absolute rounded-full blur-xl sm:blur-2xl will-change-transform'
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+      <div
+        className={`${blob} inset-[9%]`}
+        style={{
+          backgroundColor: color,
+          borderRadius: '47% 53% 44% 56% / 55% 45% 55% 45%',
+          animationDuration: '38s',
+        }}
+      />
+      <div
+        className={`${blob} inset-[12%]`}
+        style={{
+          backgroundColor: color,
+          borderRadius: '56% 44% 52% 48% / 44% 57% 43% 56%',
+          animationDuration: '52s',
+          animationDirection: 'reverse',
+        }}
+      />
+      <div
+        className={`${blob} inset-[6%] opacity-70`}
+        style={{
+          backgroundColor: color,
+          borderRadius: '42% 58% 60% 40% / 52% 40% 60% 48%',
+          animationDuration: '67s',
+        }}
+      />
+      <div
+        className="absolute inset-[18%] rounded-full"
+        style={{
+          backgroundImage: `radial-gradient(closest-side, ${core}, transparent)`,
+        }}
+      />
+    </div>
   )
 }
