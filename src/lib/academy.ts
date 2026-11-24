@@ -45,7 +45,7 @@ export interface AcademyStep {
 export const ACADEMY_TITLE = 'AgentLemon Academy'
 
 export const ACADEMY_TAGLINE =
-  'In about 10 minutes, connect AgentLemon to your AI and make your first agent and skill.'
+  'In 10 to 15 minutes, connect AgentLemon to your AI and make your first agent and skill.'
 
 /** The promise, as short bullets for the top of the page. */
 export const ACADEMY_PROMISE: readonly string[] = [

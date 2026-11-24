@@ -107,6 +107,7 @@ export default function AcademyPage() {
             <CodeBlock
               code={academyTutorPrompt()}
               title="Copy this into your AI chat"
+              wrap
             />
           </div>
           <p className="mt-4 text-sm leading-relaxed text-fg-muted">
@@ -188,7 +189,11 @@ export default function AcademyPage() {
                 </div>
                 {step.copy && (
                   <div className="mt-5">
-                    <CodeBlock code={step.copy.text} title={step.copy.label} />
+                    <CodeBlock
+                      code={step.copy.text}
+                      title={step.copy.label}
+                      wrap
+                    />
                   </div>
                 )}
                 {step.link && (

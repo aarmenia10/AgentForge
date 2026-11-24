@@ -203,10 +203,13 @@ export function CodeBlock({
   code,
   title,
   copyLabel,
+  wrap = false,
 }: {
   code: string
   title: ReactNode
   copyLabel?: string
+  /** Wrap long lines instead of scrolling sideways (prose prompts). */
+  wrap?: boolean
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 dark:border-white/10">
@@ -214,7 +217,12 @@ export function CodeBlock({
         <span className="truncate font-mono text-xs text-slate-400">{title}</span>
         <CopyButton text={code} label={copyLabel} tone="onDark" />
       </div>
-      <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-slate-100">
+      <pre
+        className={cn(
+          'p-4 font-mono text-[13px] leading-relaxed text-slate-100',
+          wrap ? 'whitespace-pre-wrap break-words' : 'overflow-x-auto',
+        )}
+      >
         <code>{code}</code>
       </pre>
     </div>
