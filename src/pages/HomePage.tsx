@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CATEGORY_ICONS, categoryPillClass } from '@/components/CategoryPills'
 import { Hero } from '@/components/Hero'
 import { TrendingSection } from '@/components/home/TrendingSection'
 import { ArrowIcon, primaryButtonClass } from '@/components/ui'
 import { atomItems, trendingFrom, type HomeSources } from '@/lib/homeFeed'
 import { Link } from '@/router/Router'
-import { AGENT_CATEGORIES } from '@/types/agent'
 
 // Kept for the session so returning to the home page shows everything at once.
 let cached: HomeSources | null = null
@@ -38,8 +36,8 @@ function useHomeSources(): HomeSources | null {
 }
 
 /**
- * The landing page, top to bottom: the hero with its atom, "Start building"
- * and its three buttons, Trending, and the category buttons.
+ * The landing page, top to bottom: the hero with its atom, "Explore"
+ * and its three buttons, then Trending. Categories live on /agents.
  */
 export function HomePage() {
   const sources = useHomeSources()
@@ -54,14 +52,14 @@ export function HomePage() {
       <Hero atom={atom} />
 
       <section
-        aria-labelledby="home-start-building"
+        aria-labelledby="home-explore"
         className="mx-auto max-w-7xl px-4 pb-14 text-center sm:px-6"
       >
         <h2
-          id="home-start-building"
+          id="home-explore"
           className="text-2xl font-semibold tracking-tight sm:text-3xl"
         >
-          Start building
+          Explore
         </h2>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Link to="/agents" className={primaryButtonClass}>
@@ -80,25 +78,6 @@ export function HomePage() {
       </section>
 
       <TrendingSection items={trending} />
-
-      <nav
-        aria-label="Browse agents by category"
-        className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2.5 px-4 pb-16 sm:px-6"
-      >
-        {AGENT_CATEGORIES.map(({ tag, label }) => {
-          const Icon = CATEGORY_ICONS[tag]
-          return (
-            <Link
-              key={tag}
-              to={`/agents?category=${tag}`}
-              className={categoryPillClass(false)}
-            >
-              <Icon className="size-4" aria-hidden="true" />
-              {label}
-            </Link>
-          )
-        })}
-      </nav>
     </main>
   )
 }
