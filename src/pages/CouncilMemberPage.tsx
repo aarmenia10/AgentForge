@@ -8,11 +8,11 @@ import {
   skillManifestSchema,
 } from '@/lib/skillSchema'
 import { manifestSchema } from '@/lib/manifestSchema'
-import { Link, useRoute } from '@/router/Router'
+import { closeDetail, Link, useRoute } from '@/router/Router'
 import { publicCouncils, type CouncilItem } from '@/services/councilPublic'
 
 export default function CouncilMemberPage() {
-  const { route } = useRoute()
+  const { route, go } = useRoute()
   const { id, kind, version } = route.params
   const { user, openSignIn } = useAuth()
   const uid = user?.uid
@@ -103,7 +103,10 @@ export default function CouncilMemberPage() {
   if (!member || (!member.public && member.accountUid !== uid))
     return <PageHold />
   return (
-    <PageShell title={member.item.name}>
+    <PageShell
+      title={member.item.name}
+      onClose={() => closeDetail(go, '/councils')}
+    >
       <div className="space-y-4">
         <p>{member.item.description}</p>
         <p className="break-all text-xs">

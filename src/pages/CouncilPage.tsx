@@ -17,7 +17,7 @@ import {
 } from '@/components/studio/parts'
 import { formatCouncilRef } from '@/lib/councilSchema'
 import { publicOriginLabel } from '@/lib/portability'
-import { Link, useRoute } from '@/router/Router'
+import { closeDetail, Link, useRoute } from '@/router/Router'
 import { publicCouncils } from '@/services/councilPublic'
 import type { CouncilManifest, CouncilRecord } from '@/types/council'
 
@@ -38,7 +38,7 @@ const copyId = (id: string) =>
   crypto.randomUUID().slice(0, 8)
 
 export default function CouncilPage() {
-  const { route, location } = useRoute()
+  const { route, location, go } = useRoute()
   const params = new URLSearchParams(location.search)
   const id = route.params.id
   const version = params.get('version')
@@ -196,7 +196,10 @@ export default function CouncilPage() {
     })
   }
   return (
-    <PageShell title={council.name}>
+    <PageShell
+      title={council.name}
+      onClose={() => closeDetail(go, account ? '/me' : '/councils')}
+    >
       <div className="space-y-5">
         <p>{council.description}</p>
         <p className="break-all text-xs">

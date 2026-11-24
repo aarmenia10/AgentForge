@@ -93,8 +93,14 @@ export default function AgentsPage() {
   }, [])
 
   const closeAgent = useCallback(() => {
+    if (window.history.state?.agentLemonCanGoBack) {
+      window.history.back()
+      return
+    }
     setOpenId(null)
-    writeAgentParam(null)
+    const url = new URL(window.location.href)
+    url.searchParams.delete(AGENT_PARAM)
+    window.history.replaceState(null, '', url)
   }, [])
 
   const visible = useMemo(() => queryAgents(agents, query), [agents, query])
