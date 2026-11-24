@@ -15,6 +15,13 @@ const primary =
 const secondary =
   'inline-flex items-center justify-center rounded-full border border-line px-5 py-3 text-sm font-semibold text-fg hover:bg-surface-2'
 
+const introduction =
+  'AgentLemon was created to make artificial intelligence accessible to everyone. Our platform makes it easy to discover, share, and download AI agents and skills that help individuals and businesses work smarter.'
+const comparison =
+  'An AI agent is your digital assistant. An AI skill teaches that assistant how to do a particular job.'
+const enterprise =
+  'AgentForce Enterprise gives companies a private space to upload, organize, and share AI agents and skills with their employees. Instead of every employee creating their own AI tools from scratch, teams can collaborate and reuse tools internally.'
+
 const examples = [
   {
     title: 'What is an AI agent?',
@@ -87,10 +94,7 @@ export default function AboutPage() {
         </h1>
         <h2 className="mt-6 text-xl">Who we are</h2>
         <p className="mt-3 max-w-3xl text-lg leading-relaxed text-fg-muted">
-          AgentLemon was created to make artificial intelligence accessible to
-          everyone. Our platform makes it easy to discover, share, and download
-          AI agents and skills that help individuals and businesses work
-          smarter.
+          {introduction}
         </p>
         <p className="mt-3 text-lg">
           You don't need to be a programmer or an AI expert to get started.
@@ -124,8 +128,7 @@ export default function AboutPage() {
           ))}
         </div>
         <p className="rounded-2xl bg-surface-2 p-5 text-center font-semibold">
-          An AI agent is your digital assistant. An AI skill teaches that
-          assistant how to do a particular job.
+          {comparison}
         </p>
       </section>
 
@@ -151,10 +154,7 @@ export default function AboutPage() {
         <Building2 aria-hidden="true" className="size-9 text-accent-fg" />
         <h2 className="mt-4 text-2xl sm:text-3xl">AgentForce Enterprise</h2>
         <p className="mt-3 max-w-3xl leading-relaxed text-fg-muted">
-          AgentForce Enterprise gives companies a private space to upload,
-          organize, and share AI agents and skills with their employees.
-          Instead of every employee creating their own AI tools from scratch,
-          teams can collaborate and reuse tools internally.
+          {enterprise}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link to="/enterprise" className={primary}>
