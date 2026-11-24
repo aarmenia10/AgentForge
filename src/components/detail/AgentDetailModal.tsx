@@ -12,6 +12,7 @@ import {
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatCount, formatRelativeTime } from '@/lib/format'
+import { lockBodyScroll } from '@/lib/scrollLock'
 import { TOOL_TYPE_LABELS, type AgentManifest, type AgentTool } from '@/types/agent'
 import {
   fetchPublicOrigins,
@@ -37,6 +38,13 @@ const TABS: readonly { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'install', label: 'Advanced Options', icon: PlugZap },
 ]
 
+// Controls inside the closed Install dialog still match the selector.
+export function isAgentDialogTabStop(
+  element: Pick<HTMLElement, 'tabIndex' | 'getClientRects'>,
+): boolean {
+  return element.tabIndex >= 0 && element.getClientRects().length > 0
+}
+
 interface AgentDetailModalProps {
   agent: AgentManifest
   onClose: () => void
@@ -58,6 +66,7 @@ export function AgentDetailModal({
   const [tab, setTab] = useState<TabId>('overview')
   const tabs = installable ? TABS : TABS.filter((t) => t.id !== 'install')
   const dialogRef = useRef<HTMLDivElement>(null)
+  const reportButtonRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
   const baseId = useId()
   const [originApp, setOriginApp] = useState<OriginApp | null>(null)
@@ -95,12 +104,16 @@ export function AgentDetailModal({
   // Lock page scroll, move focus in, and restore both on close.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    dialogRef.current?.focus()
+    const unlock = lockBodyScroll()
+    const dialog = dialogRef.current
+    dialog?.focus()
     return () => {
-      document.body.style.overflow = previousOverflow
-      previouslyFocused?.focus()
+      unlock()
+      // Another dialog may still have focus after browser Back.
+      const active = document.activeElement
+      if (active === document.body || dialog?.contains(active)) {
+        previouslyFocused?.focus()
+      }
     }
   }, [])
 
@@ -112,9 +125,10 @@ export function AgentDetailModal({
     }
     if (event.key !== 'Tab') return
     // Keep keyboard focus inside the dialog.
-    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input, select, [tabindex]:not([tabindex="-1"])',
+    const controls = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]',
     )
+    const focusable = controls && [...controls].filter(isAgentDialogTabStop)
     if (!focusable || focusable.length === 0) return
     const first = focusable[0]
     const last = focusable[focusable.length - 1]
@@ -179,6 +193,7 @@ export function AgentDetailModal({
                 <span>Updated {formatRelativeTime(agent.stats.updated_at)}</span>
                 {uid && uid !== agent.author.uid && (
                   <button
+                    ref={reportButtonRef}
                     type="button"
                     onClick={() => setShowReport(true)}
                     className="text-xs text-fg-muted hover:text-rose-500"
@@ -279,7 +294,11 @@ export function AgentDetailModal({
           itemId={agent.id}
           targetType="item"
           targetId={agent.id}
-          onClose={() => setShowReport(false)}
+          onClose={() => {
+            setShowReport(false)
+            const returnTarget = reportButtonRef.current ?? dialogRef.current
+            returnTarget?.focus()
+          }}
         />
       )}
     </div>

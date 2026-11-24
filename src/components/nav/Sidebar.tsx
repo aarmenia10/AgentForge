@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { createPortal } from 'react-dom'
+import { lockBodyScroll } from '@/lib/scrollLock'
 import { cn } from '../ui'
 
 const FOCUSABLE =
@@ -49,11 +50,10 @@ export function Sidebar({
     const frame = requestAnimationFrame(() => setEntered(true))
     const panel = panelRef.current
     panel?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
-    const { overflow } = document.body.style
-    document.body.style.overflow = 'hidden'
+    const unlock = lockBodyScroll()
     return () => {
       cancelAnimationFrame(frame)
-      document.body.style.overflow = overflow
+      unlock()
     }
   }, [open])
 

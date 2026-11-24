@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AgentGrid } from '@/components/AgentGrid'
 import { AgentDetailModal } from '@/components/detail/AgentDetailModal'
 import { ExplorerToolbar } from '@/components/ExplorerToolbar'
@@ -6,15 +6,11 @@ import { CategoryPills } from '@/components/CategoryPills'
 import { Reveal } from '@/components/Reveal'
 import { agentRepository } from '@/lib/agentRepository'
 import { DEFAULT_QUERY, queryAgents, type CatalogQuery } from '@/lib/catalog'
-import { useRoute } from '@/router/Router'
+import { canCloseAgentWithBack, useRoute } from '@/router/Router'
 import { AGENT_CATEGORIES, type AgentManifest } from '@/types/agent'
 
 const AGENT_PARAM = 'agent'
 const CATEGORY_PARAM = 'category'
-
-function readAgentParam(): string | null {
-  return new URLSearchParams(window.location.search).get(AGENT_PARAM)
-}
 
 /** The hero's category links arrive as `?category=<tag>`. Unknown tags are ignored. */
 function readCategoryParam(): CatalogQuery['category'] {
@@ -22,12 +18,11 @@ function readCategoryParam(): CatalogQuery['category'] {
   return AGENT_CATEGORIES.find((category) => category.tag === tag)?.tag ?? null
 }
 
-/** Mirrors the open agent into `?agent=<id>` so detail views are shareable. */
-function writeAgentParam(id: string | null) {
-  const url = new URL(window.location.href)
-  if (id) url.searchParams.set(AGENT_PARAM, id)
-  else url.searchParams.delete(AGENT_PARAM)
-  window.history.pushState({ agentLemonCanGoBack: true }, '', url)
+export function agentCloseUrl(href: string): string | null {
+  const url = new URL(href)
+  if (!url.searchParams.has(AGENT_PARAM)) return null
+  url.searchParams.delete(AGENT_PARAM)
+  return url.href
 }
 
 // Kept for the session so returning to the page shows the catalog at once.
@@ -50,8 +45,9 @@ export default function AgentsPage() {
     const category = readCategoryParam()
     return category ? { ...cachedQuery, category } : cachedQuery
   })
-  const [openId, setOpenId] = useState<string | null>(readAgentParam)
-  const { location } = useRoute()
+  const { location, go } = useRoute()
+  const openId = new URLSearchParams(location.search).get(AGENT_PARAM)
+  const closing = useRef(false)
 
   const patchQuery = useCallback((patch: Partial<CatalogQuery>) => {
     setQuery((current) => {
@@ -80,28 +76,37 @@ export default function AgentsPage() {
     }
   }, [])
 
-  // Back and forward can add or remove `?agent=<id>`; the URL is the source of
-  // truth for the open agent.
-  useEffect(() => {
-    setOpenId(readAgentParam())
-  }, [location.key])
+  const openAgent = useCallback(
+    (agent: AgentManifest) => {
+      const url = new URL(window.location.href)
+      const previousId = url.searchParams.get(AGENT_PARAM)
+      if (previousId === agent.id) return
 
-  const openAgent = useCallback((agent: AgentManifest) => {
-    setOpenId(agent.id)
-    writeAgentParam(agent.id)
-    void agentRepository.recordView(agent.id).catch(() => {})
-  }, [])
+      const replace = url.searchParams.has(AGENT_PARAM)
+      url.searchParams.set(AGENT_PARAM, agent.id)
+      go(url.href, { replace })
+      void agentRepository.recordView(agent.id).catch(() => {})
+    },
+    [go],
+  )
 
   const closeAgent = useCallback(() => {
-    if (window.history.state?.agentLemonCanGoBack) {
-      window.history.back()
+    if (closing.current) return
+    const closeInPlace = () => {
+      closing.current = false
+      const url = agentCloseUrl(window.location.href)
+      if (url) go(url, { replace: true })
+    }
+    if (!canCloseAgentWithBack(window.history.state)) {
+      closeInPlace()
       return
     }
-    setOpenId(null)
-    const url = new URL(window.location.href)
-    url.searchParams.delete(AGENT_PARAM)
-    window.history.replaceState(null, '', url)
-  }, [])
+
+    closing.current = true
+    // A previous entry can be replaced after this modal was opened.
+    window.addEventListener('popstate', closeInPlace, { once: true })
+    window.history.back()
+  }, [go])
 
   const visible = useMemo(() => queryAgents(agents, query), [agents, query])
   const openedAgent = useMemo(
