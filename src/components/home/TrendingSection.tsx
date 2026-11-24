@@ -10,7 +10,11 @@ interface TrendingSectionProps {
   items: HomeItem[] | null
 }
 
-/** The most liked items across agents, skills, and councils. */
+/**
+ * The most liked items across agents, skills, and councils. Home page only:
+ * the cards are see-through (`home-glass`) so the lemon press shows behind
+ * them, and only the heading and cards take the pointer.
+ */
 export function TrendingSection({ items }: TrendingSectionProps) {
   if (items && items.length === 0) return null
   return (
@@ -20,7 +24,7 @@ export function TrendingSection({ items }: TrendingSectionProps) {
     >
       <h2
         id="home-trending"
-        className="text-2xl font-semibold tracking-tight sm:text-3xl"
+        className="home-glass pointer-events-auto inline-block rounded-full px-5 py-1.5 text-2xl font-semibold tracking-tight sm:text-3xl"
       >
         Trending
       </h2>
@@ -32,12 +36,12 @@ export function TrendingSection({ items }: TrendingSectionProps) {
           {Array.from({ length: TRENDING_COUNT }, (_, i) => (
             <div
               key={i}
-              className="h-44 animate-pulse rounded-3xl bg-surface"
+              className="home-glass h-44 animate-pulse rounded-3xl"
             />
           ))}
         </div>
       ) : (
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="pointer-events-auto mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <li key={`${item.kind}:${item.id}`}>
               <TrendingCard item={item} />
@@ -51,7 +55,7 @@ export function TrendingSection({ items }: TrendingSectionProps) {
 
 function TrendingCard({ item }: { item: HomeItem }) {
   return (
-    <article className="card-lift group relative flex h-full flex-col rounded-3xl bg-surface p-6">
+    <article className="home-glass card-lift group relative flex h-full flex-col rounded-3xl p-6">
       <div className="flex items-start justify-between gap-3">
         <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-fg">
           {KIND_LABEL[item.kind]}
