@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { InstallDialog } from '@/components/detail/InstallDialog'
+import { councilInstallText } from '@/lib/installText'
 import { useAuth } from '@/auth/AuthProvider'
 import { CouncilEditor } from '@/components/councils/CouncilEditor'
 import {
@@ -26,6 +28,7 @@ type View = {
   owned?: CouncilRecord
   edit?: CouncilRecord | null
   public: boolean
+  directText: string | null
 }
 const store = () =>
   import('@/services/councilStore').then(({ councilStore }) => councilStore())
@@ -62,6 +65,7 @@ export default function CouncilPage() {
         return {
           council,
           public: true,
+          directText: councilInstallText(council, items),
           details: items.map(({ item }) => ({
             name: item.name,
             handle: item.author.handle,
@@ -79,7 +83,20 @@ export default function CouncilPage() {
         ),
         owned ? accountStore.getEdit(id) : null,
       ])
-      return { council, details, owned, edit, public: false, accountUid: uid }
+      const directText = await Promise.all(
+        council.members.map(({ ref }) => accountStore.installMember(ref)),
+      )
+        .then((items) => councilInstallText(council, items))
+        .catch(() => null)
+      return {
+        council,
+        details,
+        owned,
+        edit,
+        public: false,
+        accountUid: uid,
+        directText,
+      }
     }
     if (account && status === 'restoring') return
     load()
@@ -138,7 +155,14 @@ export default function CouncilPage() {
         </Link>
       </PageShell>
     )
-  if (!view || (account && view.accountUid !== uid)) return <PageHold />
+  if (
+    !view ||
+    view.council.id !== id ||
+    view.public === account ||
+    (version && view.public && view.council.version !== version) ||
+    (account && view.accountUid !== uid)
+  )
+    return <PageHold />
   const { council, owned, edit, details } = view
   const ref = formatCouncilRef(council.id, council.version)
   const origin = publicOriginLabel(council.origin_app)
@@ -183,19 +207,16 @@ export default function CouncilPage() {
         </p>
         {(view.public || uid) && (
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={primaryButton}
-              disabled={busy}
-              onClick={() =>
-                void act(async () => {
-                  await navigator.clipboard.writeText(prompt)
-                  return 'Prompt copied. Paste it into an AI app connected to AgentLemon.'
-                })
-              }
-            >
-              Use the whole council
-            </button>
+            <InstallDialog
+              key={ref}
+              kind="Council"
+              name={council.name}
+              directText={view.directText}
+              connectedText={prompt}
+              account={!view.public}
+              restricted={!view.public}
+              limitation="Includes the exact pinned members and coordination instructions. AI apps without separate agents may simulate their roles; external tools require integrations."
+            />
             {view.public && (
               <button
                 type="button"

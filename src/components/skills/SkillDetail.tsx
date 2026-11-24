@@ -3,7 +3,6 @@ import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   AuthorLink,
-  CodeBlock,
   CopyButton,
   VERIFIED_AUTHOR_LABEL,
 } from '@/components/ui'
@@ -13,7 +12,8 @@ import { CommentsSection } from '@/components/ratings/CommentsSection'
 import { ReportDialog } from '@/components/ratings/ReportDialog'
 import { fetchRatings, type RatingData } from '@/lib/blockedWords'
 import { formatRelativeTime } from '@/lib/format'
-import { MCP_CONNECTOR_URL } from '@/lib/mcpConfig'
+import { InstallDialog } from '@/components/detail/InstallDialog'
+import { skillInstallText } from '@/lib/installText'
 import { formatBytes, skillBytes } from '@/lib/skillRepository'
 import { SKILL_INSTRUCTIONS_PATH } from '@/lib/skillSchema'
 import { publicOriginLabel } from '@/lib/portability'
@@ -23,7 +23,7 @@ import type {
   SkillIndexEntry,
 } from '@/types/skill'
 import { FileText, KindLabel } from './parts'
-import { comparePaths, FIND_PROMPT, loadPrompt } from './skillDraft'
+import { comparePaths, loadPrompt } from './skillDraft'
 
 type Heading = 'h2' | 'h4'
 
@@ -37,12 +37,14 @@ export function SkillDetail({
   loadFiles,
   heading = 'h2',
   showAuthor = true,
+  connectable = skill.visibility === 'public',
 }: {
   skill: SkillIndexEntry
   /** Resolves to every file with its text. Called once, when shown. */
   loadFiles: () => Promise<SkillFile[]>
   heading?: Heading
   showAuthor?: boolean
+  connectable?: boolean
 }) {
   const { status, user } = useAuth()
   const uid = status === 'signed-in' && user ? user.uid : null
@@ -167,104 +169,81 @@ export function SkillDetail({
       </div>
 
       <section className="space-y-3">
-        <H className="text-lg font-semibold text-fg">Use it from an AI app</H>
-        {isPublic ? (
-          <>
-            <p>
-              Add AgentLemon to your AI app once, as a connector. Then ask for
-              this skill by name:
-            </p>
-            <CodeBlock
-              code={loadPrompt(skill)}
-              title="Say this in your AI app"
-              copyLabel="Copy"
-            />
-            <p>
-              Or describe the job and let it compare skills:{' '}
-              <span className="font-mono text-[13px] text-fg">
-                {FIND_PROMPT}
-              </span>
-            </p>
-            <CodeBlock
-              code={MCP_CONNECTOR_URL}
-              title="Connector link"
-              copyLabel="Copy link"
-            />
-            <p className="text-xs text-fg-muted">
-              In your AI app&apos;s settings, add a custom connector and paste
-              the link. Apps without a skills feature can still follow a skill,
-              because it is plain text.
-            </p>
-          </>
-        ) : (
-          <p>
-            For now, private and friends skills are used from this website: copy
-            SKILL.md below and paste it into your AI app. Connected apps will
-            reach them once connector sign-in arrives.
-          </p>
-        )}
+        <InstallDialog
+          kind="Skill"
+          name={skill.name}
+          directText={files && skillInstallText({ ...skill, files })}
+          connectedText={connectable ? loadPrompt(skill) : undefined}
+          restricted={!connectable}
+          limitation="Text and reference files are included. Scripts and external tools require a compatible AI workspace and your approval."
+        />
       </section>
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <H className="text-lg font-semibold text-fg">SKILL.md</H>
-          {instructions && (
-            <CopyButton text={instructions.content} label="Copy SKILL.md" />
-          )}
-        </div>
-        {error ? (
-          <Notice tone="error" role="alert">
-            Could not load this skill&apos;s files. Reload the page to try
-            again.
-          </Notice>
-        ) : !files ? (
-          <p className="inline-flex items-center gap-2" role="status">
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            Loading the files…
-          </p>
-        ) : instructions ? (
-          <FileText text={instructions.content} label="Text of SKILL.md" />
-        ) : null}
-      </section>
-
-      <section className="space-y-3">
-        <H className="text-lg font-semibold text-fg">Other files</H>
-        {others.length === 0 ? (
-          <p>This skill is a single SKILL.md file.</p>
-        ) : (
-          <>
-            <p>SKILL.md says when to read each one. Open them one at a time.</p>
-            <ul className="space-y-2" aria-label="Other files">
-              {others.map((f) => (
-                <FileLine
-                  key={f.path}
-                  file={f}
-                  open={openPath === f.path}
-                  disabled={!files}
-                  panel={panel}
-                  onToggle={() =>
-                    setOpenPath(openPath === f.path ? null : f.path)
-                  }
-                />
-              ))}
-            </ul>
-            {opened && (
-              <div id={panel} className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <code className="break-all font-mono text-xs font-semibold">
-                    {opened.path}
-                  </code>
-                  <CopyButton text={opened.content} label="Copy this file" />
-                </div>
-                <FileText
-                  text={opened.content}
-                  label={`Text of ${opened.path}`}
-                />
-              </div>
+      <details className="space-y-3">
+        <summary className="cursor-pointer text-lg font-semibold">
+          Advanced Options
+        </summary>
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <H className="text-lg font-semibold text-fg">SKILL.md</H>
+            {instructions && (
+              <CopyButton text={instructions.content} label="Copy instruction file" />
             )}
-          </>
-        )}
-      </section>
+          </div>
+          {error ? (
+            <Notice tone="error" role="alert">
+              Could not load this skill&apos;s files. Reload the page to try
+              again.
+            </Notice>
+          ) : !files ? (
+            <p className="inline-flex items-center gap-2" role="status">
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              Loading the files…
+            </p>
+          ) : instructions ? (
+            <FileText text={instructions.content} label="Text of SKILL.md" />
+          ) : null}
+        </section>
+
+        <section className="space-y-3">
+          <H className="text-lg font-semibold text-fg">Other files</H>
+          {others.length === 0 ? (
+            <p>This skill is a single SKILL.md file.</p>
+          ) : (
+            <>
+              <p>SKILL.md says when to read each one. Open them one at a time.</p>
+              <ul className="space-y-2" aria-label="Other files">
+                {others.map((f) => (
+                  <FileLine
+                    key={f.path}
+                    file={f}
+                    open={openPath === f.path}
+                    disabled={!files}
+                    panel={panel}
+                    onToggle={() =>
+                      setOpenPath(openPath === f.path ? null : f.path)
+                    }
+                  />
+                ))}
+              </ul>
+              {opened && (
+                <div id={panel} className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <code className="break-all font-mono text-xs font-semibold">
+                      {opened.path}
+                    </code>
+                    <CopyButton text={opened.content} label="Copy this file" />
+                  </div>
+                  <FileText
+                    text={opened.content}
+                    label={`Text of ${opened.path}`}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      </details>
 
       <section className="space-y-3 border-t border-line pt-4">
         <H className="text-lg font-semibold text-fg">Comments</H>

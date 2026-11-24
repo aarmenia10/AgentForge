@@ -50,16 +50,16 @@ export function ConnectorCard({ variant = 'settings' }: { variant?: Variant }) {
       <div className="mt-4">
         <CodeBlock
           code={MCP_CONNECTOR_URL}
-          title="Connector link"
-          copyLabel="Copy link"
+          title="Connection link"
+          copyLabel="Copy Connection Link"
         />
       </div>
       {variant === 'install' && (
         <div className="mt-3">
           <CodeBlock
             code={ACCOUNT_RESOURCE}
-            title="Connector link with account access"
-            copyLabel="Copy account link"
+            title="Connection link with account access"
+            copyLabel="Copy Account Connection Link"
           />
         </div>
       )}

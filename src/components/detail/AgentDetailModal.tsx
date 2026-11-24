@@ -22,7 +22,9 @@ import { VoteButtons } from '@/components/ratings/VoteButtons'
 import { CommentsSection } from '@/components/ratings/CommentsSection'
 import { ReportDialog } from '@/components/ratings/ReportDialog'
 import { fetchRatings, type RatingData } from '@/services/ratings'
-import { ArrowIcon, AuthorLink, cn, CopyButton, FrameworkBadge, primaryButtonClass } from '../ui'
+import { AuthorLink, cn, CopyButton, FrameworkBadge } from '../ui'
+import { agentInstallText } from '@/lib/installText'
+import { InstallDialog } from './InstallDialog'
 import { InstallPanel } from './InstallPanel'
 import { SchemaViewer } from './SchemaViewer'
 
@@ -32,7 +34,7 @@ const TABS: readonly { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Overview', icon: FileText },
   { id: 'tools', label: 'Tools & MCP', icon: Wrench },
   { id: 'schema', label: 'Schema Contract', icon: Braces },
-  { id: 'install', label: 'Add to Claude / Cursor', icon: PlugZap },
+  { id: 'install', label: 'Advanced Options', icon: PlugZap },
 ]
 
 interface AgentDetailModalProps {
@@ -258,25 +260,16 @@ export function AgentDetailModal({
           {tab === 'install' && <InstallPanel agent={agent} />}
         </div>
 
-        {!installable && (
-          <footer className="border-t border-line px-5 py-4 text-sm text-fg-muted sm:px-7">
-            This agent is not in the public catalog, so it cannot be added to
-            an AI app yet. Copy what you need from the tabs above.
-          </footer>
-        )}
-        {installable && tab !== 'install' && (
-          <footer className="border-t border-line px-5 py-4 sm:px-7">
-            <button
-              type="button"
-              onClick={() => setTab('install')}
-              className={`${primaryButtonClass} w-full sm:w-auto`}
-            >
-              <PlugZap className="size-4" />
-              Add to Claude / Cursor
-              <ArrowIcon />
-            </button>
-          </footer>
-        )}
+        <footer className="border-t border-line px-5 py-4 sm:px-7">
+          <InstallDialog
+            kind="Agent"
+            name={agent.name}
+            directText={agentInstallText(agent)}
+            restricted={!installable}
+            connectedText={installable ? `Use AgentLemon to load agent ${agent.id}@${agent.version} and follow its blueprint for my task.` : undefined}
+            limitation={agent.tools_required.length ? 'This agent requires companion tools. Their actions may be unavailable until you connect those tools separately.' : 'This agent needs no companion tools.'}
+          />
+        </footer>
       </div>
 
       {showReport && (
