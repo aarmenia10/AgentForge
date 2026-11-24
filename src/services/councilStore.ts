@@ -265,10 +265,7 @@ export function createCouncilStore(db: Firestore, uid: string) {
       if (!snapshot.exists()) throw new Error('Member unavailable.')
       const data = snapshot.data()
       if (data.version !== ref.version) {
-        if (
-          data.visibility !== 'public' ||
-          data.review_status !== 'approved'
-        )
+        if (data.visibility !== 'public' || data.review_status !== 'approved')
           throw new Error('Pinned member unavailable.')
         const pinned = await publicCouncils.member(ref)
         if (pinned.item.author.uid !== data.owner_uid)

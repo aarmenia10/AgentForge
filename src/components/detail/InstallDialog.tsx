@@ -93,21 +93,18 @@ export function InstallDialog({
           </button>
         </div>
         <p className="my-3 text-sm text-fg-muted">
-          Choose either method. Review the instructions before using any
-          third-party tool.
+          Review the instructions before using either method.
         </p>
         {restricted && (
           <p className="mb-3 rounded-xl bg-surface-2 p-3 text-sm">
-            This content is restricted. Only paste it into an AI workspace
-            authorized to receive it.
+            This content is restricted. Use only an authorized AI workspace.
           </p>
         )}
         <div className="grid gap-4 md:grid-cols-2">
           <section className="space-y-3 rounded-2xl border border-line p-4">
             <h3 className="font-semibold">Copy &amp; Paste</h3>
             <p className="text-sm">
-              Start using this tool immediately. No AgentLemon connection is
-              needed for its text instructions.
+              Start using this tool without connecting AgentLemon.
             </p>
             <ol className="list-decimal space-y-1 pl-5 text-sm">
               <li>Click Copy {kind}.</li>
@@ -126,8 +123,7 @@ export function InstallDialog({
             </button>
             {!directText && (
               <p className="text-sm text-fg-muted">
-                Complete instructions are not available yet. Reload or try
-                the connection method if available.
+                Instructions unavailable. Reload or use the connection method.
               </p>
             )}
             <p className="text-xs text-fg-muted">
@@ -139,8 +135,7 @@ export function InstallDialog({
             <section className="space-y-3 rounded-2xl border border-line p-4">
               <h3 className="font-semibold">Connect &amp; Install</h3>
               <p className="text-sm">
-                Connect once per AI platform or workspace for easy access to
-                supported tools and integrations.
+                Connect once per AI platform for supported integrations.
               </p>
               <label className="block text-sm font-medium">
                 Choose your AI platform
@@ -173,8 +168,7 @@ export function InstallDialog({
               </button>
               <h4 className="text-sm font-semibold">2. Install your tool</h4>
               <p className="text-sm">
-                Copy the request and paste it in a chat with AgentLemon
-                enabled.
+                Paste the request into a chat with AgentLemon enabled.
               </p>
               <button
                 type="button"
@@ -209,10 +203,7 @@ export function InstallDialog({
               {!account && (
                 <>
                   <p>Codex CLI: codex mcp add agentlemon --url {link}</p>
-                  <p>
-                    Cursor: add this entry to the mcpServers object in
-                    mcp.json:
-                  </p>
+                  <p>Cursor: add this entry to mcpServers in mcp.json:</p>
                   <pre className="whitespace-pre-wrap break-all">
                     {JSON.stringify({ agentlemon: { url: link } }, null, 2)}
                   </pre>
@@ -222,9 +213,8 @@ export function InstallDialog({
           )}
           {advanced}
           <p className="text-xs text-fg-muted">
-            If loading fails, check that the selected app supports custom
-            connections and has AgentLemon enabled. You can always try direct
-            copying when available.
+            If loading fails, check that AgentLemon is enabled in your AI app.
+            You can also try direct copying.
           </p>
         </details>
       </dialog>

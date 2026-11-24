@@ -183,7 +183,10 @@ export function SkillDetail({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <H className="text-lg font-semibold text-fg">SKILL.md</H>
             {instructions && (
-              <CopyButton text={instructions.content} label="Copy instruction file" />
+              <CopyButton
+                text={instructions.content}
+                label="Copy instruction file"
+              />
             )}
           </div>
           {error ? (
@@ -207,7 +210,9 @@ export function SkillDetail({
             <p>This skill is a single SKILL.md file.</p>
           ) : (
             <>
-              <p>SKILL.md says when to read each one. Open them one at a time.</p>
+              <p>
+                SKILL.md says when to read each one. Open them one at a time.
+              </p>
               <ul className="space-y-2" aria-label="Other files">
                 {others.map((f) => (
                   <FileLine
