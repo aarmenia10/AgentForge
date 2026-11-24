@@ -547,6 +547,7 @@ What is being built right now. One row per claim. Add yours before you start and
 | --- | --- | --- | --- | --- | --- |
 | P3-12 | Aidan | Codex | `copilot/signup-use-for` | Preferences UI, storage, suggestions, rules, tests, README | 2026-11-22 |
 | Visual restyle | Aidan | Copilot | `aarmenia10-restyle-pages` | Studio, My items, Friends, Review, Skills, Councils, Profile, Suggestions, comments, reports, welcome | 2026-11-23 |
+| Reports handled | Aidan | Copilot | `copilot/reports-handled` | Report deletion rules, admin Reports tab, council filtering, tests | 2026-11-24 |
 
 ### 8.2 Ideas inbox
 

@@ -514,6 +514,41 @@ test('R-27: a report note over 500 characters is denied', async () =>
     await assertSucceeds(report('x'.repeat(500)))
   }))
 
+test('an admin can delete reports for agents and skills', async () =>
+  scenario(async ({ as, peek }) => {
+    await submitReport(as('bob'), 'agent', AGENT, 'bob', { reason: 'spam' })
+    await submitReport(as('bob'), 'skill', SKILL, 'bob', { reason: 'spam' })
+
+    await assertSucceeds(
+      deleteDoc(doc(as('admin'), 'agents', AGENT, 'reports', 'bob')),
+    )
+    await assertSucceeds(
+      deleteDoc(doc(as('admin'), 'skills', SKILL, 'reports', 'bob')),
+    )
+    assert.equal((await peek(`agents/${AGENT}/reports/bob`)).exists(), false)
+    assert.equal((await peek(`skills/${SKILL}/reports/bob`)).exists(), false)
+  }))
+
+test('reporters, item owners, and other users cannot delete agent reports', async () =>
+  scenario(async ({ as }) => {
+    await submitReport(as('bob'), 'agent', AGENT, 'bob', { reason: 'spam' })
+
+    for (const uid of ['bob', 'alice', 'carol'])
+      await assertFails(
+        deleteDoc(doc(as(uid), 'agents', AGENT, 'reports', 'bob')),
+      )
+  }))
+
+test('reporters, item owners, and other users cannot delete skill reports', async () =>
+  scenario(async ({ as }) => {
+    await submitReport(as('bob'), 'skill', SKILL, 'bob', { reason: 'spam' })
+
+    for (const uid of ['bob', 'alice', 'carol'])
+      await assertFails(
+        deleteDoc(doc(as(uid), 'skills', SKILL, 'reports', 'bob')),
+      )
+  }))
+
 /* ---------- Skills and export markers: R-28 to R-31 ---------- */
 
 test('R-28: a vote on a public approved skill is allowed and moves the skill counters', async () =>
