@@ -270,10 +270,13 @@ export function createCouncilStore(db: Firestore, uid: string) {
           data.review_status !== 'approved'
         )
           throw new Error('Pinned member unavailable.')
-        return publicCouncils.member(ref)
+        const pinned = await publicCouncils.member(ref)
+        if (pinned.item.author.uid !== data.owner_uid)
+          throw new Error('Member identity mismatch.')
+        return pinned
       }
       if (ref.kind === 'agent') {
-        const item = manifestSchema.parse(data)
+        const item = storedAgentRecordSchema().parse(data)
         if (item.id === ref.id) return { kind: 'agent', item }
       } else {
         const item = skillRecordSchema.parse(data)

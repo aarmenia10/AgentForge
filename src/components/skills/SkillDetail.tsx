@@ -1,11 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
-import {
-  AuthorLink,
-  CopyButton,
-  VERIFIED_AUTHOR_LABEL,
-} from '@/components/ui'
+import { AuthorLink, CopyButton, VERIFIED_AUTHOR_LABEL } from '@/components/ui'
 import { Notice, smallButton, VisibilityLabel } from '@/components/studio/parts'
 import { VoteButtons } from '@/components/ratings/VoteButtons'
 import { CommentsSection } from '@/components/ratings/CommentsSection'
