@@ -71,13 +71,17 @@ export function FeaturedEditor() {
   }, [])
 
   const names = new Map(catalog?.map((item) => [keyOf(item), item.name]))
-  const term = query.trim().toLowerCase()
+  const term = query
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, ' ')
   const matches = term
     ? (catalog ?? [])
         .filter(
           (entry) =>
             `${entry.name} ${entry.id} ${KIND_LABEL[entry.kind]}`
               .toLowerCase()
+              .replace(/[-\s]+/g, ' ')
               .includes(term) &&
             !items.some((item) => keyOf(item) === keyOf(entry)),
         )
@@ -185,6 +189,9 @@ export function FeaturedEditor() {
                 ref={searchInput}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.preventDefault()
+                }}
                 className={`${inputClass()} h-10`}
                 placeholder="Search agents, skills, and councils"
                 disabled={items.length >= MAX_FEATURED_ITEMS}
