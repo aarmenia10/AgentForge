@@ -2,7 +2,6 @@ import { Globe, Lock, Users } from 'lucide-react'
 import type { AgentManifest } from '@/types/agent'
 import type { StepProps } from './context'
 import { Notice } from './parts'
-import { copyInstructionClass } from '../ui'
 
 export const VISIBILITY_CHOICES: {
   value: AgentManifest['visibility']
@@ -76,7 +75,7 @@ export function StepVisibility({
         </Notice>
       )}
       {draft.visibility !== 'public' && (
-        <p className={copyInstructionClass}>
+        <p className="text-xs text-fg-muted">
           For now, private and friends agents are used from this website: open
           one and copy its prompt. The install command works for public agents.
         </p>
