@@ -107,6 +107,7 @@ export default function AcademyPage() {
             <CodeBlock
               code={academyTutorPrompt()}
               title="Copy this into your AI chat"
+              emphasizeTitle
               wrap
             />
           </div>

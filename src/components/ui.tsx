@@ -122,12 +122,15 @@ export function CopyButton({
   text,
   label = 'Copy',
   tone = 'surface',
+  emphasizeCopy = false,
   onResult,
 }: {
   text: string | null
   label?: string
   /** `onDark` is for buttons sitting on an always-dark code block. */
   tone?: 'surface' | 'onDark' | 'primary'
+  /** Academy copy buttons opt into the enhanced presentation. */
+  emphasizeCopy?: boolean
   onResult?: (manualText: string | null) => void
 }) {
   const [status, setStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>(
@@ -161,7 +164,7 @@ export function CopyButton({
   }
 
   const copied = status === 'copied'
-  const emphasize = status === 'idle' || status === 'copying'
+  const emphasize = emphasizeCopy && (status === 'idle' || status === 'copying')
   return (
     <button
       type="button"
@@ -250,10 +253,10 @@ export function CodeBlock({
       <div
         className={cn(
           'flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2',
-          (emphasizeTitle || title === COPY_CHAT_INSTRUCTION) && 'flex-wrap',
+          emphasizeTitle && 'flex-wrap',
         )}
       >
-        {title === COPY_CHAT_INSTRUCTION ? (
+        {emphasizeTitle && title === COPY_CHAT_INSTRUCTION ? (
           <CopyChatInstruction onDark />
         ) : (
           <span
@@ -266,7 +269,12 @@ export function CodeBlock({
             {title}
           </span>
         )}
-        <CopyButton text={code} label={copyLabel} tone="onDark" />
+        <CopyButton
+          text={code}
+          label={copyLabel}
+          tone="onDark"
+          emphasizeCopy={emphasizeTitle}
+        />
       </div>
       <pre
         className={cn(
