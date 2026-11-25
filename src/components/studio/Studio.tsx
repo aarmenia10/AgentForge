@@ -52,9 +52,14 @@ import {
   NO_FINDINGS_TEXT,
   primaryButton,
   secondaryButton,
+  SelfContainedNotice,
   smallButton,
   textLink,
 } from './parts'
+import {
+  checkSelfContained,
+  type SelfContainedWarning,
+} from '@/lib/selfContained'
 import { StepBasics, StepPrompt, StepTools } from './Steps'
 import { StepIO } from './StepIO'
 import { StepVisibility } from './StepVisibility'
@@ -242,7 +247,7 @@ export function Studio({ editId }: { editId: string | null }) {
   const liveApproved =
     live?.visibility === 'public' && live.review_status === 'approved'
 
-  const { problems, findings } = useMemo(() => {
+  const { problems, findings, selfContained } = useMemo(() => {
     const built = draftToManifest(checked, identity)
     const list: Problem[] = [...built.problems]
     const parsed = manifestSchema.safeParse(built.manifest)
@@ -291,7 +296,13 @@ export function Studio({ editId }: { editId: string | null }) {
     } catch {
       lint = []
     }
-    return { problems: list, findings: lint }
+    let selfContained: SelfContainedWarning[]
+    try {
+      selfContained = checkSelfContained(built.manifest, 'agent')
+    } catch {
+      selfContained = []
+    }
+    return { problems: list, findings: lint, selfContained }
     // identity is derived from profile, so profile stands in for it here.
   }, [checked, profile, validator, catalogIds, editing, liveApproved, live])
 
@@ -606,6 +617,8 @@ export function Studio({ editId }: { editId: string | null }) {
             ? NO_FINDINGS_TEXT
             : `The safety linter flagged ${blockCount ? `${blockCount} item${blockCount > 1 ? 's' : ''} that block${blockCount > 1 ? '' : 's'} sharing` : ''}${blockCount && warnCount ? ' and ' : ''}${warnCount ? `${warnCount} item${warnCount > 1 ? 's' : ''} for a reviewer to check` : ''}. Each one is shown beside its field.`}
         </p>
+
+        <SelfContainedNotice warnings={selfContained} />
 
         {needsEmailVerification && (
           <Notice tone="warn" title="Confirm your email before you save">

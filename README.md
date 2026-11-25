@@ -32,7 +32,7 @@ Verified by the orchestrator on 2026-11-17 at the P2-17 merge: `npm run lint`, `
 | Static catalog | Built. `scripts/export-catalog.ts` validates version 2 records, exports only public and approved agents, strips Firestore metadata, and writes `public/catalog.json`. The site reads only that file |
 | Seed agents | 14 validated schema version 2 public manifests with the AgentForge author identity. At least two in every category, including `creative`, and all five frameworks represented |
 | Validation | Built. Strict version 2 manifest and Firestore record validation in `src/lib/validateManifest.ts` (zod plus JSON Schema compilation) |
-| MCP server | Released. `agentlemon-registry` 0.3.4 (current; 0.3.0 to 0.3.3 stay hosted) is served from the site at `/mcp/agentlemon-registry-0.3.4.tgz`. Every `agentforge-registry` release (0.1.0 to 0.2.2) stays available on both addresses and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
+| MCP server | Released. `agentlemon-registry` 0.3.5 (current; 0.3.0 to 0.3.4 stay hosted) is served from the site at `/mcp/agentlemon-registry-0.3.5.tgz`. Every `agentforge-registry` release (0.1.0 to 0.2.2) stays available on both addresses and installs with `npx`. Ships the AI navigation guide, ranked search, and `compare_agents` |
 | Firestore rules | Profiles, unique handles, mutual friends, visibility, owner submissions, admin review/verification, and atomic per-user stars. Private/friends reads use current ownership/friendship |
 | Firebase project | `agentforge-b10db`, linked through `.firebaserc`. Web config is in `.env.production` |
 | Live site | https://agentlemon.web.app, deployed automatically from `main` by CI. The old address https://agentforge-b10db.web.app gets the same deploy: it keeps serving files for existing installs and sends page visits to the new address |
@@ -57,7 +57,7 @@ Verified by the orchestrator on 2026-11-17 at the P2-17 merge: `npm run lint`, `
 | Auth domain | `agentlemon.web.app` (changed 2026-11-18; `agentforge-b10db.firebaseapp.com` before) |
 | Plan | Spark (no cost) |
 | Firestore | Database `(default)`, location `nam5`, currently empty |
-| MCP server install | `npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.4.tgz`. Not on the npm registry, by decision |
+| MCP server install | `npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.5.tgz`. Not on the npm registry, by decision |
 | Remote connector | https://agentlemon-connector.lesslimit.workers.dev/mcp (Cloudflare Workers, free plan, account subdomain `lesslimit`). The old Worker at `agentforge-connector.lesslimit.workers.dev` keeps running, undeployed, until nobody uses it |
 | Repository | `aarmenia10/AgentLemon` (renamed from `aarmenia10/AgentForge` on 2026-11-24; GitHub redirects the old address), default branch `main` |
 
@@ -112,7 +112,7 @@ The web app generates this entry and the server must honor it. The generator is 
   "mcpServers": {
     "agentlemon-<agent-id>": {
       "command": "npx",
-      "args": ["-y", "https://agentlemon.web.app/mcp/agentlemon-registry-0.3.4.tgz", "--agent", "<agent-id>@<version>"]
+      "args": ["-y", "https://agentlemon.web.app/mcp/agentlemon-registry-0.3.5.tgz", "--agent", "<agent-id>@<version>"]
     }
   }
 }

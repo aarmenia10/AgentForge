@@ -380,6 +380,45 @@ test('real Auth and Firestore REST enforce account isolation, private create-onl
     assert.equal(chatCouncil.visibility, 'private')
     assert.equal(chatCouncil.saved_from_chat, true)
     assert.equal(chatCouncil.origin_app, existing.origin_app)
+
+    // R1 (deferred by decision D4, documented in docs/COUNCILS.md 9.2): a
+    // private member keeps only its current version. After the owner edits
+    // it to a new version, the council's pin no longer resolves, and get_item
+    // says which version is current. Nothing warns at edit time yet.
+    assert.match(savedCouncil.next_step, /can break this council/)
+    await assertSucceeds(
+      setDoc(doc(aliceDb, 'skills', privateSkill.id), {
+        ...skillRecord,
+        version: '1.1.0',
+        stats: { updated_at: new Date().toISOString() },
+      }),
+    )
+    await assert.rejects(
+      toolBody(
+        await call(aliceTokens.access_token, 'get_item', {
+          kind: 'skill',
+          id: privateSkill.id,
+          version: privateSkill.version,
+        }),
+      ),
+      new RegExp(
+        `is at version 1\\.1\\.0, not ${privateSkill.version.replaceAll('.', '\\.')}\\. .*council pinned to an older version`,
+      ),
+    )
+    assert.equal(
+      (
+        await toolBody(
+          await call(aliceTokens.access_token, 'get_item', {
+            kind: 'council',
+            id: council.id,
+          }),
+        )
+      ).council.members[1].ref.version,
+      privateSkill.version,
+    )
+    await assertSucceeds(
+      setDoc(doc(aliceDb, 'skills', privateSkill.id), skillRecord),
+    )
     const newId = 'never-created'
     const overwrite = {
       ...council,

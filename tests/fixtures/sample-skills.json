@@ -1,0 +1,127 @@
+[
+  {
+    "skill_schema_version": 1,
+    "visibility": "public",
+    "id": "research-source-check",
+    "version": "1.0.0",
+    "name": "research-source-check",
+    "description": "Sample: Checks a claim by finding 2 or 3 independent sources, quoting the relevant line from each, and rating confidence as high, medium, or low.",
+    "author": {
+      "uid": "test-author-uid",
+      "name": "Test Author",
+      "handle": "test-author",
+      "verified": false
+    },
+    "tags": ["sample"],
+    "stats": {
+      "updated_at": "2026-11-24T00:00:00.000Z"
+    },
+    "files": [
+      {
+        "path": "SKILL.md",
+        "kind": "instructions",
+        "content": "---\nname: research-source-check\ndescription: \"Sample: Checks a claim by finding 2 or 3 independent sources, quoting the relevant line from each, and rating confidence as high, medium, or low.\"\n---\n\n# Research Source Check\n\nUse this skill when the user wants to know whether a claim, statistic, or news item is true.\n\n## Steps\n\n1. Restate the claim in one clear sentence. If it is vague, ask the user what exactly they want checked.\n2. Search the web for 2 or 3 independent sources. Independent means they do not simply repeat each other. Prefer primary sources (official data, original studies, the organization involved) over blogs or reposts.\n3. For each source, find the line that speaks directly to the claim. Quote it exactly, keep each quote under 15 words, and give the source name, date, and link. If a longer passage matters, paraphrase it.\n4. Note whether each source supports the claim, contradicts it, or only partly covers it.\n5. Rate your confidence:\n   - High: two or more independent, reliable sources agree.\n   - Medium: sources agree but are few, indirect, or somewhat dated, or reliable sources differ slightly.\n   - Low: only one source, weak sources, or reliable sources conflict.\n6. Give a one-sentence verdict, then say what would raise your confidence.\n\n## Output format\n\n- Claim\n- Sources (name, date, link, quoted line, supports / contradicts / partial)\n- Confidence: high, medium, or low, with one sentence of reasoning\n- Verdict\n\n## Notes\n\n- Never invent a source, quote, or link. If you cannot find 2 sources, say so and rate confidence low.\n- Be clear about the difference between \"not found\" and \"false\".\n"
+      }
+    ]
+  },
+  {
+    "skill_schema_version": 1,
+    "visibility": "public",
+    "id": "weekly-plan",
+    "version": "1.0.0",
+    "name": "weekly-plan",
+    "description": "Sample: Turns a brain-dump of tasks into a prioritized week plan with time blocks and one most important task per day.",
+    "author": {
+      "uid": "test-author-uid",
+      "name": "Test Author",
+      "handle": "test-author",
+      "verified": false
+    },
+    "tags": ["sample"],
+    "stats": {
+      "updated_at": "2026-11-24T00:00:00.000Z"
+    },
+    "files": [
+      {
+        "path": "SKILL.md",
+        "kind": "instructions",
+        "content": "---\nname: weekly-plan\ndescription: \"Sample: Turns a brain-dump of tasks into a prioritized week plan with time blocks and one most important task per day.\"\n---\n\n# Weekly Plan\n\nUse this skill when the user dumps a messy list of tasks, errands, and worries and wants a realistic plan for the week.\n\n## Steps\n\n1. Read the brain-dump and split it into separate tasks. Merge duplicates and rewrite vague items as concrete actions.\n2. Ask the user for the facts you need if they are missing: which days they are available, their usual working hours, fixed commitments (meetings, classes, appointments), and any hard deadlines.\n3. Rank the tasks. Put deadlines and high-impact items first. Mark quick tasks (under 15 minutes) so they can be batched.\n4. Estimate how long each task takes. Be honest and add a buffer of about 20 percent. Do not fill every hour of the day.\n5. Place tasks into time blocks from Monday to Sunday, around the fixed commitments. Put the hardest work in the user's best hours.\n6. Choose exactly one \"most important task\" for each day. It goes first on that day.\n7. List anything that did not fit under \"Not this week\" so the user can decide what to drop or move.\n\n## Output format\n\nA day-by-day plan. Each day shows the most important task, then a list of time blocks like \"9:00 to 10:30: Draft report\". End with the \"Not this week\" list.\n\n## Notes\n\n- Never schedule over the user's fixed commitments.\n- If the week is overloaded, say so plainly and suggest what to cut.\n- Keep it short enough to paste into a calendar or notes app.\n"
+      }
+    ]
+  },
+  {
+    "skill_schema_version": 1,
+    "visibility": "public",
+    "id": "email-reply-drafter",
+    "version": "1.0.0",
+    "name": "email-reply-drafter",
+    "description": "Sample: Drafts a short, polite reply to an email in the user's tone, with a subject line and two alternative openings.",
+    "author": {
+      "uid": "test-author-uid",
+      "name": "Test Author",
+      "handle": "test-author",
+      "verified": false
+    },
+    "tags": ["sample"],
+    "stats": {
+      "updated_at": "2026-11-24T00:00:00.000Z"
+    },
+    "files": [
+      {
+        "path": "SKILL.md",
+        "kind": "instructions",
+        "content": "---\nname: email-reply-drafter\ndescription: \"Sample: Drafts a short, polite reply to an email in the user's tone, with a subject line and two alternative openings.\"\n---\n\n# Email Reply Drafter\n\nUse this skill when the user pastes an email and wants a reply drafted.\n\n## Steps\n\n1. Read the email carefully. Work out what the sender wants, any deadlines, and any questions that need an answer.\n2. Check how the user writes. If they gave a sample of their writing or told you their tone (for example warm, brief, formal), match it. If not, default to friendly and professional.\n3. Ask the user for any fact you need and do not have, such as a date they can meet. Do not invent facts, prices, or commitments.\n4. Draft a short reply, ideally under 120 words. Answer every question in the email. State clearly what happens next.\n5. Write a subject line. Use \"Re:\" plus the original subject unless a new one would be clearer.\n6. Offer two alternative openings for the first line, one warmer and one more direct, so the user can pick.\n\n## Output format\n\n- Subject line\n- Reply body\n- Alternative opening A (warmer)\n- Alternative opening B (more direct)\n\n## Notes\n\n- Never send anything. Only draft it for the user to review.\n- Keep the tone polite even if the original email is rude.\n- Mark any placeholder the user must fill in with square brackets, like [date].\n"
+      }
+    ]
+  },
+  {
+    "skill_schema_version": 1,
+    "visibility": "public",
+    "id": "meeting-notes-cleanup",
+    "version": "1.0.0",
+    "name": "meeting-notes-cleanup",
+    "description": "Sample: Turns rough meeting notes into clear decisions, action items with owners and dates, and open questions.",
+    "author": {
+      "uid": "test-author-uid",
+      "name": "Test Author",
+      "handle": "test-author",
+      "verified": false
+    },
+    "tags": ["sample"],
+    "stats": {
+      "updated_at": "2026-11-24T00:00:00.000Z"
+    },
+    "files": [
+      {
+        "path": "SKILL.md",
+        "kind": "instructions",
+        "content": "---\nname: meeting-notes-cleanup\ndescription: \"Sample: Turns rough meeting notes into clear decisions, action items with owners and dates, and open questions.\"\n---\n\n# Meeting Notes Cleanup\n\nUse this skill when the user pastes messy or half-finished meeting notes and wants them organized.\n\n## Steps\n\n1. Read the notes all the way through. Note the meeting title, date, and attendees if they are mentioned.\n2. Pull out every decision that was made. Write each as one plain sentence in the past tense.\n3. Pull out every action item. For each one, write what needs to happen, who owns it, and the due date. If the owner or date is missing from the notes, write \"Owner: unassigned\" or \"Due: not set\" instead of guessing.\n4. List open questions: anything that was raised but not settled, and anything that needs a follow-up conversation.\n5. Add a two-sentence summary of what the meeting was about at the top.\n\n## Output format\n\n- Summary (two sentences)\n- Decisions (bulleted)\n- Action items (a table with columns: Task, Owner, Due)\n- Open questions (bulleted)\n\n## Notes\n\n- Keep the original meaning. Do not add decisions or tasks that were not in the notes.\n- Fix spelling and shorthand, but keep names and numbers exactly as written.\n- If the notes are too thin to fill a section, say \"None noted\" for that section.\n"
+      }
+    ]
+  },
+  {
+    "skill_schema_version": 1,
+    "visibility": "public",
+    "id": "morning-news-brief",
+    "version": "1.0.0",
+    "name": "morning-news-brief",
+    "description": "Sample: Each morning, finds 3 recent news articles that match the user's work and interests and summarizes each one.",
+    "author": {
+      "uid": "test-author-uid",
+      "name": "Test Author",
+      "handle": "test-author",
+      "verified": false
+    },
+    "tags": ["sample"],
+    "stats": {
+      "updated_at": "2026-11-24T00:00:00.000Z"
+    },
+    "files": [
+      {
+        "path": "SKILL.md",
+        "kind": "instructions",
+        "content": "---\nname: morning-news-brief\ndescription: \"Sample: Each morning, finds 3 recent news articles that match the user's work and interests and summarizes each one.\"\ntags: [sample]\n---\n\n# Morning News Brief\n\nUse this skill when the user asks for their morning news brief or a quick catch-up on what matters to them.\n\n## Steps\n\n1. Think about what you already know about the user's work, industry, and interests. If you know very little, ask one short question to learn their main topics.\n2. Search the web for recent news (ideally from the last 48 hours) on those topics. Pick 3 articles from different, reputable sources. Avoid duplicates and paywalled pages when you can.\n3. If your app can, open each article in its own browser tab using your browser tool. If it cannot, just use the links.\n4. For each article, write one short paragraph that says what happened and why it matters to this user. Use your own words and do not copy long passages.\n5. Under each paragraph, add the article title, the source name, the publication date, and the link.\n\n## Output format\n\nThree numbered entries. Each has a one-paragraph summary, then a line with the title, source, date, and link. End with one sentence naming the single story the user should read first.\n\n## Notes\n\n- Only use real articles you actually found. Never invent links or dates.\n- If you cannot find 3 relevant articles, say so and share what you did find.\n"
+      }
+    ]
+  }
+]

@@ -37,9 +37,11 @@ import {
   BLUEPRINT_NOTICE,
   discoveryTools,
   jsonResult,
+  PUBLIC_ONLY_DESCRIPTION,
   renderBlueprint,
   runDiscoveryTool,
   selectAgent,
+  type PrivateItemHint,
 } from '../../mcp-server/src/shared'
 import { accountToolNames, accountTools } from './accountTools'
 
@@ -67,8 +69,7 @@ const publicTitles: Record<string, string> = {
 
 export function createConnectorServer(
   catalog: readonly AgentManifest[],
-  resolve: (selector: string) => Promise<AgentManifest> = async (value) =>
-    selectAgent(catalog, value),
+  resolve?: (selector: string) => Promise<AgentManifest>,
   readSkill = hostedSkillReader(),
   account?: (
     name: string,
@@ -78,7 +79,10 @@ export function createConnectorServer(
     | Readonly<Record<string, OriginApp>>
     | (() => Promise<Readonly<Record<string, OriginApp>>>) = {},
   readCouncil = hostedCouncilReader(undefined, undefined, origins),
+  hint: PrivateItemHint = account ? 'get_item' : 'connector_link',
 ) {
+  const resolveAgent =
+    resolve ?? (async (value: string) => selectAgent(catalog, value, hint))
   const server = new Server(
     { name: CONNECTOR_NAME, version: CONNECTOR_VERSION },
     {
@@ -95,7 +99,8 @@ export function createConnectorServer(
       {
         name: LOAD_TOOL,
         description:
-          'Fetch one agent after you have compared candidates and decided. Accepts an id or exact id@version and returns its full blueprint, schemas, and external tool requirements in one call. Nothing stays loaded afterwards. If no candidate fits the task, do not call this; tell the user and proceed without an agent.',
+          'Fetch one agent after you have compared candidates and decided. Accepts an id or exact id@version and returns its full blueprint, schemas, and external tool requirements in one call. Nothing stays loaded afterwards. If no candidate fits the task, do not call this; tell the user and proceed without an agent. ' +
+          PUBLIC_ONLY_DESCRIPTION,
         inputSchema: {
           type: 'object',
           properties: {
@@ -155,7 +160,7 @@ export function createConnectorServer(
           !agent_id.endsWith(`@${version}`)
         )
           throw new Error('Conflicting version selectors')
-        const agent = await resolve(
+        const agent = await resolveAgent(
           version && !agent_id.includes('@')
             ? `${agent_id}@${version}`
             : agent_id,

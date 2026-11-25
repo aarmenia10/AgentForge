@@ -1,9 +1,9 @@
 # agentlemon-registry
 
-Version 0.3.4. Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
+Version 0.3.5. Node 22+ local stdio MCP server. No inference service, API key, or Firestore reads.
 
 ```sh
-npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.4.tgz --agent postgres-index-tuner@1.0.0
+npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.5.tgz --agent postgres-index-tuner@1.0.0
 ```
 
 The server is distributed as a tarball on the AgentLemon site, not through the npm
@@ -16,6 +16,8 @@ fetches `https://agentlemon.web.app/catalog.json` with a 10-second timeout and
 falls back to its bundled snapshot on network, HTTP, parsing, or validation failure.
 The 0.2.x and 0.3.x servers validates schema version 2 manifests: author is `{ uid, name, handle, verified }`, with `visibility` and `schema_version: 2`. The catalog contains only public, approved agents and no Firestore storage metadata. Search and comparison results keep author as `{ name, verified_author }`. "Verified author" means identity confirmed, not safety reviewed.
 
+This server reads only the public registry. Your own private and friends agents, skills, and councils need the AgentLemon account connector (`https://agentlemon-connector.lesslimit.workers.dev/account/mcp`) and its `get_item` tool; when an ID is not public, the error says so and gives that address.
+
 The default never reads a catalog from the working directory. An explicit source
 fails closed on any error, even when it names the default URL. An unavailable pinned
 version always fails closed; it never silently substitutes another version. When the pin differs from the catalog version, it reads `agents/<id>/<version>.json` beside that catalog (HTTP or filesystem). The body must be a public manifest with the exact requested id and version; HTML 200 SPA fallbacks are rejected. The agent must still appear in the current catalog. Offline fallback continues to support pins present in the bundled catalog.
@@ -23,7 +25,7 @@ version always fails closed; it never silently substitutes another version. When
 For OpenAI Codex, install the pinned agent using the documented stdio command:
 
 ```sh
-codex mcp add agentlemon-postgres-index-tuner -- npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.4.tgz --agent postgres-index-tuner@1.0.0
+codex mcp add agentlemon-postgres-index-tuner -- npx -y https://agentlemon.web.app/mcp/agentlemon-registry-0.3.5.tgz --agent postgres-index-tuner@1.0.0
 ```
 
 See [OpenAI's MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).

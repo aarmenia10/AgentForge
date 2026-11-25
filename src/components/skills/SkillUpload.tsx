@@ -17,9 +17,11 @@ import {
   Notice,
   primaryButton,
   secondaryButton,
+  SelfContainedNotice,
   smallButton,
   textLink,
 } from '@/components/studio/parts'
+import { checkSelfContained } from '@/lib/selfContained'
 import { Link, useRoute } from '@/router/Router'
 import { formatBytes, skillRepository } from '@/lib/skillRepository'
 import { SKILL_INSTRUCTIONS_PATH, utf8ByteLength } from '@/lib/skillSchema'
@@ -171,6 +173,10 @@ export function SkillUpload({ editId }: { editId: string | null }) {
     [checked, profile, takenIds, live],
   )
   const stale = checked !== draft
+  const selfContained = useMemo(
+    () => checkSelfContained({ files: draftFiles(checked) }, 'skill'),
+    [checked],
+  )
 
   function update(patch: Partial<SkillDraft>) {
     setDraft((current) => ({ ...current, ...patch }))
@@ -650,6 +656,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
             ? NO_FINDINGS_TEXT
             : `The safety linter flagged ${blockCount ? `${blockCount} item${blockCount > 1 ? 's' : ''} that block${blockCount > 1 ? '' : 's'} sharing` : ''}${blockCount && warnCount ? ' and ' : ''}${warnCount ? `${warnCount} item${warnCount > 1 ? 's' : ''} for a reviewer to check` : ''}. Each one is shown beside its file.`}
         </p>
+        <SelfContainedNotice warnings={selfContained} />
         {needsEmailVerification && <VerifyEmailNotice />}
         {profile === null && (
           <Notice tone="warn" title="Choose your username first">

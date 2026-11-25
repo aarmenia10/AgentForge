@@ -11,6 +11,7 @@ import { cn } from '@/components/ui'
 import type { LintFinding } from '@/lib/safetyLinter'
 import type { Problem } from '@/lib/studioManifest'
 import type { AgentManifest, AgentRecord } from '@/types/agent'
+import type { SelfContainedWarning } from '@/lib/selfContained'
 
 /* Shared pieces for the Studio, My agents, and the review queue. */
 
@@ -224,6 +225,37 @@ export function Notice({
         {children}
       </div>
     </div>
+  )
+}
+
+/**
+ * Self-containment warnings (src/lib/selfContained.ts). They never block a
+ * save; they tell the author what a fresh AI in another app will be missing.
+ */
+export function SelfContainedNotice({
+  warnings,
+}: {
+  warnings: readonly SelfContainedWarning[]
+}) {
+  if (warnings.length === 0) return null
+  return (
+    <Notice
+      tone="warn"
+      title={`${warnings.length} thing${warnings.length > 1 ? 's' : ''} another AI may not have`}
+    >
+      <p className="text-xs text-fg-muted">
+        Another AI loads this item with only its own text and files. These do
+        not stop you saving.
+      </p>
+      <ul className="list-disc space-y-1 pl-5">
+        {warnings.map((w, i) => (
+          <li key={`${w.code}${i}`}>
+            <code className="break-all font-mono text-xs">{w.where}</code>:{' '}
+            {w.message}
+          </li>
+        ))}
+      </ul>
+    </Notice>
   )
 }
 

@@ -251,6 +251,36 @@ Beyond the owner's decisions, these were settled here and bind P3-9, P3-10, and 
 14. No zip upload, so no new dependency.
 15. Uploads drop a leading byte-order mark and otherwise keep content byte for byte.
 
+## 14. Self-contained skills
+
+A skill is loaded later by a fresh AI, often in another app, that has only the skill's own files. It has no project folder, no attachments, and no memory of the chat the skill came from. The private `cams45` skill showed what goes wrong: its SKILL.md told the AI to match "the .docx already in this project", go to "the course Modules page" with no URL, and use Claude-only tool IDs. Every consumer filled those gaps differently. The checklist the AI guide gives exporters is in `docs/AI_GUIDE.md` section 13. In short:
+
+- **Bundle what the skill mentions.** Every file the instructions refer to goes in the skill as a reference file.
+- **Convert binary files.** Images, PDFs, .docx and other binary files stay unsupported (decision D3, 2026-11-25). Save a Markdown format spec instead (the headings and styles a document uses, with their names, list and quote conventions, citation format, file naming rule) plus a short excerpt of a finished example. `tests/fixtures/cams45-selfcontained.json` is a worked example: `format-spec.md`, `example-output.md`, and `inputs.md` replace the project .docx.
+- **State the facts.** URLs, IDs, style names, and numbers go in the text. Anything personal or per-use (a course URL, a lesson number) is written as an input the AI must ask for.
+- **Describe tools by capability**, name the author's tool only as an example, give a fallback, and state the minimum capability up front.
+
+### 14.1 Warnings
+
+`src/lib/selfContained.ts` (`checkSelfContained`) looks for text that only made sense where the skill was written. It is pure and Worker-safe, and it only warns: no save is ever blocked (decision D2). Scripts are not scanned.
+
+| Code              | What it means                                                                                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `absent_file`     | A file name with an extension (`.docx`, `.pdf`, `.md`, `.csv`, ...) that is not a path in the bundle. Patterns such as `{NN}.docx` and URLs are ignored                                           |
+| `hidden_context`  | "this project", "the project folder", "the attached file", "already in this project", "the file above", "as we did", "we built", "earlier in this chat", or a local path (`C:\`, `/Users/`, `~/`) |
+| `vague_location`  | "the X page" or "go to the X page" when the skill has no URL anywhere. One per item                                                                                                               |
+| `tool_id`         | A namespaced tool ID (`claude-in-chrome:navigate`, `mcp__server__tool`) or a tool-like snake_case name in backticks (`ask_user_input_v0`, `web_fetch`)                                            |
+| `skill_reference` | "the docx skill": a dependency on another skill that is not bundled                                                                                                                               |
+| `placeholder`     | `<...>`, `<COURSE_ID>`, `<your ...>`, `[insert ...]`, TODO, TBD, FIXME, XXX                                                                                                                       |
+
+Where they appear:
+
+- **Saving from chat:** `save_skill` returns `self_contained_warnings` (a response field, never stored) and a `next_step` asking the AI to fix them with the user and save again under a new ID. They run whatever the size, unlike the inline linter, which skips saves over 12 KiB.
+- **Uploading on the site:** the Publish step lists them above the save button.
+- **Reading:** `get_item` and `get_skill` add `context_warnings` to the portability block when there are any. `detected_tools` is unchanged.
+
+Saving never replaces an item. To revise a skill, save it under a new ID or edit it on the site.
+
 ## README changes
 
 For the orchestrator to fold in. Insert this as a new subsection at the end of README section 5, after "Version 1 compatibility":

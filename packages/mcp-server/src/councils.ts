@@ -11,14 +11,26 @@ import {
   extractItemText,
   type OriginApp,
 } from '../../../src/lib/portability'
-import { createPublicCouncilReader } from '../../../src/services/councilPublic'
+import {
+  CouncilNotPublic,
+  createPublicCouncilReader,
+} from '../../../src/services/councilPublic'
 import {
   DEFAULT_SEARCH_LIMIT,
   MAX_SEARCH_LIMIT,
   queryTerms,
   rankCandidates,
 } from './discovery'
-import { BLUEPRINT_NOTICE, jsonResult, renderBlueprint } from './shared'
+import {
+  BLUEPRINT_NOTICE,
+  jsonResult,
+  notPublicMessage,
+  PUBLIC_ONLY_DESCRIPTION,
+  readPublicResponse,
+  renderBlueprint,
+  UNREACHABLE_MESSAGE,
+  type PrivateItemHint,
+} from './shared'
 
 const searchArgs = z.strictObject({
   query: z.string().optional(),
@@ -42,12 +54,14 @@ function tool(name: string, description: string, schema: z.ZodObject): Tool {
 export const councilTools = [
   tool(
     'search_councils',
-    'Search public councils by keyword or tag and compare their pinned member rosters.',
+    'Search public councils by keyword or tag and compare their pinned member rosters. ' +
+      PUBLIC_ONLY_DESCRIPTION,
     searchArgs,
   ),
   tool(
     'get_council',
-    'Read a public council by ID or exact council:<id>@<version>. Returns coordination instructions, member blueprints and skills, and portability notes. Set resolve_members to false for the roster only.',
+    'Read a public council by ID or exact council:<id>@<version>. Returns coordination instructions, member blueprints and skills, and portability notes. Set resolve_members to false for the roster only. ' +
+      PUBLIC_ONLY_DESCRIPTION,
     getArgs,
   ),
 ]
@@ -57,6 +71,7 @@ export function createCouncilReader(
   origins:
     | Readonly<Record<string, OriginApp>>
     | (() => Promise<Readonly<Record<string, OriginApp>>>) = {},
+  hint: PrivateItemHint = 'connector_link',
 ) {
   const reader = createPublicCouncilReader(read)
   return async (name: string, args: unknown) => {
@@ -96,7 +111,16 @@ export function createCouncilReader(
     if (pin && version && pin.version !== version)
       throw new Error('Conflicting council versions.')
     const id = pin?.id ?? agentIdSchema.parse(council_id)
-    const { council, items } = await reader.get(id, pin?.version ?? version)
+    const { council, items } = await reader
+      .get(id, pin?.version ?? version)
+      .catch((error: unknown) => {
+        if (error instanceof CouncilNotPublic)
+          throw new Error(
+            notPublicMessage('council', error.id, hint, error.version),
+            { cause: error },
+          )
+        throw error
+      })
     const originMap =
       resolve_members && items.some(({ kind }) => kind === 'agent')
         ? typeof origins === 'function'
@@ -157,10 +181,20 @@ export function hostedCouncilReader(
   fetchFile = (url: string) =>
     fetch(url, { signal: AbortSignal.timeout(5000), redirect: 'manual' }),
   origins?: Parameters<typeof createCouncilReader>[1],
+  hint: PrivateItemHint = 'connector_link',
 ) {
-  return createCouncilReader(async (path) => {
-    const response = await fetchFile(new URL(path, catalogUrl).href)
-    if (!response.ok) throw new Error('Public council data is unavailable.')
-    return response.json()
-  }, origins)
+  return createCouncilReader(
+    async (path) => {
+      const url = new URL(path, catalogUrl).href
+      let response: Response
+      try {
+        response = await fetchFile(url)
+      } catch {
+        throw new Error(UNREACHABLE_MESSAGE)
+      }
+      return readPublicResponse(response, url)
+    },
+    origins,
+    hint,
+  )
 }

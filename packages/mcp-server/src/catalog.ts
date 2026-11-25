@@ -7,6 +7,11 @@ import {
 } from '../../../src/lib/validateManifest'
 import { createSkillReader, hostedSkillReader } from './skills'
 import { resolveAgent, versionUrl } from './versions'
+import {
+  PublicFileMissing,
+  readPublicResponse,
+  UNREACHABLE_MESSAGE,
+} from './shared'
 import type { AgentManifest } from '../../../src/types/agent'
 import { parseOrigins, type OriginApp } from '../../../src/lib/portability'
 
@@ -92,6 +97,19 @@ export async function loadCatalog(source?: string): Promise<AgentManifest[]> {
 
 export { selectAgent } from './shared'
 
+/** Reads a JSON file next to a local catalog; a missing file is "not published". */
+async function readLocalJson(path: string): Promise<unknown> {
+  let text: string
+  try {
+    text = await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+      throw new PublicFileMissing(path)
+    throw error
+  }
+  return JSON.parse(text)
+}
+
 export function agentResolver(
   catalog: AgentManifest[],
   source = DEFAULT_CATALOG_URL,
@@ -100,18 +118,17 @@ export function agentResolver(
     validateManifest(
       await resolveAgent(catalog, selector, async (id, version) => {
         if (/^https?:\/\//.test(source)) {
-          const response = await fetch(versionUrl(source, id, version), {
-            signal: AbortSignal.timeout(10_000),
-          })
-          if (!response.ok)
-            throw new Error(`Version request failed: HTTP ${response.status}`)
-          return response.json()
+          const url = versionUrl(source, id, version)
+          let response: Response
+          try {
+            response = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+          } catch {
+            throw new Error(UNREACHABLE_MESSAGE)
+          }
+          return readPublicResponse(response, url)
         }
-        return JSON.parse(
-          await readFile(
-            resolve(dirname(resolve(source)), 'agents', id, `${version}.json`),
-            'utf8',
-          ),
+        return readLocalJson(
+          resolve(dirname(resolve(source)), 'agents', id, `${version}.json`),
         )
       }),
     )
@@ -120,12 +137,7 @@ export function agentResolver(
 export function localSkillReader(source = DEFAULT_CATALOG_URL) {
   if (/^https?:\/\//.test(source)) return hostedSkillReader(source)
   return createSkillReader(async (path) =>
-    JSON.parse(
-      await readFile(
-        resolve(dirname(resolve(source)), decodeURIComponent(path)),
-        'utf8',
-      ),
-    ),
+    readLocalJson(resolve(dirname(resolve(source)), decodeURIComponent(path))),
   )
 }
 
@@ -137,11 +149,8 @@ export function localCouncilReader(
     return hostedCouncilReader(source, undefined, origins)
   return createCouncilReader(
     async (path) =>
-      JSON.parse(
-        await readFile(
-          resolve(dirname(resolve(source)), decodeURIComponent(path)),
-          'utf8',
-        ),
+      readLocalJson(
+        resolve(dirname(resolve(source)), decodeURIComponent(path)),
       ),
     origins,
   )

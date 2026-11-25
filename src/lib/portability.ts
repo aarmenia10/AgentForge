@@ -4,6 +4,7 @@
  * This module is imported by both the local server and the remote connector's
  * Worker runtime. It must remain strictly free of Node APIs, Ajv, and eval.
  */
+import { checkSelfContained, type SelfContainedWarning } from './selfContained'
 
 export type OriginApp = 'claude' | 'chatgpt' | 'other'
 
@@ -138,8 +139,18 @@ export const PORTABILITY_NOTE =
 export interface PortabilityBlock {
   origin_app?: OriginApp
   detected_tools: string[]
+  /**
+   * Self-containment warnings computed at read time (src/lib/selfContained.ts):
+   * missing files, hidden context, places without a URL, one app's tool IDs,
+   * other skills, placeholders. Present only when there is at least one.
+   * A response field: never stored.
+   */
+  context_warnings?: SelfContainedWarning[]
   note: string
 }
+
+export const CONTEXT_WARNINGS_NOTE =
+  'context_warnings list parts of this item that may depend on files, places, tools, or context you do not have. Ask the user for the missing piece, or tell them which step you cannot do, before guessing.'
 
 /**
  * Extracts searchable text from an agent or skill manifest or record.
@@ -194,10 +205,13 @@ export function extractItemText(item: unknown): string {
  *
  * @param item - Agent or skill record/manifest, or raw text.
  * @param explicitOrigin - Optional origin_app if known from record or public/origins.json.
+ * @param contextItem - The agent, skill, or council to check for context
+ *   warnings, when `item` is raw text. Defaults to `item`.
  */
 export function createPortabilityBlock(
   item: unknown,
   explicitOrigin?: OriginApp | null,
+  contextItem: unknown = item,
 ): PortabilityBlock {
   const text = typeof item === 'string' ? item : extractItemText(item)
   const detected = detectAppTools(text)
@@ -214,10 +228,14 @@ export function createPortabilityBlock(
         ? ((item as Record<string, unknown>).origin_app as OriginApp)
         : undefined
 
+  const warnings = checkSelfContained(contextItem, undefined, { phase: 'read' })
   return {
     ...(origin && { origin_app: origin }),
     detected_tools: detected,
-    note: PORTABILITY_NOTE,
+    ...(warnings.length > 0 && { context_warnings: warnings }),
+    note: warnings.length
+      ? `${PORTABILITY_NOTE} ${CONTEXT_WARNINGS_NOTE}`
+      : PORTABILITY_NOTE,
   }
 }
 
