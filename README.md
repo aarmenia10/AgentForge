@@ -561,6 +561,7 @@ What is being built right now. One row per claim. Add yours before you start and
 
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
+| Home scene v2 | Aidan | Codex | `task/home-scene-v2` | Home backdrop, lemon press SVG, glass cards and scene tests | 2026-11-25 |
 
 ### 8.2 Ideas inbox
 
