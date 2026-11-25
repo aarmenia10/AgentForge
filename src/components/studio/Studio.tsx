@@ -63,6 +63,9 @@ import {
 import { StepBasics, StepPrompt, StepTools } from './Steps'
 import { StepIO } from './StepIO'
 import { StepVisibility } from './StepVisibility'
+import { ReplaceMemberDialog } from '@/components/councils/ReplaceMemberDialog'
+import { findCouncilUses, replaceCouncilMembers } from '@/services/councilStore'
+import type { ItemRef } from '@/types/skill'
 
 type ValidatorModule = typeof import('@/lib/validateManifest')
 
@@ -121,6 +124,13 @@ export function Studio({ editId }: { editId: string | null }) {
   })
   const [catalogIds, setCatalogIds] = useState<Set<string> | null>(null)
   const [verifyNote, setVerifyNote] = useState('')
+  const [councilVersionUses, setCouncilVersionUses] = useState<Awaited<
+    ReturnType<typeof findCouncilUses>
+  > | null>(null)
+  const [councilVersionTarget, setCouncilVersionTarget] =
+    useState<ItemRef | null>(null)
+  const [councilVersionReplacement, setCouncilVersionReplacement] =
+    useState<ItemRef | null>(null)
   const stepHeading = useRef<HTMLHeadingElement>(null)
 
   /* ----- loading ----- */
@@ -377,6 +387,34 @@ export function Studio({ editId }: { editId: string | null }) {
       if (record) setLive(record)
       setPendingEdit(edit)
       setSaved(message)
+      if (
+        !staged &&
+        live?.visibility === 'private' &&
+        final.visibility === 'private' &&
+        final.version !== live.version
+      ) {
+        const oldRef: ItemRef = {
+          kind: 'agent',
+          id: final.id,
+          version: live.version,
+        }
+        try {
+          const uses = await findCouncilUses(oldRef, live.version)
+          if (uses.owner.length || uses.public.length) {
+            setCouncilVersionUses(uses)
+            setCouncilVersionTarget(oldRef)
+            setCouncilVersionReplacement({
+              kind: 'agent',
+              id: final.id,
+              version: final.version,
+            })
+          }
+        } catch (error) {
+          setSaveError(
+            `Agent saved, but its councils could not be checked: ${describeServiceError(error, 'load')}`,
+          )
+        }
+      }
     } catch (error) {
       setSaveError(describeServiceError(error, 'save'))
     } finally {
@@ -760,6 +798,39 @@ export function Studio({ editId }: { editId: string | null }) {
           </p>
         )}
       </section>
+      {councilVersionUses &&
+        councilVersionTarget &&
+        councilVersionReplacement && (
+          <ReplaceMemberDialog
+            mode="version"
+            itemName={draft.name}
+            target={councilVersionTarget}
+            replacement={councilVersionReplacement}
+            ownerUses={councilVersionUses.owner}
+            publicUses={councilVersionUses.public}
+            onCancel={() => {
+              setCouncilVersionUses(null)
+              setCouncilVersionTarget(null)
+              setCouncilVersionReplacement(null)
+            }}
+            onUpdateVersion={async () => {
+              const result = await replaceCouncilMembers(
+                councilVersionUses.owner,
+                councilVersionTarget,
+                councilVersionReplacement,
+                councilVersionTarget.version,
+              )
+              setCouncilVersionUses(null)
+              setCouncilVersionTarget(null)
+              setCouncilVersionReplacement(null)
+              setSaved(
+                result.staged.length
+                  ? `Updates to ${result.staged.join(', ')} were sent for review.`
+                  : 'Updated your councils to the new agent version.',
+              )
+            }}
+          />
+        )}
     </div>
   )
 }

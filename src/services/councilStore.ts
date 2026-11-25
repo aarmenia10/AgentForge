@@ -21,9 +21,15 @@ import {
 import { agentIdSchema, storedAgentRecordSchema } from '../lib/manifestSchema'
 import { validateCouncilRecord } from '../lib/councilSchema'
 import { compareVersions } from '../lib/semver'
+import { nextPatch } from '../lib/studioManifest'
 import { formatItemRef, skillRecordSchema } from '../lib/skillSchema'
 import { publicCouncils, type CouncilItem } from './councilPublic'
-import type { CouncilManifest, CouncilRecord } from '../types/council'
+import type {
+  CouncilIndexEntry,
+  CouncilManifest,
+  CouncilRecord,
+  CouncilMember,
+} from '../types/council'
 import type { ItemRef } from '../types/skill'
 import { lintCouncil } from './councilSafety'
 
@@ -32,6 +38,103 @@ const editSource = 'council_edits'
 type ReviewStatus = CouncilRecord['review_status']
 type Source = typeof liveSource | typeof editSource
 type CouncilInput = Omit<CouncilManifest, 'author' | 'stats'>
+type CouncilWithMembers = {
+  id: string
+  name: string
+  members: CouncilMember[]
+}
+
+export type CouncilMemberUse<T extends CouncilWithMembers> = {
+  council: T
+  members: CouncilMember[]
+}
+
+function pinsTarget(ref: ItemRef, target: ItemRef, version?: string): boolean {
+  return (
+    ref.kind === target.kind &&
+    ref.id === target.id &&
+    (version === undefined || ref.version === version)
+  )
+}
+
+export function findCouncilsPinningItem<T extends CouncilWithMembers>(
+  councils: readonly T[],
+  target: ItemRef,
+  version?: string,
+): CouncilMemberUse<T>[] {
+  return councils.flatMap((council) => {
+    const members = council.members.filter(({ ref }) =>
+      pinsTarget(ref, target, version),
+    )
+    return members.length ? [{ council, members }] : []
+  })
+}
+
+export function buildCouncilReplacementInput(
+  council: CouncilRecord,
+  target: ItemRef,
+  replacement: ItemRef,
+  version?: string,
+): CouncilInput {
+  return {
+    ...council,
+    version:
+      council.visibility === 'public' && council.review_status === 'approved'
+        ? nextPatch(council.version)
+        : council.version,
+    members: council.members.map((member) =>
+      pinsTarget(member.ref, target, version)
+        ? { ...member, ref: replacement }
+        : member,
+    ),
+  }
+}
+
+export async function findCouncilUses(
+  target: ItemRef,
+  version?: string,
+): Promise<{
+  owner: CouncilMemberUse<CouncilRecord>[]
+  public: CouncilMemberUse<CouncilIndexEntry>[]
+}> {
+  const store = await councilStore()
+  const [ownerCouncils, publicIndex] = await Promise.all([
+    store.findMinePinning(target, version),
+    publicCouncils.list(),
+  ])
+  return {
+    owner: ownerCouncils,
+    public: findCouncilsPinningItem(publicIndex, target, version).filter(
+      ({ council }) => council.author.uid !== store.ownerUid,
+    ),
+  }
+}
+
+export async function replaceCouncilMembers(
+  councils: readonly CouncilMemberUse<CouncilRecord>[],
+  target: ItemRef,
+  replacement: ItemRef,
+  version?: string,
+): Promise<{ staged: string[] }> {
+  const store = await councilStore()
+  const staged: string[] = []
+  for (const { council } of councils) {
+    try {
+      const result = await store.update(
+        buildCouncilReplacementInput(council, target, replacement, version),
+      )
+      if (result.staged) staged.push(council.name)
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      throw new Error(
+        `Could not update “${council.name}”. No item was deleted. ${reason}`,
+        { cause: error },
+      )
+    }
+  }
+  return { staged }
+}
+
 const isApproved = (record: CouncilRecord) =>
   record.visibility === 'public' && record.review_status === 'approved'
 
@@ -240,11 +343,26 @@ export function createCouncilStore(db: Firestore, uid: string) {
     }
   }
   return {
+    ownerUid: uid,
     get: (id: string) => read(liveSource, id),
     getEdit: (id: string) => read(editSource, id),
     withdraw: (id: string) => deleteDoc(ref(editSource, id)),
     listMine: (afterId?: string) =>
       page(liveSource, [where('owner_uid', '==', uid)], afterId),
+    async findMinePinning(target: ItemRef, version?: string) {
+      const found: CouncilMemberUse<CouncilRecord>[] = []
+      let afterId: string | undefined
+      do {
+        const next = await page(
+          liveSource,
+          [where('owner_uid', '==', uid)],
+          afterId,
+        )
+        found.push(...findCouncilsPinningItem(next.items, target, version))
+        afterId = next.cursor ?? undefined
+      } while (afterId)
+      return found
+    },
     listShared: (owner: string, afterId?: string) =>
       page(
         liveSource,

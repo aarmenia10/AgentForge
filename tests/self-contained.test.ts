@@ -84,7 +84,9 @@ test('fixtures: both cams45 fixtures are valid skills with a fake author and no 
     'the export carried only SKILL.md',
   )
   // The brief's Appendix A is the same text with blank lines added by a formatter.
-  const brief = await readFile('prompts/export-fix-worker.md', 'utf8')
+  const brief = (
+    await readFile('prompts/export-fix-worker.md', 'utf8')
+  ).replace(/\r\n/g, '\n')
   const start =
     brief.indexOf('```markdown\n', brief.indexOf('## Appendix A')) + 12
   const appendix = brief.slice(start, brief.lastIndexOf('\n```')) + '\n'

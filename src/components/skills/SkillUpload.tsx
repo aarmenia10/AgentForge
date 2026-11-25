@@ -60,6 +60,9 @@ import {
 } from './skillDraft'
 import { loadSkillForEdit, saveSkill, ScreenError } from './skillActions'
 import { VerifyEmailNotice } from './VerifyEmailNotice'
+import { ReplaceMemberDialog } from '@/components/councils/ReplaceMemberDialog'
+import { findCouncilUses, replaceCouncilMembers } from '@/services/councilStore'
+import type { ItemRef } from '@/types/skill'
 
 /** A message carried across the remount that follows a first save. */
 let flash: string | null = null
@@ -111,6 +114,13 @@ export function SkillUpload({ editId }: { editId: string | null }) {
     flash = null
     return message
   })
+  const [councilVersionUses, setCouncilVersionUses] = useState<Awaited<
+    ReturnType<typeof findCouncilUses>
+  > | null>(null)
+  const [councilVersionTarget, setCouncilVersionTarget] =
+    useState<ItemRef | null>(null)
+  const [councilVersionReplacement, setCouncilVersionReplacement] =
+    useState<ItemRef | null>(null)
 
   /* ----- loading ----- */
 
@@ -264,6 +274,33 @@ export function SkillUpload({ editId }: { editId: string | null }) {
       if (result.live) setLive(result.live)
       setPendingEdit(result.pendingEdit)
       setSaved(result.message)
+      if (
+        live?.visibility === 'private' &&
+        check.manifest.visibility === 'private' &&
+        check.manifest.version !== live.version
+      ) {
+        const oldRef: ItemRef = {
+          kind: 'skill',
+          id: check.manifest.id,
+          version: live.version,
+        }
+        try {
+          const uses = await findCouncilUses(oldRef, live.version)
+          if (uses.owner.length || uses.public.length) {
+            setCouncilVersionUses(uses)
+            setCouncilVersionTarget(oldRef)
+            setCouncilVersionReplacement({
+              kind: 'skill',
+              id: check.manifest.id,
+              version: check.manifest.version,
+            })
+          }
+        } catch (error) {
+          setSaveError(
+            `Skill saved, but its councils could not be checked: ${describeServiceError(error, 'load', 'skill')}`,
+          )
+        }
+      }
     } catch (error) {
       setSaveError(
         error instanceof ScreenError
@@ -723,6 +760,39 @@ export function SkillUpload({ editId }: { editId: string | null }) {
           {saveLabel(draft.visibility, live)}
         </button>
       </Section>
+      {councilVersionUses &&
+        councilVersionTarget &&
+        councilVersionReplacement && (
+          <ReplaceMemberDialog
+            mode="version"
+            itemName={name || check.manifest.name}
+            target={councilVersionTarget}
+            replacement={councilVersionReplacement}
+            ownerUses={councilVersionUses.owner}
+            publicUses={councilVersionUses.public}
+            onCancel={() => {
+              setCouncilVersionUses(null)
+              setCouncilVersionTarget(null)
+              setCouncilVersionReplacement(null)
+            }}
+            onUpdateVersion={async () => {
+              const result = await replaceCouncilMembers(
+                councilVersionUses.owner,
+                councilVersionTarget,
+                councilVersionReplacement,
+                councilVersionTarget.version,
+              )
+              setCouncilVersionUses(null)
+              setCouncilVersionTarget(null)
+              setCouncilVersionReplacement(null)
+              setSaved(
+                result.staged.length
+                  ? `Updates to ${result.staged.join(', ')} were sent for review.`
+                  : 'Updated your councils to the new skill version.',
+              )
+            }}
+          />
+        )}
     </div>
   )
 }
