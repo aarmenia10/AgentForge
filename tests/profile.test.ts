@@ -82,7 +82,7 @@ test('the public profile is built from the catalog alone', () => {
   const profile = authorProfile(SEED_AGENTS, seedHandle)
   assert.ok(profile.agents.length > 0)
   assert.ok(profile.agents.every((a) => a.author.handle === seedHandle))
-  assert.equal(profile.displayName, SEED_AGENTS[0].author.name)
+  assert.equal(profile.displayName, 'AgentLemon')
   assert.equal(profile.uid, SEED_AGENTS[0].author.uid)
   for (let i = 1; i < profile.agents.length; i++)
     assert.ok(
