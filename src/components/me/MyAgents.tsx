@@ -24,6 +24,9 @@ import {
 import type { AgentRecord } from '@/types/agent'
 import { originLabel } from '@/lib/portability'
 import { VisibilityChanger } from './VisibilityChanger'
+import { ReplaceMemberDialog } from '@/components/councils/ReplaceMemberDialog'
+import { findCouncilUses, replaceCouncilMembers } from '@/services/councilStore'
+import type { ItemRef } from '@/types/skill'
 
 const PAGE = 20
 
@@ -177,7 +180,15 @@ function AgentRow({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [councilUses, setCouncilUses] = useState<Awaited<
+    ReturnType<typeof findCouncilUses>
+  > | null>(null)
   const blocked = hasBlock(safeLint(record))
+  const memberRef: ItemRef = {
+    kind: 'agent',
+    id: record.id,
+    version: record.version,
+  }
 
   async function applyVisibility(visibility: AgentRecord['visibility']) {
     setBusy(true)
@@ -226,23 +237,74 @@ function AgentRow({
     }
   }
 
+  async function deleteRecord() {
+    try {
+      await deleteAgent(record.id)
+    } catch (e) {
+      throw new Error(describeServiceError(e, 'delete'), { cause: e })
+    }
+    setCouncilUses(null)
+    onDeleted()
+  }
+
   async function remove() {
-    if (
-      !window.confirm(
-        `Delete ${record.name} permanently? This can't be undone. If it is public, it leaves the site within the hour, and anyone who pinned it can no longer load it.`,
-      )
-    )
-      return
     setBusy(true)
     setError('')
     try {
-      await deleteAgent(record.id)
-      onDeleted()
+      let uses: Awaited<ReturnType<typeof findCouncilUses>>
+      try {
+        uses = await findCouncilUses(memberRef)
+      } catch (error) {
+        throw new Error(
+          `Could not check the councils that use this agent: ${describeServiceError(error, 'load')}`,
+          { cause: error },
+        )
+      }
+      if (uses.owner.length || uses.public.length) {
+        setCouncilUses(uses)
+        return
+      }
+      if (
+        window.confirm(
+          `Delete ${record.name} permanently? This can't be undone. If it is public, it leaves the site within the hour, and anyone who pinned it can no longer load it.`,
+        )
+      )
+        await deleteRecord()
     } catch (e) {
-      setError(describeServiceError(e, 'delete'))
+      setError(
+        e instanceof Error ? e.message : describeServiceError(e, 'delete'),
+      )
     } finally {
       setBusy(false)
     }
+  }
+
+  async function replaceInCouncils(replacement: ItemRef, deleteAfter: boolean) {
+    if (!councilUses) return
+    const result = await replaceCouncilMembers(
+      councilUses.owner,
+      memberRef,
+      replacement,
+    )
+    if (deleteAfter && result.staged.length === 0) {
+      try {
+        await deleteAgent(record.id)
+      } catch (error) {
+        throw new Error(
+          `The councils were updated, but ${record.name} was not deleted: ${describeServiceError(error, 'delete')}`,
+          { cause: error },
+        )
+      }
+      setCouncilUses(null)
+      onDeleted()
+      return
+    }
+    setMessage(
+      result.staged.length
+        ? `Updates to ${result.staged.join(', ')} were sent for review. ${record.name} was not deleted; delete it after approval.`
+        : `Updated ${councilUses.owner.length} council(s).`,
+    )
+    setCouncilUses(null)
   }
 
   return (
@@ -336,6 +398,18 @@ function AgentRow({
           busy={busy}
           onCancel={() => setChanging(null)}
           onConfirm={applyVisibility}
+        />
+      )}
+      {councilUses && (
+        <ReplaceMemberDialog
+          mode="delete"
+          itemName={record.name}
+          target={memberRef}
+          ownerUses={councilUses.owner}
+          publicUses={councilUses.public}
+          onCancel={() => setCouncilUses(null)}
+          onDeleteAnyway={deleteRecord}
+          onReplace={replaceInCouncils}
         />
       )}
       {error && (

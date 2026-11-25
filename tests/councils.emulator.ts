@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore'
 import { Firestore } from 'firebase-admin/firestore'
 import { createCouncilStore } from '../src/services/councilStore'
+import { createAgentStore } from '../src/services/agentStore'
 import { seedRecord, exportDigest } from '../scripts/export-catalog'
 import { acknowledge } from '../scripts/catalogChanges'
 import { readFirestoreExport } from '../scripts/catalogFirestore'
@@ -32,6 +33,7 @@ test('council rules gate a 20-member roster, snapshots, proposals, and hourly ta
   const adminDb = client('council-admin')
   const anon = env.unauthenticatedContext().firestore()
   const owner = createCouncilStore(ownerDb, 'council-owner')
+  const ownerAgents = createAgentStore(ownerDb, 'council-owner')
   const unconfirmed = createCouncilStore(
     client('council-owner', false),
     'council-owner',
@@ -91,6 +93,83 @@ test('council rules gate a 20-member roster, snapshots, proposals, and hourly ta
     // Every council save needs a confirmed email, like agents and skills.
     await assert.rejects(unconfirmed.create(draft))
     await owner.create(draft)
+
+    const privateAgent = (id: string) => {
+      const seeded = seedRecord({
+        ...SEED_AGENTS[0],
+        id,
+        visibility: 'private',
+      })
+      return {
+        ...seeded,
+        owner_uid: 'council-owner',
+        review_status: 'pending' as const,
+        author: { ...seeded.author, uid: 'council-owner' },
+      }
+    }
+    const replaceSource = privateAgent('replace-source')
+    const replaceTarget = privateAgent('replace-target')
+    const witness = privateAgent('replace-witness')
+    const privateAgents = db.batch()
+    for (const item of [replaceSource, replaceTarget, witness])
+      privateAgents.set(db.doc('agents/' + item.id), item)
+    await privateAgents.commit()
+    const sourceRef = {
+      kind: 'agent' as const,
+      id: replaceSource.id,
+      version: replaceSource.version,
+    }
+    const targetRef = {
+      kind: 'agent' as const,
+      id: replaceTarget.id,
+      version: replaceTarget.version,
+    }
+    const witnessRef = {
+      kind: 'agent' as const,
+      id: witness.id,
+      version: witness.version,
+    }
+    await owner.create({
+      ...draft,
+      id: 'replace-team',
+      name: 'Replace team',
+      members: [
+        { ref: sourceRef, role: 'Find sources', order: 1 },
+        { ref: witnessRef, role: 'Review sources', order: 2 },
+      ],
+    })
+    const beforeReplace = (await owner.get('replace-team'))!
+    await owner.update({
+      ...beforeReplace,
+      members: beforeReplace.members.map((member) =>
+        member.ref.id === sourceRef.id ? { ...member, ref: targetRef } : member,
+      ),
+    })
+    const afterReplace = (await owner.get('replace-team'))!
+    assert.deepEqual(afterReplace.members[0], {
+      ref: targetRef,
+      role: 'Find sources',
+      order: 1,
+    })
+    assert.equal((await owner.installMember(targetRef)).item.id, targetRef.id)
+
+    await owner.create({
+      ...draft,
+      id: 'delete-anyway-team',
+      name: 'Delete anyway team',
+      members: [
+        { ref: sourceRef, role: 'Find sources', order: 1 },
+        {
+          ref: witnessRef,
+          role: 'Check the work',
+          order: 2,
+        },
+      ],
+    })
+    await ownerAgents.deleteAgent(sourceRef.id)
+    assert.ok(await owner.get('delete-anyway-team'))
+    await assert.rejects(owner.installMember(sourceRef), /Member unavailable/)
+
     await assertFails(
       updateDoc(doc(client('council-outsider'), path), { name: 'Taken over' }),
     )
