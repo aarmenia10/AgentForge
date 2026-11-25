@@ -13,7 +13,7 @@ Branch: `task/export-self-contained`, cut from a freshly fetched `origin/main`. 
 ### Rules that bind this task (from the decision log; do not relearn them)
 
 1. **Never add fields to agent entries in `catalog.json`, to agent version files, or to `src/types/agent.ts`.** Released local servers parse them strictly. The same caution applies to stored skill and council records: do not add stored fields. New information goes in **tool responses** (which servers build at read or save time), in **guide text**, or in **item text by convention**. Existing items and schema versions must keep working unchanged.
-2. **`docs/AI_GUIDE.md` is a protected file.** The orchestrator is getting the owner's agreement for the guide changes in this task. Write the changes anyway, and list them in the PR description under "Protected file changes" so the agreement can be recorded. `packages/mcp-server/src/guide.ts` holds a generated copy: after editing the guide, run `node packages/mcp-server/sync-guide.mjs`. `CONDENSED_GUIDE` and `CONNECTOR_CONDENSED_GUIDE` in the same file are hand-written and must keep the same rules.
+2. **`docs/AI_GUIDE.md` is a protected file.** The owner agreed to the guide changes in this task on 2026-11-25 (decision D1). List them in the PR description under "Protected file changes". `packages/mcp-server/src/guide.ts` holds a generated copy: after editing the guide, run `node packages/mcp-server/sync-guide.mjs`. `CONDENSED_GUIDE` and `CONNECTOR_CONDENSED_GUIDE` in the same file are hand-written and must keep the same rules.
 3. **Any change under `packages/mcp-server/src`** (and the shared files it bundles from `src/lib`) needs a version bump in `packages/mcp-server/package.json` (0.3.4 now, so 0.3.5) and `npm run release:mcp`, so the committed tarball in `public/mcp/` matches the source. Never delete an old tarball. Update the version constant in `src/lib/mcpConfig.ts` if one exists for it (check).
 4. **Connector changes** (`packages/connector`): also run `npm ci`, `npm run check`, and `npm run benchmark` inside `packages/connector`.
 5. Workers reject `fetch(..., { redirect: 'error' })`; use `'manual'`.
@@ -99,7 +99,7 @@ Also fix R5: make the tool table name the connector's tools, or add a connector 
 
 ### W3. Save-time checks (F9, F10, R3, R4)
 
-Add a pure function, for example `checkSelfContained(item)` in a new `src/lib/selfContained.ts` (Worker-safe: no Node APIs), that returns warnings with a code, a message, and the matching text. It never blocks a save in this task (see open decision D2). Run it in `prepareChatSave()` for agents and skills, in `save_council` for the council and each supplied member, and in the web upload and Studio flows if that is simple and clean (state where you added it). Return the warnings in the save response as a new field, for example `self_contained_warnings` (a response field, not stored), plus a `next_step` line asking the AI to fix them with the user and save again under a new ID. Always run it, whatever the size (unlike the linter in R4).
+Add a pure function, for example `checkSelfContained(item)` in a new `src/lib/selfContained.ts` (Worker-safe: no Node APIs), that returns warnings with a code, a message, and the matching text. It never blocks a save (decision D2). Run it in `prepareChatSave()` for agents and skills, in `save_council` for the council and each supplied member, and in the web upload and Studio flows if that is simple and clean (state where you added it). Return the warnings in the save response as a new field, for example `self_contained_warnings` (a response field, not stored), plus a `next_step` line asking the AI to fix them with the user and save again under a new ID. Always run it, whatever the size (unlike the linter in R4).
 
 Patterns, each with tests, low false positives preferred:
 
@@ -122,7 +122,7 @@ Extend `createPortabilityBlock()` (or a sibling) so `get_item`, `get_skill`, `ge
 
 ### W6. Tests
 
-- One regression test per finding (F1 to F10) and per repo finding you change (R2 to R5); R1 can be a documented emulator test or a note if it is out of scope (D4).
+- One regression test per finding (F1 to F10) and per repo finding you change (R2 to R5); R1 is out of scope (D4): add an emulator test that demonstrates it if practical, otherwise a note.
 - Round trip (automated): save `cams45-original` through `prepareChatSave()` and confirm the expected warnings appear (absent `.docx`, "this project", hard-coded tool IDs, other-skill reference, vague location). Save `cams45-selfcontained` and confirm no warnings. Read both back through the `get_item` path (use the existing connector test fixtures, `tests/connectorFixture.ts`, or the emulator tests, whichever the repo already uses for `get_item`) and confirm every file survives byte for byte and the portability block includes `context_warnings` for the original only.
 - F7: `get_skill` on a private-only ID gives the new public-only message that names `get_item`; a fetch failure gives the "unreachable" message instead.
 - Existing items: every agent in `public/catalog.json`, the seed data, and the existing skill and council test fixtures still parse, load, and render exactly as before. Add a test that the new warning field is absent or empty for all 14 catalog agents, or list any warnings they get and justify them.
@@ -151,12 +151,12 @@ Extend `createPortabilityBlock()` (or a sibling) so `get_item`, `get_skill`, `ge
 - Keep the diff focused. Do not restyle the site.
 - Do not edit README section 4 or the shared board.
 
-## 6. Open decisions (the orchestrator is asking the owner; build to the default shown)
+## 6. Owner decisions (2026-11-25, final; recorded in README section 4)
 
-- **D1.** Guide changes to the protected `docs/AI_GUIDE.md`. Default: write them; the orchestrator records the owner's agreement before merging.
-- **D2.** Warn or block on save. Default: warn only.
-- **D3.** Binary files (.docx) stay unsupported; exporters convert them to text specs. Default: yes.
-- **D4.** Private version history (R1) is out of scope for this task. Default: document the caveat and add the warning only.
+- **D1. Yes:** the owner agrees to the guide changes in the protected `docs/AI_GUIDE.md` described in W1 and W2. List them in the PR anyway.
+- **D2. Warn only:** the new checks never block a save.
+- **D3. Yes:** binary files (.docx, PDF, images) stay unsupported; exporters convert them to text (a format spec plus an example excerpt).
+- **D4. Yes, out of scope:** private version history (R1) is a later task. Document the caveat and add the warning only.
 
 ## 7. Report format (reply with exactly these sections)
 
@@ -164,7 +164,7 @@ Extend `createPortabilityBlock()` (or a sibling) so `get_item`, `get_skill`, `ge
 2. **Protected file changes:** the exact `docs/AI_GUIDE.md` sections added or changed.
 3. **What was tested:** each check with real counts; each W6 test by name; anything you ran by hand.
 4. **Repo facts that differed from this file:** with paths.
-5. **What is still open:** including the manual round trip and anything in D1 to D4.
+5. **What is still open:** including the manual round trip and R1 (deferred by D4).
 6. **PR link.**
 
 ---
