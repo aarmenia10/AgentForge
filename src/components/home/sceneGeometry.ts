@@ -2,92 +2,98 @@
  * Layout of the home page lemon press, in the scene's own units (the SVG
  * viewBox). Pure: no React and no DOM, so tests can check it.
  *
- * Top to bottom: a press holds the lemon, juice drips from its spout into a
- * glass prism, and three streams leave the prism for three cups on pedestals.
- * One lemon, built once, poured into Agents, Skills, and Councils.
+ * The two lemon tips feed the upper cups. Their spouts feed opposite corners
+ * of an inverted prism, whose point feeds the lower cup.
  */
 
 export type Pt = readonly [number, number]
 
 export const VIEW = { w: 1000, h: 970 } as const
 
-/** The lemon's centre. Its outline is `lemonPath()` around this point. */
-export const LEMON: Pt = [540, 190]
-/** Where the two press arms meet. They turn around it when squeezed. */
-export const HINGE: Pt = [300, 190]
-/** The tip of the lower jaw's spout, where drops form. */
-export const SPOUT: Pt = [540, 346]
+export const LEMON: Pt = [540, 210]
+export const TIPS: readonly Pt[] = [
+  [398, 210],
+  [682, 210],
+]
+export const HINGE: Pt = [540, 83]
+export const HANDLE: Pt = [739, 29]
+export const FRAME = { left: 350, right: 730, top: 81, bottom: 264 }
 
 export const PRISM = {
-  apex: [540, 458] as Pt,
-  left: [448, 612] as Pt,
-  right: [632, 612] as Pt,
-  /** The back edge, offset up and to the right, gives the prism its depth. */
-  depth: [28, -13] as Pt,
+  left: [443, 548] as Pt,
+  right: [637, 548] as Pt,
+  apex: [540, 692] as Pt,
+  depth: [19, -13] as Pt,
 }
-/** Drops vanish into the prism here. */
-export const DROP_END_Y = PRISM.apex[1] - 2
 
 export const CUP = {
-  top: 742,
-  bottom: 868,
-  topHalf: 76,
-  bottomHalf: 62,
-  radius: 18,
+  height: 108,
+  topHalf: 74,
+  bottomHalf: 60,
+  radius: 15,
 } as const
-
-export const PEDESTAL = { top: 876, face: 896, bottom: 918, half: 104 }
+export const PEDESTAL = { top: 886, face: 902, bottom: 920, half: 96 }
+export const SPOUT_LENGTH = 22
 
 export interface CupSpec {
   key: 'agents' | 'skills' | 'councils'
   label: string
   to: string
   cx: number
-  /** How full the cup is, 0 to 1. */
+  top: number
   level: number
 }
 
 export const CUPS: readonly CupSpec[] = [
-  { key: 'agents', label: 'Agents', to: '/agents', cx: 300, level: 0.48 },
-  { key: 'skills', label: 'Skills', to: '/skills', cx: 540, level: 0.6 },
-  { key: 'councils', label: 'Councils', to: '/councils', cx: 780, level: 0.7 },
+  {
+    key: 'agents',
+    label: 'Agents',
+    to: '/agents',
+    cx: TIPS[0][0],
+    top: 322,
+    level: 0.48,
+  },
+  {
+    key: 'skills',
+    label: 'Skills',
+    to: '/skills',
+    cx: TIPS[1][0],
+    top: 322,
+    level: 0.6,
+  },
+  {
+    key: 'councils',
+    label: 'Councils',
+    to: '/councils',
+    cx: PRISM.apex[0],
+    top: 770,
+    level: 0.7,
+  },
 ]
 
-/** The height of the juice's surface in a cup filled to `level`. */
-export function surfaceY(level: number): number {
-  return CUP.bottom - (CUP.bottom - CUP.top - 12) * level
+export function surfaceY(cup: CupSpec): number {
+  return cup.top + CUP.height - (CUP.height - 12) * cup.level
 }
 
-/** Half the cup's inside width at height `y` (the glass narrows downwards). */
-export function cupHalfWidthAt(y: number): number {
-  const t = (y - CUP.top) / (CUP.bottom - CUP.top)
+export function cupHalfWidthAt(cup: CupSpec, y: number): number {
+  const t = (y - cup.top) / CUP.height
   return CUP.topHalf + (CUP.bottomHalf - CUP.topHalf) * t
 }
 
-/** Points on the prism's two front faces where the outer streams leave. */
-const EXIT_T = 0.62
-const lerp = (a: Pt, b: Pt, t: number): Pt => [
-  a[0] + (b[0] - a[0]) * t,
-  a[1] + (b[1] - a[1]) * t,
-]
-export const PRISM_EXITS: readonly Pt[] = [
-  lerp(PRISM.apex, PRISM.left, EXIT_T),
-  [PRISM.apex[0], PRISM.left[1]],
-  lerp(PRISM.apex, PRISM.right, EXIT_T),
+export const TOP_SPOUTS: readonly Pt[] = CUPS.slice(0, 2).map((cup) => [
+  cup.cx,
+  cup.top + CUP.height + SPOUT_LENGTH,
+])
+
+export const STREAMS: readonly (readonly Pt[])[] = [
+  ...TOP_SPOUTS.map((tip, i) => {
+    const corner = i === 0 ? PRISM.left : PRISM.right
+    return [tip, [tip[0], tip[1] + 36] as Pt, corner]
+  }),
+  [PRISM.apex, [CUPS[2].cx, surfaceY(CUPS[2])]],
 ]
 
-/** Centre lines of the three streams, prism to juice surface. */
-export const STREAMS: readonly (readonly Pt[])[] = CUPS.map((cup, i) => {
-  const exit = PRISM_EXITS[i]
-  const end: Pt = [cup.cx, surfaceY(cup.level)]
-  if (exit[0] === cup.cx) return [exit, end]
-  // Leave the prism at 30 degrees below the horizontal, then fall straight.
-  const run = Math.abs(cup.cx - exit[0])
-  return [exit, [cup.cx, exit[1] + run * Math.tan(Math.PI / 6)], end]
-})
-
-/** Each stream is drawn as this many parallel lines, this far apart. */
-export const STREAM_LINES = [-7, 0, 7] as const
+export const STREAM_LINES = [-4, 0, 4] as const
 
 // ----------------------------------------------------------------- paths
 
@@ -161,8 +167,9 @@ export function lemonPath(): string {
 }
 
 /** The cup's glass outline (open at the top), for cup centre `cx`. */
-export function cupPath(cx: number, inset = 0): string {
-  const { top, bottom, topHalf, bottomHalf, radius } = CUP
+export function cupPath({ cx, top }: CupSpec, inset = 0): string {
+  const { topHalf, bottomHalf, radius } = CUP
+  const bottom = top + CUP.height
   const t = topHalf - inset
   const b = bottomHalf - inset
   const y = bottom - inset
@@ -226,21 +233,36 @@ const NEAR = 26
  */
 export function partAt(x: number, y: number): Part | null {
   for (let i = 0; i < CUPS.length; i++) {
-    const cx = CUPS[i].cx
+    const cup = CUPS[i]
+    const end =
+      cup.key === 'councils' ? VIEW.h : cup.top + CUP.height + SPOUT_LENGTH
     if (
-      Math.abs(x - cx) <= PEDESTAL.half + 6 &&
-      y >= CUP.top - 30 &&
-      y <= VIEW.h
+      Math.abs(x - cup.cx) <= CUP.topHalf + 8 &&
+      y >= cup.top - 12 &&
+      y <= end
     )
       return `cup-${i}` as Part
   }
-  const [lx, ly] = LEMON
-  const ex = (x - lx) / 110
-  const ey = (y - ly) / 170
-  if (ex * ex + ey * ey <= 1) return 'lemon'
-  const cx = (PRISM.apex[0] + PRISM.left[0] + PRISM.right[0]) / 3
-  const cy = (PRISM.apex[1] + PRISM.left[1] + PRISM.right[1]) / 3
-  if (Math.hypot(x - cx - 12, y - cy) <= 92) return 'prism'
+  const frame: Pt[] = [
+    [FRAME.left, FRAME.bottom],
+    [FRAME.left, FRAME.top],
+    [FRAME.right, FRAME.top],
+    [FRAME.right, FRAME.bottom],
+  ]
+  if (
+    distanceToPolyline([x, y], frame) < 18 ||
+    distanceToPolyline([x, y], [HINGE, HANDLE]) < 21 ||
+    (Math.abs(x - LEMON[0]) <= 146 && y >= HINGE[1] && y <= FRAME.bottom + 16)
+  )
+    return 'lemon'
+  const fraction = (y - PRISM.left[1]) / (PRISM.apex[1] - PRISM.left[1])
+  if (
+    fraction >= -0.09 &&
+    fraction <= 1.04 &&
+    Math.abs(x - PRISM.apex[0]) <=
+      (1 - fraction) * (PRISM.right[0] - PRISM.apex[0]) + 16
+  )
+    return 'prism'
   for (let i = 0; i < STREAMS.length; i++)
     if (distanceToPolyline([x, y], STREAMS[i]) <= NEAR)
       return `stream-${i}` as Part

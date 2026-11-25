@@ -140,10 +140,12 @@
 }
 
 .home-glass {
+  --lm-muted: var(--home-glass-muted);
+  --lm-accent-text: var(--home-glass-accent-text);
   background-color: var(--home-glass, var(--lm-surface));
   border: 1px solid color-mix(in oklab, var(--lm-border) 70%, transparent);
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
-  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 /*
@@ -174,8 +176,8 @@
 .lp-box {
   position: absolute;
   aspect-ratio: 1000 / 970;
-  height: min(46%, calc((100vw - 16px) * 1.4));
-  bottom: 0.5rem;
+  height: min(52%, calc((100vw - 16px) * 1.4));
+  bottom: 0.9rem;
   left: 50%;
   transform: translateX(-54%);
 }
@@ -189,7 +191,7 @@
     height: max(28rem, calc(100% - 1.5rem));
     top: 0.75rem;
     bottom: auto;
-    left: calc(50% + min(23vw, 340px));
+    left: calc(50% + min(23vw, 340px) - 250px);
   }
 }
 
@@ -216,9 +218,9 @@
   .lp-fade {
     background: linear-gradient(
       90deg,
-      var(--lm-bg) calc(50% - 400px),
-      color-mix(in srgb, var(--lm-bg) 72%, transparent) calc(50% - 150px),
-      transparent calc(50% + 40px)
+      var(--lm-bg) calc(50% - 565px),
+      color-mix(in srgb, var(--lm-bg) 82%, transparent) calc(50% - 205px),
+      transparent calc(50% - 10px)
     );
   }
 }
@@ -243,26 +245,6 @@
   will-change: transform;
 }
 
-/*
- * Light mode's dark patch behind the scene: a rounded block of the stage
- * color, blurred so it fades into the page with no edge. It covers the press,
- * prism, cups, and labels, and stops short of the hero text on the left.
- * Still and rasterised once.
- */
-.lp-stage {
-  position: absolute;
-  inset: -2% -8% -30% 19%;
-  border-radius: 34% 30% 18% 26%;
-  filter: blur(42px);
-  pointer-events: none;
-}
-@media (max-width: 1023px) {
-  .lp-stage {
-    inset: 7% 2% -30% 6%;
-    filter: blur(28px);
-  }
-}
-
 /* Highlights fade in near the pointer, and on a focused cup. */
 .lp-hot {
   opacity: 0;
@@ -275,17 +257,38 @@
 .lp-scene[data-hot='cup-2'] .lp-hot-cup-2,
 .lp-scene[data-hot='stream-0'] .lp-hot-stream-0,
 .lp-scene[data-hot='stream-1'] .lp-hot-stream-1,
-.lp-scene[data-hot='stream-2'] .lp-hot-stream-2,
-.lp-scene[data-flash] .lp-flash {
+.lp-scene[data-hot='stream-2'] .lp-hot-stream-2 {
   opacity: 1;
 }
 
-.lp-notes {
-  display: none;
+/* The hero overlaps the Agents cup. Only its text and buttons take input. */
+.home-hero > div:first-child {
+  pointer-events: none;
 }
-@media (min-width: 640px) {
-  .lp-notes {
-    display: block;
+.home-hero > div:first-child :is(h1, p, a, button) {
+  pointer-events: auto;
+}
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .home-hero > div:first-child :is(h1, p) {
+    width: fit-content;
+    margin-inline-start: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home .home-hero {
+    min-height: min(var(--home-screen), 34rem);
+    grid-template-columns: 1fr;
+    align-content: center;
+  }
+  .home-hero > div:first-child {
+    text-align: center;
+  }
+  .home-hero > div:first-child > p {
+    margin-inline: auto;
+  }
+  .home-hero > div:first-child > div {
+    justify-content: center;
   }
 }
 .lp-note {
@@ -302,8 +305,8 @@
   color: color-mix(in srgb, var(--lp-label, #c8c8c8) 100%, transparent);
   pointer-events: none;
 }
-.lp-note[data-align='end'] {
-  transform: translate(-100%, -50%);
+.lp-note[data-align='center'] {
+  transform: translate(-50%, -50%);
 }
 .lp-note-n {
   color: var(--lp-accent, var(--lm-accent));
@@ -333,17 +336,33 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--lp-label, #c8c8c8);
-  transition:
-    color 200ms ease,
-    border-color 200ms ease,
-    background-color 200ms ease;
 }
+.lp-cup-link:nth-child(-n + 2) .lp-cup-label {
+  top: 42%;
+  background: var(--lp-stage);
+}
+@media (max-width: 639px) {
+  .lp-note[data-align='center'] {
+    margin-top: -0.9rem;
+  }
+  .lp-note {
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    gap: 0.2rem;
+  }
+  .lp-cup-label {
+    font-size: 10px;
+    padding: 0.12rem 0.35rem;
+    letter-spacing: 0.06em;
+  }
+}
+
 .lp-scene[data-hot='cup-0'] .lp-cup-link:nth-child(1) .lp-cup-label,
 .lp-scene[data-hot='cup-1'] .lp-cup-link:nth-child(2) .lp-cup-label,
 .lp-scene[data-hot='cup-2'] .lp-cup-link:nth-child(3) .lp-cup-label {
   color: var(--lp-accent-light, #fff);
   border-color: color-mix(in srgb, var(--lp-accent, #fad628) 60%, transparent);
-  background-color: color-mix(in srgb, var(--lp-stage, #000) 75%, transparent);
+  background-color: var(--lp-stage);
 }
 
 @media (prefers-reduced-motion: reduce) {

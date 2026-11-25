@@ -3,11 +3,8 @@
  * (`tokensFor(state).tokens`) so every mode, background, and accent works.
  * Pure: no React and no DOM.
  *
- * The scene is always drawn on a dark stage, because glow does not read on a
- * light page: in dark mode the stage is the page itself, in light mode it is
- * a soft patch of near black behind the scene. So every scene color is chosen
- * against the stage. The lemon and the juice use the accent; the press, the
- * glass, the lines, and the marks are neutrals mixed from the stage and white.
+ * The page itself is the stage. Dark mode uses luminous edges. In light mode
+ * ink outlines, deeper juice and cool gray glass give the drawing definition.
  */
 import {
   contrast,
@@ -21,8 +18,6 @@ import {
 
 const WHITE: Rgb = [255, 255, 255]
 const BLACK: Rgb = [0, 0, 0]
-/** The light-mode stage: near black with a faint cool cast. */
-export const LIGHT_MODE_STAGE: Rgb = [11, 12, 17]
 /** The accent must stand out from the stage at least this much to glow. */
 export const MIN_GLOW_CONTRAST = 3
 
@@ -63,13 +58,15 @@ function fromHsl(h: number, s: number, l: number): Rgb {
 }
 
 export interface ScenePalette {
-  /** The page is dark. In light mode the scene sits on its own dark patch. */
+  /** Selects luminous or inked details. */
   dark: boolean
   bg: string
   /** What the scene is drawn on. */
   stage: string
   /** The lemon and the juice. */
   accent: string
+  ink: string
+  juice: string
   /** The lit side of the lemon, juice surfaces, drops' highlights. */
   accentLight: string
   /** The shaded side: a deeper, slightly warmer neighbour of the accent. */
@@ -90,7 +87,28 @@ export function scenePalette(tokens: Record<string, string>): ScenePalette {
   const bg = hexOr(tokens, '--lm-bg', [10, 10, 10])
   const rawAccent = hexOr(tokens, '--lm-accent', [250, 214, 40])
   const dark = isDarkColor(bg)
-  const stage = dark ? bg : LIGHT_MODE_STAGE
+  const stage = bg
+  if (!dark) {
+    const [h, s, l] = toHsl(rawAccent)
+    const rind = fromHsl(h, s, Math.min(0.58, Math.max(0.4, l)))
+    const juice = fromHsl((h + 351) % 360, s, 0.39)
+    const gray: Rgb = [45, 56, 65]
+    return {
+      dark,
+      bg: toHex(bg),
+      stage: toHex(stage),
+      accent: toHex(rind),
+      accentLight: toHex(mix(rind, WHITE, 0.34)),
+      accentDeep: toHex(fromHsl((h + 350) % 360, s, 0.32)),
+      ink: toHex(ensureContrast(juice, [bg], 4.5, BLACK)),
+      juice: toHex(juice),
+      line: toHex(mix(bg, gray, 0.22)),
+      lineStrong: toHex(mix(bg, gray, 0.76)),
+      metal: toHex(mix(bg, gray, 0.25)),
+      metalLight: toHex(mix(bg, gray, 0.12)),
+      label: toHex(ensureContrast(gray, [bg], 5, BLACK)),
+    }
+  }
   // A dark custom accent would vanish on the stage; lift it until it glows.
   const accent = ensureContrast(rawAccent, [stage], MIN_GLOW_CONTRAST, WHITE)
   const [h, s, l] = toHsl(accent)
@@ -100,6 +118,8 @@ export function scenePalette(tokens: Record<string, string>): ScenePalette {
     bg: toHex(bg),
     stage: toHex(stage),
     accent: toHex(accent),
+    ink: toHex(ensureContrast(accent, [bg], 4.5, WHITE)),
+    juice: toHex(accent),
     accentLight: toHex(mix(accent, WHITE, 0.55)),
     accentDeep: toHex(
       contrast(deep, stage) < 1.6 ? mix(accent, BLACK, 0.3) : deep,
@@ -116,49 +136,53 @@ export function scenePalette(tokens: Record<string, string>): ScenePalette {
 
 /** What the cards' text must reach on the see-through surface. */
 export const GLASS_MIN_CONTRAST = 4.5
-const GLASS_FLOOR = 0.7
+const GLASS_FLOOR = 0.5
 
 export interface HomeGlass {
   /** Share of the card's own surface color, 0 to 1. The rest is the scene. */
   alpha: number
   /** CSS color for the surface. */
   fill: string
+  muted: string
+  accentText: string
 }
 
 /**
- * The see-through surface of the home page's cards and panels. The scene can
- * be anything under a card, from the stage to a white highlight, so the
- * surface is made just opaque enough that body text, muted text, and accent
- * text keep AA contrast over the worst of them. The backdrop blur only makes
- * this safer, and browsers without it get the same numbers.
+ * Start at half surface, half blurred artwork. Blending and blurring the SVG
+ * keep each color channel within its palette's bounds. Use stronger home-card
+ * text tones when needed, retaining at least 25% of their original color. Raise the
+ * surface by one percentage point only if those tones still cannot reach AA.
  */
 export function homeGlass(tokens: Record<string, string>): HomeGlass {
-  const bg = hexOr(tokens, '--lm-bg', [10, 10, 10])
   const surface = hexOr(tokens, '--lm-surface', [30, 30, 30])
-  const texts = [
-    hexOr(tokens, '--lm-text', [246, 246, 246]),
-    hexOr(tokens, '--lm-muted', [179, 179, 179]),
-    hexOr(tokens, '--lm-accent-text', [250, 214, 40]),
-  ]
+  const body = hexOr(tokens, '--lm-text', [246, 246, 246])
+  const muted = hexOr(tokens, '--lm-muted', [179, 179, 179])
+  const accentText = hexOr(tokens, '--lm-accent-text', [250, 214, 40])
   const palette = scenePalette(tokens)
-  const backdrops = [
-    WHITE,
-    bg,
-    parseHex(palette.stage) ?? bg,
-    parseHex(palette.accent) ?? bg,
-    parseHex(palette.accentLight) ?? WHITE,
-  ]
-  const readable = (a: number) =>
-    backdrops.every((under) => {
-      const seen = mix(under, surface, a)
-      return texts.every((text) => contrast(text, seen) >= GLASS_MIN_CONTRAST)
-    })
-  // Whole steps of 1%, so the loop cannot drift; fully opaque if nothing passes.
-  let step = Math.round(GLASS_FLOOR * 100)
-  while (step < 100 && !readable(step / 100)) step++
+  const ink = palette.dark ? WHITE : BLACK
+  const colors = Object.values(palette)
+    .filter((v): v is string => typeof v === 'string')
+    .map((v) => parseHex(v)!)
+  // Even at the brightest (or darkest) edge of the blur, every text must pass.
+  const bound = (i: number) =>
+    (palette.dark ? Math.max : Math.min)(...colors.map((c) => c[i]))
+  const extreme: Rgb = [bound(0), bound(1), bound(2)]
+  const tones = [body, mix(muted, ink, 0.75), mix(accentText, ink, 0.75)]
+  let step = GLASS_FLOOR * 100
+  let seen = mix(extreme, surface, step / 100)
+  while (
+    step < 100 &&
+    tones.some((color) => contrast(color, seen) < GLASS_MIN_CONTRAST)
+  ) {
+    seen = mix(extreme, surface, ++step / 100)
+  }
   const alpha = step / 100
   return {
     alpha,
     fill: `rgb(${surface.join(' ')} / ${alpha})`,
+    muted: toHex(ensureContrast(muted, [seen], GLASS_MIN_CONTRAST, ink)),
+    accentText: toHex(
+      ensureContrast(accentText, [seen], GLASS_MIN_CONTRAST, ink),
+    ),
   }
 }

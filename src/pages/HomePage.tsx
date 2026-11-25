@@ -6,7 +6,7 @@ import {
   type CSSProperties,
 } from 'react'
 import { Hero } from '@/components/Hero'
-import { HomeBackdrop } from '@/components/home/HomeBackdrop'
+import { HomeBackdrop, useReducedMotion } from '@/components/home/HomeBackdrop'
 import { homeGlass } from '@/components/home/scenePalette'
 import { TrendingSection } from '@/components/home/TrendingSection'
 import { ArrowIcon, primaryButtonClass } from '@/components/ui'
@@ -76,6 +76,7 @@ function useNavHeight(): number | null {
 export function HomePage() {
   const sources = useHomeSources()
   const navHeight = useNavHeight()
+  const reduced = useReducedMotion()
   const { appearance } = useTheme()
   const glass = useMemo(
     () => homeGlass(tokensFor(appearance).tokens),
@@ -88,12 +89,14 @@ export function HomePage() {
 
   const style = {
     '--home-glass': glass.fill,
+    '--home-glass-muted': glass.muted,
+    '--home-glass-accent-text': glass.accentText,
     ...(navHeight === null ? {} : { '--home-nav': `${navHeight}px` }),
   } as CSSProperties
 
   return (
     <main className="home relative flex-1 overflow-x-clip" style={style}>
-      <HomeBackdrop />
+      <HomeBackdrop reduced={reduced} />
 
       <div className="pointer-events-none relative z-10">
         <Hero />

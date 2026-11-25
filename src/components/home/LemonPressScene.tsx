@@ -3,7 +3,6 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
   type MouseEvent,
   type PointerEvent,
 } from 'react'
@@ -14,10 +13,13 @@ import {
   CUP,
   CUPS,
   HINGE,
+  HANDLE,
+  FRAME,
+  TOP_SPOUTS,
+  SPOUT_LENGTH,
   LEMON,
   PEDESTAL,
   PRISM,
-  PRISM_EXITS,
   STREAM_LINES,
   STREAMS,
   VIEW,
@@ -57,33 +59,14 @@ function insetTriangle(points: readonly Pt[], by: number): Pt[] {
 const pct = (n: number, of: number) => `${(n / of) * 100}%`
 const pts = (list: readonly Pt[]) => list.map((p) => p.join(',')).join(' ')
 
-function prefersReducedMotion(): boolean {
-  return (
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-  )
-}
-
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(prefersReducedMotion)
-  useEffect(() => {
-    const query = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-    if (!query) return
-    const change = () => setReduced(query.matches)
-    query.addEventListener('change', change)
-    return () => query.removeEventListener('change', change)
-  }, [])
-  return reduced
-}
-
 /** How far the page has scrolled through the first screen, 0 to 1. */
 function scrollProgress(): number {
   return Math.max(0, Math.min(1, window.scrollY / (window.innerHeight * 0.9)))
 }
 
 /**
- * The home page background: a press squeezes one lemon, the juice drips into
- * a glass prism and leaves it as three streams that fill three cups, Agents,
- * Skills, and Councils. Build once, use everywhere.
+ * The press feeds the Agents and Skills cups. Their streams combine in the
+ * glass triangle and fill the Councils cup.
  *
  * Drawn in SVG on two layers: a still one (glows, grid, lines, pedestals) and
  * a live one (press, lemon, prism, streams, juice, drops), each composited on
@@ -93,7 +76,6 @@ function scrollProgress(): number {
 export default function LemonPressScene() {
   const { appearance } = useTheme()
   const { go } = useRoute()
-  const reduced = useReducedMotion()
   const palette = useMemo(
     () => scenePalette(tokensFor(appearance).tokens),
     [appearance],
@@ -111,8 +93,8 @@ export default function LemonPressScene() {
     ]
     const one = <T extends Element>(name: string) => all<T>(name)[0]
     const nodes: SceneNodes = {
-      upperJaw: one('upper-jaw'),
-      lowerJaw: one('lower-jaw'),
+      ram: one('ram'),
+      lever: one('lever'),
       lemon: one('lemon'),
       drops: all('drop'),
       flows: all('flow'),
@@ -124,7 +106,7 @@ export default function LemonPressScene() {
         ring: one(`ring-${i}`),
       })),
     }
-    const scene = startSceneMotion(nodes, { reduced })
+    const scene = startSceneMotion(nodes)
     motion.current = scene
 
     // Run only while the tab is visible and the scene is on screen.
@@ -169,7 +151,7 @@ export default function LemonPressScene() {
       scene.destroy()
       motion.current = null
     }
-  }, [reduced, palette.dark])
+  }, [palette.dark])
 
   function setHot(part: Part | null) {
     if (hot.current === part) return
@@ -208,12 +190,6 @@ export default function LemonPressScene() {
     const at = toScene(event)
     if (at && partAt(at[0], at[1]) === 'lemon') {
       motion.current?.squeeze()
-      // With reduced motion the lemon only brightens for a moment.
-      const element = root.current
-      if (element && reduced) {
-        element.dataset.flash = 'on'
-        window.setTimeout(() => delete element.dataset.flash, 450)
-      }
     }
   }
 
@@ -224,8 +200,7 @@ export default function LemonPressScene() {
       !event.ctrlKey &&
       !event.shiftKey &&
       !event.altKey
-    // Reduced motion, or a new-tab click: the link just goes.
-    if (!plain || reduced) return
+    if (!plain) return
     event.preventDefault()
     motion.current?.slosh(index)
     window.clearTimeout(pending.current)
@@ -239,8 +214,8 @@ export default function LemonPressScene() {
       className="lp-scene absolute inset-0"
       style={
         {
-          '--lp-accent': palette.accent,
-          '--lp-accent-light': palette.accentLight,
+          '--lp-accent': palette.ink,
+          '--lp-accent-light': palette.dark ? palette.accentLight : palette.ink,
           '--lp-label': palette.label,
           '--lp-stage': palette.stage,
         } as CSSProperties
@@ -253,27 +228,29 @@ export default function LemonPressScene() {
       }}
       onClick={onClick}
     >
-      {!palette.dark && <Stage color={palette.stage} />}
       <StillLayer p={palette} />
       <LiveLayer p={palette} />
 
       <div aria-hidden="true" className="lp-notes">
-        <Note x={668} y={192} n="01" text="Build once" />
-        <Note x={448} y={505} n="02" text="Combine" align="end" />
-        <Note x={566} y={694} n="03" text="Use everywhere" />
+        <Note x={540} y={330} align="center" n="01" text="Build once" />
+        <Note x={666} y={605} n="02" text="Combine" />
+        <Note x={666} y={825} n="03" text="Use everywhere" />
       </div>
 
-      <nav aria-label="Pour into">
+      <nav aria-label="Lemon press destinations">
         {CUPS.map((cup, i) => (
           <Link
             key={cup.key}
             to={cup.to}
             className="lp-cup-link"
             style={{
-              left: pct(cup.cx - PEDESTAL.half, VIEW.w),
-              top: pct(CUP.top - 34, VIEW.h),
-              width: pct(PEDESTAL.half * 2, VIEW.w),
-              height: pct(PEDESTAL.bottom - CUP.top + 34, VIEW.h),
+              left: pct(cup.cx - CUP.topHalf - 6, VIEW.w),
+              top: pct(cup.top - 12, VIEW.h),
+              width: pct((CUP.topHalf + 6) * 2, VIEW.w),
+              height: pct(
+                (i === 2 ? PEDESTAL.bottom - cup.top : CUP.height) + 12,
+                VIEW.h,
+              ),
             }}
             onClick={(event) => onCup(event, i)}
             onFocus={() => {
@@ -282,7 +259,7 @@ export default function LemonPressScene() {
               if (window.scrollY > window.innerHeight * 0.3)
                 window.scrollTo({
                   top: 0,
-                  behavior: reduced ? 'auto' : 'smooth',
+                  behavior: 'smooth',
                 })
             }}
             onBlur={() => setHot(null)}
@@ -306,7 +283,7 @@ function Note({
   y: number
   n: string
   text: string
-  align?: 'start' | 'end'
+  align?: 'start' | 'center'
 }) {
   return (
     <span
@@ -317,17 +294,6 @@ function Note({
       <span className="lp-note-n">{n}</span>
       {text}
     </span>
-  )
-}
-
-/** Light mode's patch of space (`.lp-stage`): glow needs darkness to read. */
-function Stage({ color }: { color: string }) {
-  return (
-    <div
-      aria-hidden="true"
-      className="lp-stage"
-      style={{ backgroundColor: color }}
-    />
   )
 }
 
@@ -431,7 +397,7 @@ function StillLayer({ p }: { p: ScenePalette }) {
         <ellipse
           key={cup.key}
           cx={cup.cx}
-          cy="836"
+          cy={cup.top + CUP.height * 0.7}
           rx="150"
           ry="118"
           fill="url(#lp-g-cup)"
@@ -489,16 +455,18 @@ function StillLayer({ p }: { p: ScenePalette }) {
         />
       </g>
 
-      {CUPS.map((cup) => (
-        <Pedestal key={cup.key} cx={cup.cx} p={p} />
-      ))}
+      <Pedestal cx={CUPS[2].cx} p={p} />
 
       {/* The cups' back walls and the far half of each rim. */}
       {CUPS.map((cup) => (
         <g key={cup.key}>
-          <path d={`${cupPath(cup.cx)}Z`} fill="#fff" fillOpacity="0.035" />
           <path
-            d={`M${cup.cx - CUP.topHalf} ${CUP.top}A${CUP.topHalf} 11 0 0 1 ${cup.cx + CUP.topHalf} ${CUP.top}`}
+            d={`${cupPath(cup)}Z`}
+            fill={p.dark ? p.accentLight : '#fff'}
+            fillOpacity="0.035"
+          />
+          <path
+            d={`M${cup.cx - CUP.topHalf} ${cup.top}A${CUP.topHalf} 11 0 0 1 ${cup.cx + CUP.topHalf} ${cup.top}`}
             fill="none"
             stroke={p.lineStrong}
             strokeOpacity="0.5"
@@ -589,7 +557,7 @@ function LiveLayer({ p }: { p: ScenePalette }) {
   const back = (pt: Pt): Pt => [pt[0] + PRISM.depth[0], pt[1] + PRISM.depth[1]]
   const front = [PRISM.apex, PRISM.left, PRISM.right]
   const side = [PRISM.apex, back(PRISM.apex), back(PRISM.right), PRISM.right]
-  const entry: Pt = [px, py + 12]
+  const entry: Pt = [px, py - 14]
 
   return (
     <svg {...svgProps}>
@@ -617,13 +585,21 @@ function LiveLayer({ p }: { p: ScenePalette }) {
           <stop offset="1" stopColor={p.accentLight} stopOpacity="0" />
         </radialGradient>
         <radialGradient id="lp-spec">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.85" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          <stop
+            offset="0"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0.85"
+          />
+          <stop
+            offset="1"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0"
+          />
         </radialGradient>
         <Glow id="lp-g-hot" color={p.accentLight} peak={0.4} />
         <Glow id="lp-g-core" color={p.accent} peak={0.95} />
         <linearGradient id="lp-juice" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={p.accent} stopOpacity="0.96" />
+          <stop offset="0" stopColor={p.juice} stopOpacity="0.96" />
           <stop offset="1" stopColor={p.accentDeep} stopOpacity="0.96" />
         </linearGradient>
         <radialGradient id="lp-surface" cx="0.42" cy="0.4" r="0.7">
@@ -631,18 +607,50 @@ function LiveLayer({ p }: { p: ScenePalette }) {
           <stop offset="1" stopColor={p.accent} />
         </radialGradient>
         <linearGradient id="lp-glass" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.11" />
-          <stop offset="0.3" stopColor="#fff" stopOpacity="0.02" />
-          <stop offset="0.85" stopColor="#fff" stopOpacity="0.03" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0.09" />
+          <stop
+            offset="0"
+            stopColor={p.dark ? p.accentLight : p.lineStrong}
+            stopOpacity="0.15"
+          />
+          <stop
+            offset="0.3"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0.02"
+          />
+          <stop
+            offset="0.85"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0.03"
+          />
+          <stop
+            offset="1"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0.09"
+          />
         </linearGradient>
         <linearGradient id="lp-prism-front" x1="0" y1="0" x2="0.4" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.2" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0.04" />
+          <stop
+            offset="0"
+            stopColor={p.dark ? p.accentLight : p.lineStrong}
+            stopOpacity="0.2"
+          />
+          <stop
+            offset="1"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0.04"
+          />
         </linearGradient>
         <linearGradient id="lp-prism-side" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.06" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0.01" />
+          <stop
+            offset="0"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0.06"
+          />
+          <stop
+            offset="1"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0.01"
+          />
         </linearGradient>
         <linearGradient
           id="lp-shimmer"
@@ -653,13 +661,25 @@ function LiveLayer({ p }: { p: ScenePalette }) {
           x2="530"
           y2="0"
         >
-          <stop offset="0" stopColor="#fff" stopOpacity="0" />
-          <stop offset="0.5" stopColor="#fff" stopOpacity="0.5" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          <stop
+            offset="0"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0"
+          />
+          <stop
+            offset="0.5"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0.5"
+          />
+          <stop
+            offset="1"
+            stopColor={p.dark ? p.accentLight : '#fff'}
+            stopOpacity="0"
+          />
         </linearGradient>
         <radialGradient id="lp-drop" cx="0.35" cy="0.6" r="0.75">
           <stop offset="0" stopColor={p.accentLight} />
-          <stop offset="1" stopColor={p.accent} />
+          <stop offset="1" stopColor={p.juice} />
         </radialGradient>
         <linearGradient id="lp-arm" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={p.metalLight} />
@@ -668,7 +688,7 @@ function LiveLayer({ p }: { p: ScenePalette }) {
         </linearGradient>
         {CUPS.map((cup, i) => (
           <clipPath key={cup.key} id={`lp-cup-${i}`}>
-            <path d={`${cupPath(cup.cx, 3)}Z`} />
+            <path d={`${cupPath(cup, 3)}Z`} />
           </clipPath>
         ))}
       </defs>
@@ -704,21 +724,18 @@ function LiveLayer({ p }: { p: ScenePalette }) {
               <path
                 key={j}
                 d={d}
-                stroke={j === 1 ? p.accentLight : p.accent}
+                stroke={p.dark && j === 1 ? p.accentLight : p.ink}
                 strokeWidth={j === 1 ? 1.8 : 1.4}
                 strokeOpacity={j === 1 ? 0.95 : 0.8}
               />
             ))}
-            {lines.map((d, j) => (
-              <path
-                key={`f${j}`}
-                data-lp="flow"
-                d={d}
-                stroke={p.accentLight}
-                strokeWidth="2.6"
-                strokeDasharray="18 132"
-              />
-            ))}
+            <circle
+              data-lp="flow"
+              cx={line[0][0]}
+              cy={line[0][1]}
+              r="2.8"
+              fill={p.ink}
+            />
           </g>
         )
       })}
@@ -736,7 +753,7 @@ function LiveLayer({ p }: { p: ScenePalette }) {
         <ellipse
           data-lp="prism-core"
           cx="544"
-          cy="568"
+          cy="603"
           rx="72"
           ry="62"
           fill="url(#lp-g-core)"
@@ -748,7 +765,7 @@ function LiveLayer({ p }: { p: ScenePalette }) {
           strokeLinecap="round"
           opacity="0.75"
         >
-          {PRISM_EXITS.map((exit, i) => (
+          {[PRISM.left, PRISM.right].map((exit, i) => (
             <line
               key={i}
               x1={entry[0]}
@@ -770,7 +787,7 @@ function LiveLayer({ p }: { p: ScenePalette }) {
         <polygon
           points={pts(insetTriangle(front, 11))}
           fill="none"
-          stroke="#fff"
+          stroke={p.dark ? p.accentLight : '#fff'}
           strokeOpacity="0.14"
           strokeWidth="1"
           strokeLinejoin="round"
@@ -780,7 +797,7 @@ function LiveLayer({ p }: { p: ScenePalette }) {
           y1={py}
           x2={PRISM.left[0]}
           y2={PRISM.left[1]}
-          stroke="#fff"
+          stroke={p.dark ? p.accentLight : '#fff'}
           strokeOpacity="0.55"
           strokeWidth="1.3"
           strokeLinecap="round"
@@ -803,11 +820,11 @@ function LiveLayer({ p }: { p: ScenePalette }) {
         <circle
           className="lp-hot lp-hot-prism"
           cx="548"
-          cy="560"
+          cy="603"
           r="130"
           fill="url(#lp-g-hot)"
         />
-        {PRISM_EXITS.map((exit, i) => (
+        {[PRISM.left, PRISM.right].map((exit, i) => (
           <circle
             key={i}
             cx={exit[0]}
@@ -828,11 +845,27 @@ function LiveLayer({ p }: { p: ScenePalette }) {
 
       {/* Juice and the cups' front glass. */}
       {CUPS.map((cup, i) => {
-        const sy = surfaceY(cup.level)
-        const hw = cupHalfWidthAt(sy)
-        const { top, bottom, topHalf } = CUP
+        const sy = surfaceY(cup)
+        const hw = cupHalfWidthAt(cup, sy)
+        const { top } = cup
+        const { topHalf } = CUP
+        const bottom = top + CUP.height
         return (
           <g key={cup.key}>
+            {i < TOP_SPOUTS.length && (
+              <g stroke={p.lineStrong} fill="url(#lp-arm)">
+                <path
+                  d={`M${cup.cx - 11} ${bottom - 2}h22l-5 ${SPOUT_LENGTH + 2}h-12Z`}
+                />
+                <ellipse
+                  cx={cup.cx}
+                  cy={TOP_SPOUTS[i][1]}
+                  rx="6"
+                  ry="2"
+                  fill={p.juice}
+                />
+              </g>
+            )}
             <ellipse
               className={`lp-hot lp-hot-cup-${i}`}
               cx={cup.cx}
@@ -844,7 +877,7 @@ function LiveLayer({ p }: { p: ScenePalette }) {
             <g clipPath={`url(#lp-cup-${i})`}>
               <path
                 data-lp={`juice-${i}`}
-                d={`M${cup.cx - hw - 6} ${sy}H${cup.cx + hw + 6}V880H${cup.cx - hw - 6}Z`}
+                d={`M${cup.cx - hw - 6} ${sy}H${cup.cx + hw + 6}V${bottom + 28}H${cup.cx - hw - 6}Z`}
                 fill="url(#lp-juice)"
               />
               <ellipse
@@ -865,18 +898,18 @@ function LiveLayer({ p }: { p: ScenePalette }) {
             />
             <ellipse
               data-lp={`ring-${i}`}
-              cx={cup.cx}
-              cy={sy}
-              rx="20"
-              ry="3"
+              cx="0"
+              cy="0"
+              rx={hw - 8}
+              ry="5.5"
               fill="none"
-              stroke="#fff"
+              stroke={p.dark ? p.accentLight : '#fff'}
               strokeOpacity="0.85"
               strokeWidth="1.1"
               opacity="0"
             />
             <path
-              d={cupPath(cup.cx)}
+              d={cupPath(cup)}
               fill="url(#lp-glass)"
               stroke={p.lineStrong}
               strokeOpacity="0.85"
@@ -891,14 +924,14 @@ function LiveLayer({ p }: { p: ScenePalette }) {
             />
             <path
               d={`M${cup.cx - topHalf + 11} ${top + 16}L${cup.cx - topHalf + 21} ${bottom - 18}`}
-              stroke="#fff"
+              stroke={p.dark ? p.accentLight : '#fff'}
               strokeOpacity="0.22"
               strokeWidth="4"
               strokeLinecap="round"
             />
             <path
               d={`M${cup.cx + topHalf - 14} ${top + 20}L${cup.cx + topHalf - 17} ${top + 58}`}
-              stroke="#fff"
+              stroke={p.dark ? p.accentLight : '#fff'}
               strokeOpacity="0.12"
               strokeWidth="2"
               strokeLinecap="round"
@@ -907,7 +940,7 @@ function LiveLayer({ p }: { p: ScenePalette }) {
             <g stroke={p.lineStrong} strokeOpacity="0.5" strokeWidth="1">
               {[0.3, 0.55, 0.8].map((t) => {
                 const y = bottom - (bottom - top) * t
-                const x = cup.cx + cupHalfWidthAt(y) - 4
+                const x = cup.cx + cupHalfWidthAt(cup, y) - 4
                 return (
                   <path key={t} d={`M${x - (t === 0.55 ? 12 : 7)} ${y}H${x}`} />
                 )
@@ -919,12 +952,12 @@ function LiveLayer({ p }: { p: ScenePalette }) {
               rx="48"
               ry="3.5"
               fill="none"
-              stroke="#fff"
+              stroke={p.dark ? p.accentLight : '#fff'}
               strokeOpacity="0.14"
             />
             <path
               className={`lp-hot lp-hot-cup-${i}`}
-              d={cupPath(cup.cx)}
+              d={cupPath(cup)}
               fill="none"
               stroke={p.accentLight}
               strokeWidth="2.2"
@@ -943,55 +976,34 @@ function LiveLayer({ p }: { p: ScenePalette }) {
 
       {/* The lemon, then the press over it. */}
       <circle
-        className="lp-hot lp-hot-lemon lp-flash"
+        className="lp-hot lp-hot-lemon"
         cx={LEMON[0]}
         cy={LEMON[1]}
         r="190"
         fill="url(#lp-g-hot)"
       />
+      <Press p={p} />
       <g data-lp="lemon" transform={`translate(${LEMON[0]} ${LEMON[1]})`}>
-        <path d={lemonPath()} fill="url(#lp-lemon)" />
-        <path d={lemonPath()} fill="url(#lp-pores)" opacity="0.26" />
-        <ellipse cx="34" cy="56" rx="26" ry="40" fill="url(#lp-bounce)" />
-        <ellipse
-          cx="-27"
-          cy="-46"
-          rx="15"
-          ry="32"
-          transform="rotate(-20 -27 -46)"
-          fill="url(#lp-spec)"
-        />
-        <path
-          d={lemonPath()}
-          fill="none"
-          stroke={p.accentLight}
-          strokeOpacity="0.5"
-          strokeWidth="1.2"
-        />
-      </g>
-
-      <Jaw p={p} which="lower" />
-      <Jaw p={p} which="upper" />
-
-      <g>
-        <circle
-          cx={HINGE[0]}
-          cy={HINGE[1]}
-          r="23"
-          fill={p.metal}
-          stroke={p.lineStrong}
-          strokeOpacity="0.8"
-          strokeWidth="1.5"
-        />
-        <circle
-          cx={HINGE[0]}
-          cy={HINGE[1]}
-          r="10"
-          fill={p.stage}
-          stroke={p.accent}
-          strokeWidth="1.6"
-        />
-        <circle cx={HINGE[0]} cy={HINGE[1]} r="3" fill={p.accentLight} />
+        <g transform="scale(1.25 0.84) rotate(90)">
+          <path d={lemonPath()} fill="url(#lp-lemon)" />
+          <path d={lemonPath()} fill="url(#lp-pores)" opacity="0.26" />
+          <ellipse cx="34" cy="56" rx="26" ry="40" fill="url(#lp-bounce)" />
+          <ellipse
+            cx="-27"
+            cy="-46"
+            rx="15"
+            ry="32"
+            transform="rotate(-20 -27 -46)"
+            fill="url(#lp-spec)"
+          />
+          <path
+            d={lemonPath()}
+            fill="none"
+            stroke={p.dark ? p.accentLight : p.ink}
+            strokeOpacity={p.dark ? 0.5 : 1}
+            strokeWidth={p.dark ? 1.2 : 2.2}
+          />
+        </g>
       </g>
 
       {/* Drops: hidden until the motion loop places them. */}
@@ -1001,101 +1013,63 @@ function LiveLayer({ p }: { p: ScenePalette }) {
             d="M0 -10C3 -5 6.5 -1 6.5 3A6.5 6.5 0 0 1 -6.5 3C-6.5 -1 -3 -5 0 -10Z"
             fill="url(#lp-drop)"
           />
-          <circle cx="-2" cy="2" r="1.5" fill="#fff" opacity="0.8" />
+          <circle
+            cx="-2"
+            cy="2"
+            r="1.5"
+            fill={p.dark ? p.accentLight : '#fff'}
+            opacity="0.8"
+          />
         </g>
       ))}
     </svg>
   )
 }
 
-/** One half of the press: its arm, its glass jaw, and its handle end. */
-function Jaw({ p, which }: { p: ScenePalette; which: 'upper' | 'lower' }) {
-  const upper = which === 'upper'
-  const [lx, ly] = LEMON
-  const [hx, hy] = HINGE
-  const armY = upper ? ly - 126 : ly + 126
-  const end = upper ? 800 : 780
-  const bend = upper ? -1 : 1
-  const arm = `M${hx} ${hy}C${hx} ${hy + bend * 70} ${hx + 40} ${armY} ${hx + 120} ${armY}L${end} ${armY}`
-  const jaw = upper
-    ? 'M-90 -34C-90 -100 -48 -128 0 -128C48 -128 90 -100 90 -34L78 -34C78 -90 42 -114 0 -114C-42 -114 -78 -90 -78 -34Z'
-    : 'M-90 34C-90 100 -48 126 -16 128L-9 152H9L16 128C48 126 90 100 90 34L78 34C78 92 42 114 0 116C-42 114 -78 92 -78 34Z'
-  const shine = upper
-    ? 'M-70 -58C-66 -92 -40 -112 -12 -117'
-    : 'M-72 58C-66 90 -42 110 -16 117'
+/** The central pivot drives the ram onto the fruit. */
+function Press({ p }: { p: ScenePalette }) {
+  const { left, right, top, bottom } = FRAME
+  const [cx, cy] = HINGE
+  const [hx, hy] = HANDLE
+  const frame = `M${left} ${bottom}V${top + 13}Q${left} ${top} ${left + 13} ${top}H${right - 13}Q${right} ${top} ${right} ${top + 13}V${bottom}`
+  const lever = `M${cx - 21} ${cy + 5}L${hx} ${hy}`
   return (
-    <g data-lp={upper ? 'upper-jaw' : 'lower-jaw'}>
-      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+    <g strokeLinejoin="round" strokeLinecap="round">
+      <path d={frame} fill="none" stroke={p.lineStrong} strokeWidth="16" />
+      <path d={frame} fill="none" stroke={p.metal} strokeWidth="11" />
+      <path
+        d="M334 264H388V275H334ZM408 264H433Q540 284 647 264H672V275H647Q540 301 433 275H408ZM692 264H746V275H692Z"
+        fill="url(#lp-arm)"
+        stroke={p.lineStrong}
+        strokeWidth="2"
+      />
+      <g
+        data-lp="ram"
+        fill="url(#lp-arm)"
+        stroke={p.lineStrong}
+        strokeWidth="2"
+      >
+        <rect x={cx - 9} y="83" width="18" height="52" rx="5" />
+        <path d="M472 144Q477 127 500 126H580Q603 127 608 144Q540 137 472 144Z" />
+      </g>
+      <g data-lp="lever">
+        <path d={lever} stroke={p.lineStrong} strokeWidth="13" />
+        <path d={lever} stroke={p.metalLight} strokeWidth="8" />
         <path
-          d={arm}
-          stroke={p.lineStrong}
-          strokeOpacity="0.38"
-          strokeWidth="17"
-        />
-        <path d={arm} stroke={p.metal} strokeWidth="14.5" />
-        <path
-          d={arm}
-          stroke={p.metalLight}
-          strokeWidth="2"
-          strokeOpacity="0.9"
-          transform="translate(0 -3.5)"
-        />
-        {/* A pressure gauge in the arm, in the accent. */}
-        <path
-          d={`M${end - 170} ${armY}H${end - 40}`}
-          stroke={p.accent}
-          strokeWidth="8"
-          strokeOpacity="0.16"
-        />
-        <path
-          d={`M${end - 170} ${armY}H${end - 40}`}
-          stroke={p.accent}
-          strokeWidth="2.6"
-        />
-        <path
-          d={`M${end - 210} ${armY}H${end - 186}`}
-          stroke={p.line}
-          strokeWidth="3"
+          d={`M${hx - 50} ${hy + 14}L${hx} ${hy}`}
+          stroke={p.ink}
+          strokeWidth="16"
         />
       </g>
       <circle
-        cx={end}
-        cy={armY}
-        r="13"
-        fill={p.stage}
+        cx={cx}
+        cy={cy}
+        r="16"
+        fill={p.metal}
         stroke={p.lineStrong}
-        strokeWidth="1.5"
+        strokeWidth="2"
       />
-      <circle cx={end} cy={armY} r="3.2" fill={p.accent} />
-      <g transform={`translate(${lx} ${ly})`}>
-        <rect
-          x="-22"
-          y={upper ? -138 : 118}
-          width="44"
-          height="20"
-          rx="7"
-          fill={p.metal}
-          stroke={p.lineStrong}
-          strokeOpacity="0.55"
-        />
-        <path
-          d={jaw}
-          fill="#fff"
-          fillOpacity="0.08"
-          stroke={p.lineStrong}
-          strokeOpacity="0.8"
-          strokeWidth="1.3"
-          strokeLinejoin="round"
-        />
-        <path
-          d={shine}
-          fill="none"
-          stroke="#fff"
-          strokeOpacity="0.38"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-        />
-      </g>
+      <circle cx={cx} cy={cy} r="6" fill={p.accent} />
     </g>
   )
 }
