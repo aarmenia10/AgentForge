@@ -125,12 +125,16 @@ try {
   ).text()
   const cpu = cpuSampler()
   for (const [label, name, args] of [
-    ['200 KiB agent', 'save_agent', { manifest: sizedAgent(cap) }],
+    [
+      '200 KiB agent',
+      'save_agent',
+      { manifest: sizedAgent(cap), save_anyway: true },
+    ],
     ['200 KiB skill', 'save_skill', { skill }],
     [
       '12 KiB agent with inline lint',
       'save_agent',
-      { manifest: sizedAgent(12 * 1024) },
+      { manifest: sizedAgent(12 * 1024), save_anyway: true },
     ],
   ]) {
     const body = JSON.stringify({
@@ -155,6 +159,7 @@ try {
       const payload = await response.json()
       assert.equal(response.status, 200, JSON.stringify(payload))
       assert.equal(payload.result?.isError, undefined, JSON.stringify(payload))
+      assert.equal(JSON.parse(payload.result.content[0].text).saved, true)
     }
     for (let i = 0; i < 40; i++) await save()
     const samples = []

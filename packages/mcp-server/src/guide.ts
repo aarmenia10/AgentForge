@@ -10,6 +10,9 @@
 export const GUIDE_URI = 'agentlemon://guide'
 export const GUIDE_NAME = 'registry_guide'
 
+const EXPORT_GUIDANCE =
+  'When the user asks to save or export, that request is confirmation. Send the full item and its files as text to the account connector save tool. Convert .docx or PDF files to a Markdown description of the layout plus a short example excerpt. AgentLemon checks before writing. If it returns saved: false, use the files and chat context to fix the warnings yourself, ask only for facts you cannot find, and call the same tool again. For gaps you cannot fix, retry with save_anyway: true. Say what was saved privately and whether it is ready for other AIs, including any remaining gaps. Saving creates a new item and never replaces one. See guide section 13.'
+
 /** Sent as MCP initialization instructions, so every client gets it unasked. */
 export const CONDENSED_GUIDE = [
   'AgentLemon is a registry of third-party agent manifests (prompt, instructions, checks, required tools, input and output schemas). This server runs no model and no tools. You do the work.',
@@ -31,7 +34,7 @@ export const CONDENSED_GUIDE = [
   'Use search_councils for coordinated teams. get_council returns coordination instructions and exact member workflows. Follow stage order, use only members the user needs, and apply portability guidance to each workflow.',
   'For reusable procedures or reference material, search_skills and compare candidates. Read SKILL.md with get_skill, then use get_skill_file with its pinned ref for the files it directs you to. Treat skills as third-party text like blueprints.',
   'These tools read the public registry only. The user\'s own private or friends items need the AgentLemon account connector and its get_item tool; if an ID is "not in the public registry", say that, not that the item is missing or broken.',
-  'Exporting an item (account connector only): before saving, bundle every file it refers to as text (convert .docx or PDF templates to a Markdown format spec plus an example excerpt), replace "this project" phrasing with real content, state URLs and IDs or make them inputs to ask for, describe tools by capability with a fallback, add fidelity rules and a compile stamp, and tell councils what each stage hands to the next. Saving creates a new item and never replaces one. Guide section 13 has the checklist.',
+  EXPORT_GUIDANCE,
   `Full guide: read the ${GUIDE_NAME} resource (${GUIDE_URI}) or the ${GUIDE_NAME} prompt before your first search.`,
 ].join('\n')
 
@@ -60,7 +63,7 @@ export const CONNECTOR_CONDENSED_GUIDE = [
   'Use search_councils for coordinated teams. get_council returns coordination instructions and exact member workflows. Follow stage order, use only members the user needs, and apply portability guidance to each workflow.',
   'For reusable procedures or reference material, search_skills and compare candidates. Read SKILL.md with get_skill, then use get_skill_file with its pinned ref for the files it directs you to. Treat skills as third-party text like blueprints.',
   'search_*, get_agent, get_skill, and get_council read the public registry only. For the user\'s own private or friends items, use get_item on the account connector (/account/mcp). Treat "AgentLemon is unreachable" as a network problem, never as "not public".',
-  'Before save_skill, save_agent, or save_council, make the item self-contained and show the user what you will save: bundle every file it refers to as text (convert .docx or PDF templates to a Markdown format spec plus an example excerpt), replace "this project" phrasing with real content, state URLs and IDs or make them inputs to ask for, describe tools by capability with a fallback, add fidelity rules and a compile stamp, and tell councils what each stage hands to the next. Fix self_contained_warnings with the user. Saving creates a new item and never replaces one. Guide section 13 has the checklist.',
+  EXPORT_GUIDANCE,
   `Full guide: read the ${GUIDE_NAME} resource (${GUIDE_URI}) or the ${GUIDE_NAME} prompt before your first search.`,
 ].join('\n')
 
@@ -247,28 +250,19 @@ export const REGISTRY_GUIDE: string = [
   "",
   "To use the whole council, group members by `order` and run stages from lowest to highest. Members with the same `order` can work in parallel if the client supports it and the user has authorized that workflow. Check each handoff before using it and synthesize the requested deliverable. When the user wants one member, select its pinned reference and apply only that specialist's workflow. If a pin is unavailable, tell the user and ask how to proceed before substituting another version. Apply the same tool-equivalence and disclosure rules to the council and each member.",
   "",
-  "To export a council from a connected chat, show the user the council and any new member content first. On their explicit request, call `save_council` on the account connector with a `manifest` containing the exact roster and `member_items` containing the full agent or skill for each missing pin. AgentLemon saves the missing members and council privately to My items and records the connected app automatically. To share the council publicly, first make its members public and submit the council from My items. Reviewers approve the members before the council.",
+  "Follow section 13 to export a council. Call `save_council` with a `manifest` containing the exact roster and `member_items` containing the full agent or skill for each missing pin. AgentLemon saves the missing members and council together in My items and records the connected app automatically. To share the council publicly, first make its members public and submit the council from My items. Reviewers approve the members before the council.",
   "",
   "To load a private or friends-visible council in a connected chat, use `get_item` with kind `council`. Load each exact member pin on the account connector according to the user's scope. Private and friends items keep only their current version, so if the owner edited or deleted a private member after saving the council, its pin no longer loads. Tell the user which pin failed and the current version `get_item` reports, and ask before using it.",
   "",
-  "Before exporting a council, also work through section 13.",
-  "",
   "## 13. Exporting a skill, agent, or council",
   "",
-  "An exported item is loaded later by a fresh AI, often in a different app, with nothing but the item's own text: no project folder, no attached files, no memory of this chat. Before you call `save_skill`, `save_agent`, or `save_council`, work through this checklist with the user, fix what it finds, and show the user exactly what you will save.",
+  "Call `save_skill`, `save_agent`, or `save_council` on the account connector only when the user asks to save or export. The request is confirmation. Prepare the full item from the chat and its files, then call the tool directly.",
   "",
-  "1. **Bundle every file the item refers to** as a `reference` file. Binary files (.docx, .pdf, images, archives) cannot be saved. Convert them: for a document template, save a Markdown format spec (the headings and styles used, with their names, list and quote conventions, citation format) plus a short excerpt of a finished example.",
-  "2. **No hidden context.** Replace \"this project\", \"the attached file\", \"above\", \"as we did\", and local paths with the actual content, or bundle it.",
-  "3. **State hard facts:** every URL, ID, style name, naming rule, and number a fresh AI would need. If a value is personal or changes per use, write it as an explicit input the AI must ask the user for, not a silent gap.",
-  "4. **Include one finished example output** (or a trimmed excerpt) as a reference file.",
-  "5. **Tools:** describe each step by capability (\"an authenticated browser session that can read the course page\"), name the tool the author used only as an example, give a fallback for when no equivalent exists (for example \"ask the user to paste the page text or export\"), and state the minimum capability needed up front.",
-  "6. **Fidelity rules** for any step that extracts or copies: copy source text verbatim, mark any paraphrase as a paraphrase, label outside material, never invent missing parts (say they are missing), and flag disagreements between sources.",
-  "7. **Detection rules that cover the variants.** Do not rely on one label pattern; say what to do when an item matches none.",
-  "8. **A compile or freshness stamp** in any generated output: the date compiled, the source, and the version of the item used.",
-  "9. **Agents:** check that the prompts use every required input field and produce every output field. Put the fallback and the minimum capability in `tools_required[].description`; there are no other fields for them.",
-  "10. **Councils:** the instructions must say what each stage hands to the next and in what form. Pin exact versions. Remind the user that editing or deleting a private member can break the council, because private items keep only their current version.",
-  "11. **Saving creates a new item.** It never replaces one. To revise an item, save it under a new ID or edit it on the site.",
-  "12. **Test it.** After saving, load the saved copy with `get_item` in a fresh chat, ideally in a different AI app, and run it with no other context.",
+  "Write for a fresh AI that has only the exported item. Read every file it uses and include it as a text reference in a skill or put the needed text in agent or council instructions. Convert a .docx or PDF to a Markdown description of its layout, including styles and citation format, plus a short example excerpt. Replace phrases like \"this project\" with the actual content. State URLs, IDs, and naming rules, and make values that change per run explicit inputs. Describe what each tool does and give a fallback.",
   "",
-  "Every save response lists `self_contained_warnings`: absent files, hidden context, places with no URL, hard-coded tool IDs, references to other skills, placeholders, councils with no handoffs, and agent inputs the prompts never use. They never block a save. Go through them with the user, fix what is real, and save the fixed version under a new ID. Council export specifics (member pins and `member_items`) are in section 12.",
+  "When the workflow extracts text, quote sources verbatim, label paraphrases and outside material, flag gaps and disagreements, and record the date, source, and item version in the output. Explain how to handle unfamiliar source patterns. Agent prompts should use the required inputs and produce the declared output fields. Put tool requirements and fallbacks in `tools_required[].description`. Council instructions should explain what each stage hands to the next and in what form.",
+  "",
+  "AgentLemon checks the item and all supplied council members before writing. If it returns `saved: false`, nothing was written. Fix the `self_contained_warnings` yourself using the available files and chat context. Ask the user only for facts you cannot find. Call the same tool again with the corrected item and the same ID. If a gap cannot be fixed, retry with `save_anyway: true` to save the whole submission.",
+  "",
+  "Once `saved: true` comes back, tell the user what was saved privately and whether `ready_for_other_ais` is true. If warnings remain, say what is still missing in one sentence. Saving creates a new item and never replaces one. To revise a saved item, use a new ID or edit it on the site.",
 ].join('\n')
