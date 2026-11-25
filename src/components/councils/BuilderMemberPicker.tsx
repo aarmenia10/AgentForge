@@ -65,7 +65,7 @@ async function loadPublic(): Promise<MemberCandidate[]> {
       name: agent.name,
       description: agent.description,
       source: 'public',
-      handle: agent.author.handle,
+      handle: displayAuthorHandle(agent.author.handle),
     })),
     ...skills.skills.map((skill): MemberCandidate => ({
       kind: 'skill',
@@ -74,7 +74,7 @@ async function loadPublic(): Promise<MemberCandidate[]> {
       name: skill.name,
       description: skill.description,
       source: 'public',
-      handle: skill.author.handle,
+      handle: displayAuthorHandle(skill.author.handle),
     })),
   ]
 }
@@ -97,7 +97,7 @@ function Row({
         <p className="break-words font-medium">{candidate.name}</p>
         <p className="break-all font-mono text-xs text-fg-muted">
           {pin.kind} · {pin.id}@{pin.version}
-          {candidate.handle ? ` · @${displayAuthorHandle(candidate.handle)}` : ''}
+          {candidate.handle ? ` · @${candidate.handle}` : ''}
         </p>
       </div>
       {/* aria-disabled, not disabled: the button the person just pressed
