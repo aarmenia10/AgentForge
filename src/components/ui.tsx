@@ -235,22 +235,36 @@ export function CodeBlock({
   title,
   copyLabel,
   wrap = false,
+  emphasizeTitle = false,
 }: {
   code: string
   title: ReactNode
   copyLabel?: string
+  /** Opt in for a short, direct copy instruction used as the title. */
+  emphasizeTitle?: boolean
   /** Wrap long lines instead of scrolling sideways (prose prompts). */
   wrap?: boolean
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 dark:border-white/10">
       <div
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-2"
+        className={cn(
+          'flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2',
+          (emphasizeTitle || title === COPY_CHAT_INSTRUCTION) && 'flex-wrap',
+        )}
       >
         {title === COPY_CHAT_INSTRUCTION ? (
           <CopyChatInstruction onDark />
         ) : (
-          <span className={cn('min-w-0 break-words', copyDarkInstructionClass)}>{title}</span>
+          <span
+            className={
+              emphasizeTitle
+                ? cn('min-w-0 break-words', copyDarkInstructionClass)
+                : 'truncate font-mono text-xs text-slate-400'
+            }
+          >
+            {title}
+          </span>
         )}
         <CopyButton text={code} label={copyLabel} tone="onDark" />
       </div>
