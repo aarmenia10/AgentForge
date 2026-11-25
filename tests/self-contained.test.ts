@@ -152,7 +152,7 @@ test('F3: the fixed skill has fidelity rules, and the guide tells exporters to w
     assert.match(skillMd, rule)
   assert.match(
     REGISTRY_GUIDE,
-    /\*\*Fidelity rules\*\* for any step that extracts or copies/,
+    /When the workflow extracts text, quote sources verbatim, label paraphrases and outside material/,
   )
 })
 
@@ -171,7 +171,7 @@ test('F4: video detection covers pages without a "Video N.N" label', async () =>
   assert.match(skillMd, /matches\s+neither[\s\S]*ask\s+the user/)
   assert.match(
     REGISTRY_GUIDE,
-    /\*\*Detection rules that cover the variants\.\*\*/,
+    /Explain how to handle unfamiliar source patterns/,
   )
 })
 
@@ -182,7 +182,7 @@ test('F5: the output spec carries a compile stamp with date, source, and skill v
     /Compiled YYYY-MM-DD from[\s\S]*skill\s+reference you loaded/,
   )
   assert.match(file(fixed, 'example-output.md'), /\*Compiled 2026-01-15 from/)
-  assert.match(REGISTRY_GUIDE, /\*\*A compile or freshness stamp\*\*/)
+  assert.match(REGISTRY_GUIDE, /record the date, source, and item version/)
 })
 
 test('F6: hard-coded tool IDs and other skills are flagged; the fixed skill states its minimum capability and a fallback', async () => {
@@ -361,27 +361,21 @@ test('F7 and R5: public read tools say they cover the public registry and point 
   }
 })
 
-test('F8 and R5: the guide has an exporter checklist, a connector tool table, and the public-only rule; the condensed guides agree', () => {
+test('F8 and R5: the full and condensed guides explain how to retry an export and use the account connector', () => {
   assert.match(REGISTRY_GUIDE, /## 13\. Exporting a skill, agent, or council/)
   const section = REGISTRY_GUIDE.slice(REGISTRY_GUIDE.indexOf('## 13.'))
-  for (let n = 1; n <= 12; n++)
-    assert.match(
-      section,
-      new RegExp(`\\n${n}\\. \\*\\*`),
-      `checklist item ${n}`,
-    )
   for (const phrase of [
-    'Bundle every file the item refers to',
-    'Binary files (.docx, .pdf, images, archives) cannot be saved',
-    'No hidden context',
-    'State hard facts',
-    'one finished example output',
-    'describe each step by capability',
-    'Saving creates a new item.',
-    'load the saved copy with `get_item` in a fresh chat',
+    'The request is confirmation.',
+    'a Markdown description of its layout',
+    'If it returns `saved: false`, nothing was written.',
+    'Ask the user only for facts you cannot find.',
+    'call the same tool again with the corrected item and the same ID.',
+    'save_anyway: true',
+    'ready_for_other_ais',
+    'Saving creates a new item and never replaces one.',
     'self_contained_warnings',
   ])
-    assert.ok(section.includes(phrase), phrase)
+    assert.ok(section.toLowerCase().includes(phrase.toLowerCase()), phrase)
   // R5: the connector's tools are listed, and the public-only rule is plain.
   for (const tool of [
     '`get_item`',
@@ -402,7 +396,9 @@ test('F8 and R5: the guide has an exporter checklist, a connector tool table, an
     assert.match(guide, /public registry only/)
     assert.match(guide, /get_item/)
     assert.match(guide, /never replaces one/)
-    assert.match(guide, /format spec plus an example excerpt/)
+    assert.match(guide, /checks before writing/)
+    assert.match(guide, /saved: false.*fix the warnings yourself/)
+    assert.match(guide, /save_anyway: true/)
   }
 })
 
@@ -472,7 +468,7 @@ test('F10: read-time portability adds context_warnings beside an unchanged detec
 
 /* ---------- Round trip ---------- */
 
-test('round trip: save both cams45 fixtures through save_skill, read them back with get_item byte for byte', async () => {
+test('round trip: save_skill checks before writing, allows an override, and preserves both cams45 fixtures byte for byte', async () => {
   const client = accountFixture()
   const { access_token } = await client.connect()
   const call = (name: string, args: object) =>
@@ -482,17 +478,36 @@ test('round trip: save both cams45 fixtures through save_skill, read them back w
     [await original(), true],
     [await selfContained(), false],
   ] as const) {
-    const saved = await call('save_skill', { skill: item })
-    assert.equal(saved.visibility, 'private')
+    const path = `${client.projectRoot}skills/${item.id}`
+    let checked
     if (expectWarnings) {
-      assert.deepEqual(codes(saved.self_contained_warnings), [
+      checked = await call('save_skill', { skill: item })
+      assert.equal(checked.saved, false)
+      assert.equal(client.documents.has(path), false)
+      assert.deepEqual(codes(checked.self_contained_warnings), [
         'absent_file',
         'hidden_context',
         'skill_reference',
         'tool_id',
         'vague_location',
       ])
-      assert.match(saved.next_step, /self_contained_warnings[\s\S]*new item ID/)
+      assert.match(checked.next_step, /Fix these warnings yourself/)
+      assert.match(checked.next_step, /with the corrected item and the same ID/)
+      assert.match(checked.next_step, /save_anyway: true/)
+    }
+    const saved = await call(
+      'save_skill',
+      expectWarnings ? { skill: item, save_anyway: true } : { skill: item },
+    )
+    assert.equal(saved.saved, true)
+    assert.equal(saved.ready_for_other_ais, !expectWarnings)
+    assert.equal(saved.visibility, 'private')
+    if (expectWarnings) {
+      assert.deepEqual(
+        saved.self_contained_warnings,
+        checked!.self_contained_warnings,
+      )
+      assert.match(saved.next_step, /in one sentence what is still missing/)
     } else {
       assert.deepEqual(saved.self_contained_warnings, [])
       assert.doesNotMatch(saved.next_step, /self_contained_warnings/)
@@ -514,9 +529,7 @@ test('round trip: save both cams45 fixtures through save_skill, read them back w
         ),
       )
     // The stored record carries no warning field.
-    const stored = client.documents.get(
-      `${client.projectRoot}skills/${item.id}`,
-    )!.fields as Record<string, unknown>
+    const stored = client.documents.get(path)!.fields as Record<string, unknown>
     assert.ok(
       !('self_contained_warnings' in stored) && !('context_warnings' in stored),
     )
@@ -545,7 +558,7 @@ test("R1 (deferred, D4) and get_item errors: not found, version differs with the
 
 /* ---------- R2, R3 ---------- */
 
-test('R2: saving never replaces an item, and every save path says so', async () => {
+test('R2: save tools tell the AI to check, fix, and retry without a separate confirmation or replacement', async () => {
   const client = accountFixture()
   const { access_token } = await client.connect()
   const send = (name: string, args: object) =>
@@ -556,24 +569,43 @@ test('R2: saving never replaces an item, and every save path says so', async () 
       '/account/mcp',
     )
     .then((r) => r.json())
-  const tools = list.result.tools as { name: string; description: string }[]
-  for (const name of ['save_agent', 'save_skill', 'save_council'])
+  const tools = list.result.tools as {
+    name: string
+    description: string
+    inputSchema: { properties: Record<string, unknown>; required: string[] }
+  }[]
+  for (const name of ['save_agent', 'save_skill', 'save_council']) {
+    const { description, inputSchema } = tools.find((t) => t.name === name)!
+    assert.match(description, /request is confirmation/)
     assert.match(
-      tools.find((t) => t.name === name)!.description,
-      /cannot replace/,
+      description,
+      /checks before saving.*fix the warnings yourself and call again/,
     )
-  await send('save_skill', { skill: await original() })
+    assert.match(description, /save_anyway: true/)
+    assert.match(description, /cannot replace/)
+    assert.deepEqual(inputSchema.properties.save_anyway, { type: 'boolean' })
+    assert.ok(!inputSchema.required.includes('save_anyway'))
+  }
+  const skill = await original()
+  const corrected = { ...(await selfContained()), id: skill.id }
+  assert.equal(
+    (await send('save_skill', { skill, save_anyway: false })).saved,
+    false,
+  )
+  const saved = await send('save_skill', { skill: corrected })
+  assert.equal(saved.saved, true)
+  assert.equal(saved.ready_for_other_ais, true)
   await assert.rejects(
-    send('save_skill', { skill: await original() }),
+    send('save_skill', { skill: corrected }),
     /already taken/,
   )
   assert.match(
     REGISTRY_GUIDE,
-    /It never replaces one\. To revise an item, save it under a new ID or edit it on the site\./,
+    /never replaces one\. To revise a saved item, use a new ID or edit it on the site\./,
   )
 })
 
-test('R3: one-line council instructions are flagged; instructions that name each handoff are not; save_council reports council and member warnings', async () => {
+test('R3: save_council checks its own instructions and every supplied member before writing anything', async () => {
   const sample =
     'Check sources and gather papers in parallel, then build an evidence review.'
   const council = {
@@ -611,39 +643,68 @@ test('R3: one-line council instructions are flagged; instructions that name each
 
   const client = accountFixture()
   const { access_token } = await client.connect()
-  const saved = await client
-    .send(
-      rpc('save_council', {
-        manifest: council,
-        member_items: [
-          {
-            kind: 'agent',
-            manifest: {
-              ...SEED_AGENTS[0],
-              id: 'desk-checker',
-              version: '1.0.0',
-            },
-          },
-          { kind: 'skill', skill: await original() },
-        ],
-      }),
-      '/account/mcp',
-      access_token,
-    )
-    .then(toolBody)
-  const byItem = (ref: string) =>
-    saved.self_contained_warnings.filter(
-      (w: { item: string }) => w.item === ref,
-    )
-  assert.deepEqual(codes(byItem('council:chat-research-desk@1.0.0')), [
-    'council_no_handoff',
-    'council_short_instructions',
-  ])
+  const call = (args: object) =>
+    client
+      .send(rpc('save_council', args), '/account/mcp', access_token)
+      .then(toolBody)
+  const agent = {
+    ...SEED_AGENTS[0],
+    id: 'desk-checker',
+    version: '1.0.0',
+    prompt_blueprint: {
+      ...SEED_AGENTS[0].prompt_blueprint,
+      instructions: [
+        ...SEED_AGENTS[0].prompt_blueprint.instructions,
+        `Use each input: ${SEED_AGENTS[0].input_schema.required?.join(', ')}.`,
+      ],
+    },
+  }
+  const member_items = [
+    { kind: 'agent', manifest: agent },
+    { kind: 'skill', skill: await original() },
+  ]
+  const args = { manifest: good, member_items }
+  const checked = await call(args)
+  assert.equal(checked.saved, false)
+  assert.deepEqual(
+    [
+      ...new Set(
+        checked.self_contained_warnings.map((w: { item: string }) => w.item),
+      ),
+    ],
+    ['skill:cams45-claude@1.0.0'],
+  )
   assert.ok(
-    byItem('skill:cams45-claude@1.0.0').some(
+    checked.self_contained_warnings.some(
       (w: SelfContainedWarning) => w.code === 'absent_file',
     ),
   )
+  const paths = [
+    'councils/chat-research-desk',
+    'agents/desk-checker',
+    'skills/cams45-claude',
+  ].map((path) => client.projectRoot + path)
+  for (const path of paths)
+    assert.equal(client.documents.has(path), false, path)
+
+  const short = await call({ ...args, manifest: council })
+  assert.equal(short.saved, false)
+  assert.deepEqual(
+    codes(
+      short.self_contained_warnings.filter(
+        (w: { item: string }) => w.item === 'council:chat-research-desk@1.0.0',
+      ),
+    ),
+    ['council_no_handoff', 'council_short_instructions'],
+  )
+  const saved = await call({ ...args, save_anyway: true })
+  assert.equal(saved.saved, true)
+  assert.equal(saved.ready_for_other_ais, false)
+  assert.deepEqual(
+    saved.self_contained_warnings,
+    checked.self_contained_warnings,
+  )
+  for (const path of paths) assert.equal(client.documents.has(path), true, path)
   assert.match(
     saved.next_step,
     /Editing or deleting a private member later can break this council/,
@@ -745,6 +806,11 @@ const skillWith = (
 test('patterns: each warning code fires on its target text', () => {
   const cases: [string, string][] = [
     ['absent_file', 'Match the layout of style-guide.pdf.'],
+    ['absent_file', 'Save it in the same format as L02_Reference.docx.'],
+    [
+      'vague_location',
+      'Ask the user which lesson, then go to the course page.',
+    ],
     ['hidden_context', 'Use the attached spreadsheet.'],
     ['hidden_context', 'Read C:\\Users\\me\\notes.txt first.'],
     ['hidden_context', 'Format it as we did last week.'],
@@ -807,6 +873,12 @@ test('patterns: low false positives on ordinary text', () => {
     'Mark any placeholder the user must fill in with square brackets, like [date].',
     'Use `snake_case` names for columns like `created_at`.',
     'Go to the Overview page. The URL is https://canvas.example.edu/courses/1.',
+    // Output files the item creates are not missing files.
+    'Save the result as CAMS045_L03_Compiled_Reference.docx and present it.',
+    'Name the output file CAMS045_LNN_Compiled_Reference.docx, where NN is the lesson number.',
+    // A place whose address the AI is told to ask for is not vague.
+    'Ask the user for the Canvas course Modules page URL, then go to the course Modules page.',
+    'Go to the course Modules page at the URL the user gives you.',
   ])
     assert.deepEqual(
       checkSelfContained(

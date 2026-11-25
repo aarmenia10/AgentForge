@@ -63,17 +63,21 @@ const skillInput = skillManifestSchema.partial({
   visibility: true,
   stats: true,
 })
-const saveAgentArgs = z.strictObject({ manifest: agentInput })
-const saveSkillArgs = z.strictObject({ skill: skillInput })
+const save_anyway = z.boolean().optional()
+const memberAgentArgs = z.strictObject({ manifest: agentInput })
+const memberSkillArgs = z.strictObject({ skill: skillInput })
+const saveAgentArgs = memberAgentArgs.extend({ save_anyway })
+const saveSkillArgs = memberSkillArgs.extend({ save_anyway })
 const saveCouncilArgs = z.strictObject({
+  save_anyway,
   manifest: councilManifestSchema
     .omit({ origin_app: true })
     .partial({ author: true, visibility: true, stats: true }),
   member_items: z
     .array(
       z.discriminatedUnion('kind', [
-        saveAgentArgs.extend({ kind: z.literal('agent') }),
-        saveSkillArgs.extend({ kind: z.literal('skill') }),
+        memberAgentArgs.extend({ kind: z.literal('agent') }),
+        memberSkillArgs.extend({ kind: z.literal('skill') }),
       ]),
     )
     .max(20)
@@ -127,7 +131,7 @@ function tool(
 }
 
 const saveDescription =
-  'Only call on the user’s explicit request after showing them the content. This creates one new private item and cannot replace an existing one: to revise an item, save under a new ID or edit it on the site. AgentLemon supplies the author and visibility. Before saving, make the item self-contained (see "Exporting a skill, agent, or council" in the guide): bundle every file it refers to as text, state URLs and IDs, and describe tools by capability with a fallback. The response lists self_contained_warnings; they never block a save.'
+  'Call only when the user asks to save or export. That request is confirmation. Include the full item and every file it uses as text. AgentLemon checks before saving. If it returns saved: false, fix the warnings yourself and call again. Use save_anyway: true only for gaps you cannot fix. After saving, say in a sentence or two what was saved and whether it is ready for other AIs. Saving creates a new private item and cannot replace an existing one.'
 export const accountTools = [
   tool(
     'account_status',
@@ -168,7 +172,8 @@ export const accountTools = [
     'save_council',
     'Save a private council',
     WRITE,
-    'Call only on the user’s explicit request after showing the council and any new member content. Include exact member pins in manifest and supply any missing member blueprints or skills in member_items. Saves missing members and the council privately in one commit; it cannot replace existing items. The instructions should say what each stage hands to the next and in what form. The response lists self_contained_warnings for the council and each supplied member; they never block a save.',
+    saveDescription +
+      ' Pin exact member versions and include the full content of missing members in member_items. The check covers the council and all supplied members. The council and missing members save together.',
     saveCouncilArgs,
   ),
 ]
@@ -388,10 +393,9 @@ export function prepareChatSave(
   time: number,
   originApp?: OriginApp,
 ) {
-  const data =
-    kind === 'agent'
-      ? saveAgentArgs.parse(input).manifest
-      : saveSkillArgs.parse(input).skill
+  const args =
+    kind === 'agent' ? saveAgentArgs.parse(input) : saveSkillArgs.parse(input)
+  const data = 'manifest' in args ? args.manifest : args.skill
   if (data.id.length > 1500) throw new Error('The item ID is too long.')
   if (kind === 'skill' && data.id === 'new')
     throw new Error('The skill ID "new" is reserved. Choose a different ID.')
@@ -424,6 +428,7 @@ export function prepareChatSave(
     return {
       record: { ...manifest, ...metadata, shared_with: [] },
       findings: skipLint ? null : lintManifest(manifest).findings,
+      saveAnyway: args.save_anyway,
       // Unlike the linter, always run, whatever the size (R4).
       warnings: checkSelfContained(manifest, 'agent'),
     }
@@ -438,21 +443,32 @@ export function prepareChatSave(
   return {
     record: { ...validated.value, ...metadata },
     findings: skipLint ? null : lintSkill(validated.value).findings,
+    saveAnyway: args.save_anyway,
     warnings: checkSelfContained(validated.value, 'skill'),
   }
 }
 
 const WARNINGS_NEXT_STEP =
-  'Fix the self_contained_warnings with the user before anyone relies on this item: bundle every file it mentions as a text reference file (convert binary files to a Markdown format spec plus an example excerpt), replace "this project" phrasing with the real content, state URLs and IDs or make them inputs to ask for, and describe tools by capability with a fallback. Then save again under a new item ID, because saving never replaces an existing item.'
+  'Fix these warnings yourself using the files and context in this chat. Read every file the item mentions and include it as a text reference file for skills, or put the needed text in agent or council instructions. For a .docx or PDF, write a Markdown description of its layout and include a short example excerpt. Replace phrases like "this project" with the actual content. Describe what each tool does and give a fallback. Ask the user only for facts you cannot find, such as a web address. Call the same tool again with the corrected item and the same ID. If a gap truly cannot be fixed, call again with save_anyway: true and tell the user in one sentence what is still missing.'
 
-/** Adds the self-containment warnings and their next step to a save response. */
-function withWarnings(
-  warnings: (SelfContainedWarning & { item?: string })[],
-  nextStep: string,
-) {
-  return {
+type ExportWarning = SelfContainedWarning & { item?: string }
+
+function needsRevision(warnings: ExportWarning[]) {
+  return jsonResult({
+    saved: false,
     self_contained_warnings: warnings,
-    next_step: warnings.length ? `${WARNINGS_NEXT_STEP} ${nextStep}` : nextStep,
+    next_step: WARNINGS_NEXT_STEP,
+  })
+}
+
+function savedStatus(warnings: ExportWarning[], nextStep: string) {
+  return {
+    saved: true,
+    ready_for_other_ais: warnings.length === 0,
+    self_contained_warnings: warnings,
+    next_step: warnings.length
+      ? `Tell the user in one sentence what is still missing. ${nextStep}`
+      : nextStep,
   }
 }
 
@@ -472,7 +488,7 @@ async function saveItem(
       `Choose your username at ${SITE_ORIGIN}/settings before saving items.`,
     )
   const originApp = clientOriginApp(context.grant?.app)
-  const { record, findings, warnings } = prepareChatSave(
+  const { record, findings, warnings, saveAnyway } = prepareChatSave(
     kind,
     input,
     access.uid,
@@ -480,6 +496,7 @@ async function saveItem(
     context.now(),
     originApp,
   )
+  if (warnings.length && saveAnyway !== true) return needsRevision(warnings)
   try {
     await db.put(`${itemCollection(kind)}/${record.id}`, record)
   } catch (error) {
@@ -499,7 +516,7 @@ async function saveItem(
     ...(findings === null && {
       lint_note: 'This item will be linted when opened on AgentLemon.',
     }),
-    ...withWarnings(
+    ...savedStatus(
       warnings,
       'To make this item public, open My items and submit it for review.',
     ),
@@ -522,7 +539,11 @@ async function saveCouncil(input: unknown, context: Context) {
   const person = await profile(context)
   if (!person)
     throw new Error('Choose your AgentLemon username before saving items.')
-  const { manifest, member_items = [] } = saveCouncilArgs.parse(input)
+  const {
+    manifest,
+    member_items = [],
+    save_anyway,
+  } = saveCouncilArgs.parse(input)
   const time = context.now()
   const origin = clientOriginApp(context.grant?.app)
   const result = validateCouncilRecord({
@@ -556,6 +577,22 @@ async function saveCouncil(input: unknown, context: Context) {
       throw new Error('Unexpected or repeated payload for ' + ref)
     supplied.set(ref, { kind, ...input } as (typeof member_items)[number])
   }
+  // Always check the council and every supplied member, even for existing pins.
+  const warnings = checkSelfContained(council, 'council').map((warning) => ({
+    item: formatCouncilItem(council.id, council.version),
+    ...warning,
+  }))
+  for (const [ref, payload] of supplied) {
+    const item = 'manifest' in payload ? payload.manifest : payload.skill
+    warnings.push(
+      ...checkSelfContained(item, payload.kind).map((warning) => ({
+        item: ref,
+        ...warning,
+      })),
+    )
+  }
+  if (warnings.length && save_anyway !== true) return needsRevision(warnings)
+
   const prepare = async ({ kind, id, version }: ItemRef) => {
     const path = itemCollection(kind) + '/' + id
     const existing = await readableItem(db, path)
@@ -615,20 +652,6 @@ async function saveCouncil(input: unknown, context: Context) {
     encoder.encode(council.instructions).byteLength <= INLINE_LINT_BYTES
       ? lintCouncil(council).findings
       : null
-  // Always checked, whatever the size: the council and every supplied member.
-  const warnings = [
-    ...checkSelfContained(council, 'council').map((warning) => ({
-      item: formatCouncilItem(council.id, council.version),
-      ...warning,
-    })),
-    ...member_items.flatMap(({ kind, ...payload }) => {
-      const item = 'manifest' in payload ? payload.manifest : payload.skill
-      return checkSelfContained(item, kind).map((warning) => ({
-        item: formatItemRef({ kind, id: item.id, version: item.version }),
-        ...warning,
-      }))
-    }),
-  ]
   if (council.members.length > 8) {
     const prefix =
       'councils/' + council.id + '/member_checks/' + access.uid + '/groups/'
@@ -671,7 +694,7 @@ async function saveCouncil(input: unknown, context: Context) {
     ...(findings === null && {
       lint_note: 'AgentLemon will lint the council before sharing.',
     }),
-    ...withWarnings(
+    ...savedStatus(
       warnings,
       'Editing or deleting a private member later can break this council, because private items keep only their current version. To share the council, open My items and choose its visibility.',
     ),

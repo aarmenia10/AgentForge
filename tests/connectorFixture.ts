@@ -251,30 +251,36 @@ export function accountFixture(verified = true) {
       const path = url.slice(`${FIRESTORE_ORIGIN}/v1/`.length)
       if (path.endsWith(':commit')) {
         calls.push('commit')
-        const {
-          writes: [{ currentDocument, update }],
-        } = JSON.parse(init!.body as string)
-        const existing = documents.get(update.name)
-        if (
-          existing
-            ? existing.updateTime !== currentDocument.updateTime
-            : currentDocument.exists !== false
-        )
-          return Response.json(
-            {
-              error: {
-                status:
-                  existing && currentDocument.exists === false
-                    ? 'ALREADY_EXISTS'
-                    : 'FAILED_PRECONDITION',
-              },
-            },
-            { status: 409 },
+        const { writes } = JSON.parse(init!.body as string) as {
+          writes: {
+            currentDocument: { exists?: boolean; updateTime?: string }
+            update: { name: string; fields: object }
+          }[]
+        }
+        for (const { currentDocument, update } of writes) {
+          const existing = documents.get(update.name)
+          if (
+            existing
+              ? existing.updateTime !== currentDocument.updateTime
+              : currentDocument.exists !== false
           )
-        documents.set(update.name, {
-          fields: update.fields,
-          updateTime: String(++version),
-        })
+            return Response.json(
+              {
+                error: {
+                  status:
+                    existing && currentDocument.exists === false
+                      ? 'ALREADY_EXISTS'
+                      : 'FAILED_PRECONDITION',
+                },
+              },
+              { status: 409 },
+            )
+        }
+        for (const { update } of writes)
+          documents.set(update.name, {
+            fields: update.fields,
+            updateTime: String(++version),
+          })
         return Response.json({})
       }
       if (path.endsWith(':runQuery')) {

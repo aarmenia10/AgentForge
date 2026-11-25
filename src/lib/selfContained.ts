@@ -81,6 +81,16 @@ const NAME_CHAR = /[A-Za-z0-9_.\-/\\]/
 const MAX_NAME_LENGTH = 200
 /** How far tokenAround looks for whitespace on each side. */
 const MAX_TOKEN_REACH = 300
+/**
+ * Text just before a file name that says the item creates the file
+ * ("save the result as", "name the output file"). Applied to at most 80
+ * characters, so it cannot backtrack far.
+ */
+const OUTPUT_NAME =
+  /(?:\b(?:save|saved|saving|export|exported|exporting|write|written|writing|name|call)\b(?: (?:it|this|that|them|each|the|your|a|an|final|output|result|results|file|files|document|doc|report|compiled))*(?: (?:as|to|is))?|\b(?:file ?name|output file)(?: is)?)[\s:`"'(*]*$/i
+/** The item tells the AI to get the address from the user. */
+const URL_FROM_USER =
+  /\bask(?:s|ing)? (?:the user|them|for)\b[^.\n]{0,60}\b(?:URL|web address|link|address)\b|\b(?:URL|link|address) (?:the user|they) (?:gives?|provides?|pastes?|shares?|sends?)\b/i
 const URL_PATTERN = /\bhttps?:\/\/[^\s)>\]]+|\bwww\.[^\s)>\]]+/i
 const LOCAL_PATH =
   /(?:^|[\s(`'"])((?:[A-Za-z]:\\|\/Users\/|\/home\/|~\/)[^\s`'")]*)/g
@@ -251,7 +261,7 @@ const MESSAGES = {
   vague_location: (m: string) =>
     `Refers to a place ("${m}") but the item has no URL anywhere. State the URL, or make it an input the AI must ask the user for.`,
   tool_id: (m: string) =>
-    `"${m}" is a tool name from one AI app. Describe the step by capability (for example "a browser session that can read the page"), name this tool only as an example, say the minimum capability up front, and give a fallback such as asking the user to paste the page text.`,
+    `"${m}" is a tool name from one AI app. Describe the step by capability (for example "a browser session that can read the page"); you may name the app, such as "Claude in Chrome", but leave out its tool IDs. Say the minimum capability up front, and give a fallback such as asking the user to paste the page text.`,
   skill_reference: (m: string) =>
     `"${m}" depends on another skill that is not part of this item. Bundle what it needs as reference files, or write the steps here.`,
   placeholder: (m: string) =>
@@ -449,6 +459,14 @@ export function checkSelfContained(
             bundled.has(basename(name).toLowerCase()))
         )
           continue
+        // A file the item tells the AI to create is not a missing file.
+        // Tested last, only for names that would otherwise be flagged.
+        if (
+          OUTPUT_NAME.test(
+            text.slice(Math.max(0, found.index - 80), found.index),
+          )
+        )
+          continue
         add(
           'absent_file',
           name,
@@ -521,11 +539,14 @@ export function checkSelfContained(
         add('placeholder', found[0], where, MESSAGES.placeholder(found[0]))
   }
 
-  // Vague locations: one warning per item, only when no URL appears anywhere.
+  // Vague locations: one warning per item, only when no URL appears anywhere
+  // and the item does not tell the AI to ask the user for it.
   if (!URL_PATTERN.test(allText))
     outer: for (const { where, text } of sources)
       for (const pattern of VAGUE_LOCATION)
         for (const found of text.matchAll(pattern)) {
+          // Scanned only once a vague place is found.
+          if (URL_FROM_USER.test(allText)) break outer
           add(
             'vague_location',
             found[0],
