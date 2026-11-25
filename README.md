@@ -562,6 +562,8 @@ What is being built right now. One row per claim. Add yours before you start and
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
 
+| Branding | Tommy | Codex | `task/standardize-agentlemon-branding` | Enterprise labels, author display, branding messages | 2026-11-25 |
+
 ### 8.2 Ideas inbox
 
 Anything either person wants to add, before it is planned. One row each. Nobody builds from this table directly: the orchestrator turns an accepted idea into a task ID in section 6, with an owner and a "done when", and marks the row. Add rows at the bottom.
