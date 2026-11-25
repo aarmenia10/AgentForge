@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { TerminalSquare, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { buildInstallSnippet, MCP_CLIENTS, MCP_SERVER_PACKAGE, type McpClient } from '@/lib/mcpConfig'
@@ -26,7 +27,7 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
             Author not confirmed
           </p>
           <p className="mt-1 leading-relaxed">
-            The registry has not confirmed who @{agent.author.handle} is. Read
+            The registry has not confirmed who @{displayAuthorHandle(agent.author.handle)} is. Read
             the agent instructions in Agent Details before you use this agent.
           </p>
         </div>

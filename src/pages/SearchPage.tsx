@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { SearchX } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ArrowIcon, primaryButtonClass } from '@/components/ui'
@@ -143,7 +144,7 @@ export default function SearchPage() {
                     name={agent.name}
                     version={agent.version}
                     description={agent.description}
-                    meta={`@${agent.author.handle} · ${agent.tags.slice(0, 3).join(', ')}`}
+                    meta={`@${displayAuthorHandle(agent.author.handle)} · ${agent.tags.slice(0, 3).join(', ')}`}
                   />
                 ))}
               </Group>
@@ -161,7 +162,7 @@ export default function SearchPage() {
                     name={skill.name}
                     version={skill.version}
                     description={skill.description}
-                    meta={`@${skill.author.handle} · ${skill.tags.slice(0, 3).join(', ')}`}
+                    meta={`@${displayAuthorHandle(skill.author.handle)} · ${skill.tags.slice(0, 3).join(', ')}`}
                   />
                 ))}
               </Group>
@@ -178,7 +179,7 @@ export default function SearchPage() {
                     kind="Council"
                     name={council.name}
                     description={council.description}
-                    meta={`${council.member_count} members · @${council.author.handle}`}
+                    meta={`${council.member_count} members · @${displayAuthorHandle(council.author.handle)}`}
                   />
                 ))}
               </Group>

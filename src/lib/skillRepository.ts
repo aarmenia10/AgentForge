@@ -1,3 +1,4 @@
+import { displayAuthorHandle, displayAuthorName } from './authorBranding'
 /**
  * Public skills, read from static files only (invariant 3): `skills.json` for
  * the list and `skills/<id>/<version>.json` for one version's text. No
@@ -151,7 +152,8 @@ function matches(skill: SkillIndexEntry, keyword: string): boolean {
     skill.name,
     skill.id,
     skill.description,
-    skill.author.name,
+    displayAuthorName(skill.author),
+    displayAuthorHandle(skill.author.handle),
     skill.author.handle,
     ...skill.tags,
     ...skill.files.map((f) => f.path),

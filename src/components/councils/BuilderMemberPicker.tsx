@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { Plus } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { agentRepository } from '@/lib/agentRepository'
@@ -64,7 +65,7 @@ async function loadPublic(): Promise<MemberCandidate[]> {
       name: agent.name,
       description: agent.description,
       source: 'public',
-      handle: agent.author.handle,
+      handle: displayAuthorHandle(agent.author.handle),
     })),
     ...skills.skills.map((skill): MemberCandidate => ({
       kind: 'skill',
@@ -73,7 +74,7 @@ async function loadPublic(): Promise<MemberCandidate[]> {
       name: skill.name,
       description: skill.description,
       source: 'public',
-      handle: skill.author.handle,
+      handle: displayAuthorHandle(skill.author.handle),
     })),
   ]
 }

@@ -41,7 +41,7 @@ export const SITE_LINKS: readonly SiteLink[] = [
   {
     to: '/enterprise',
     label: 'Enterprise',
-    labelPrefix: 'AgentForce\u00a0',
+    labelPrefix: 'AgentLemon\u00a0',
     icon: Building2,
     routes: ['enterprise'],
   },

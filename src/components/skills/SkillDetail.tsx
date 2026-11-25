@@ -1,3 +1,4 @@
+import { displayAuthorName } from '@/lib/authorBranding'
 import { Loader2, X } from 'lucide-react'
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
@@ -108,7 +109,9 @@ export function SkillDetail({
             <Row term="Author">
               <span className="inline-flex flex-wrap items-center gap-2">
                 <AuthorLink author={skill.author} showVerifiedLabel />
-                <span className="text-fg-muted">{skill.author.name}</span>
+                <span className="text-fg-muted">
+                  {displayAuthorName(skill.author)}
+                </span>
               </span>
             </Row>
           )}

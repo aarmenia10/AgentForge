@@ -1,3 +1,4 @@
+import { displayAuthorHandle, displayAuthorName } from '@/lib/authorBranding'
 import type { ReactNode } from 'react'
 import { FrameworkBadge, VERIFIED_AUTHOR_LABEL } from '@/components/ui'
 import {
@@ -50,7 +51,8 @@ export function ManifestView({
           </Value>
           <Term>Author</Term>
           <Value>
-            @{manifest.author.handle} ({manifest.author.name}){' '}
+            @{displayAuthorHandle(manifest.author.handle)} (
+            {displayAuthorName(manifest.author)}){' '}
             {manifest.author.verified ? (
               <StatusText tone="teal">{VERIFIED_AUTHOR_LABEL}</StatusText>
             ) : (

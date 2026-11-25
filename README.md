@@ -4,7 +4,7 @@
 
 AgentLemon (formerly AgentForge, renamed 2026-11-18) does not run your agents. It stores a manifest for each one (prompt blueprint, required tools, input and output schemas) and hands that manifest to the AI client you already pay for. Inference happens inside Claude, Cursor, Codex, or ChatGPT on your own subscription. The registry itself costs nothing to operate.
 
-The tagline is a comparison. AgentForge has no affiliation with GitHub and no GitHub integration.
+The tagline is a comparison. AgentLemon has no affiliation with GitHub and no GitHub integration.
 
 ---
 

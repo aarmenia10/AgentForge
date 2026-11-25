@@ -19,7 +19,7 @@ The one rule that matters most: never take the first plausible agent. Look at se
   "name": "Postgres Index Tuner",
   "version": "1.0.0",                  semver; a released version never changes
   "description": "...",                the author's claim; verify it against the schemas
-  "author": { "uid": "...", "name": "...", "handle": "agentforge", "verified": true },
+  "author": { "uid": "...", "name": "...", "handle": "example-author", "verified": true },
   "schema_version": 2,
   "visibility": "public",
   "tags": ["coding", "devops", "postgres"],

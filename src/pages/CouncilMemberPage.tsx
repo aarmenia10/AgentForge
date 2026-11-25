@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { PageHold, PageShell } from '@/components/PageShell'
@@ -111,7 +112,7 @@ export default function CouncilMemberPage() {
         <p>{member.item.description}</p>
         <p className="break-all text-xs">
           <code>{formatItemRef({ id, kind: member.kind, version })}</code> · @
-          {member.item.author.handle}
+          {displayAuthorHandle(member.item.author.handle)}
         </p>
         {member.public && (
           <div className="flex flex-wrap items-center gap-3">

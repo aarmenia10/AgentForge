@@ -1,3 +1,4 @@
+import { displayAuthorHandle, displayAuthorName } from './authorBranding'
 import type { AgentCategoryTag, AgentFramework, AgentManifest } from '@/types/agent'
 
 export type SortKey = 'popular' | 'newest' | 'top_rated'
@@ -39,7 +40,8 @@ function matchesKeyword(agent: AgentManifest, keyword: string): boolean {
     agent.name,
     agent.id,
     agent.description,
-    agent.author.name,
+    displayAuthorName(agent.author),
+    displayAuthorHandle(agent.author.handle),
     agent.author.handle,
     agent.framework,
     ...agent.tags,
