@@ -34,6 +34,7 @@ import './preferences.emulator'
 import './deletion.emulator'
 import './ratings.emulator'
 import './ratings-export.emulator'
+import './featured.emulator'
 
 async function snapshotPublicFiles() {
   const files = new Map<string, string>()

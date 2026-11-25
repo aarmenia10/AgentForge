@@ -17,6 +17,7 @@ import { readSkillExport } from './skillExport'
 import { pendingChanges } from './catalogChanges'
 import { readRatingsExport } from './ratingsExport'
 import { getBlockedWordsSync } from '../src/lib/blockedWords'
+import { parseFeaturedSelection } from '../src/lib/featured'
 
 type Log = (notice: ExportNotice) => void
 
@@ -113,6 +114,7 @@ export async function readFirestoreExport(
     councilVersions,
     votes,
     comments,
+    featured,
   ] = await Promise.all([
     pendingChanges(db, 'agents'),
     pendingChanges(db, 'agent_versions'),
@@ -122,6 +124,7 @@ export async function readFirestoreExport(
     pendingChanges(db, 'council_versions'),
     pendingChanges(db, 'votes'),
     pendingChanges(db, 'comments'),
+    pendingChanges(db, 'featured'),
   ])
   const receipts = [
     ...agents,
@@ -132,7 +135,12 @@ export async function readFirestoreExport(
     ...councilVersions,
     ...votes,
     ...comments,
+    ...featured,
   ]
+  const featuredSelection =
+    !previous || featured.some(({ id }) => id === 'current')
+      ? parseFeaturedSelection((await db.doc('featured/current').get()).data())
+      : previous.featuredSelection
   // A vote changes the live counters but writes only a `votes` marker, so the
   // marked item is refreshed here as well. Otherwise catalog.json and
   // skills.json would keep stale counts until the next full export.
@@ -172,6 +180,7 @@ export async function readFirestoreExport(
         log,
         previous,
       )),
+      featuredSelection,
       receipts,
     }
   }

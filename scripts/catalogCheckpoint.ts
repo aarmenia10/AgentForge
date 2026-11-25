@@ -14,18 +14,21 @@ import {
 import { exportDigest, sortOrigins } from './export-catalog'
 import type { PublicExport } from './export-catalog'
 import type { OriginApp } from '../src/lib/portability'
+import { parseFeaturedSelection } from '../src/lib/featured'
 
 const runDay = new Date().toISOString().slice(0, 10)
 const scope = () =>
   [process.env.GOOGLE_CLOUD_PROJECT, process.env.GITHUB_SHA].join('/')
 
-// Only already-public files are cached. The live Hosting digest covers the
-// entire reconstructed release, including version paths. A cache is disposable.
+// The encrypted checkpoint also keeps the admin's selection so a catalog
+// change can remove or restore a pick without rereading featured/current.
+// Hosting's digest verifies the reconstructed public release.
 export async function saveCheckpoint(path: string, result: PublicExport) {
   await writeFile(
     path,
     JSON.stringify({
-      format: 4,
+      format: 5,
+      featuredSelection: result.featuredSelection,
       councilIndex: result.councilIndex,
       councilVersions: [...result.councilFiles.values()],
       skillIndex: result.skillIndex,
@@ -54,7 +57,7 @@ export async function readCheckpoint(
     ])
     const data = JSON.parse(stored)
     if (
-      data.format !== 4 ||
+      data.format !== 5 ||
       data.scope !== scope() ||
       data.day !== runDay ||
       !Array.isArray(data.versions)
@@ -165,6 +168,9 @@ export async function readCheckpoint(
       skillFiles,
       councilIndex,
       councilFiles,
+      ...(data.featuredSelection !== undefined
+        ? { featuredSelection: parseFeaturedSelection(data.featuredSelection) }
+        : {}),
       ...(origins !== undefined ? { origins } : {}),
       ...(ratingsFiles !== undefined ? { ratingsFiles } : {}),
     }
