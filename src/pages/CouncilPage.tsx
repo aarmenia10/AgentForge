@@ -69,7 +69,7 @@ export default function CouncilPage() {
           directText: councilInstallText(council, items),
           details: items.map(({ item }) => ({
             name: item.name,
-            handle: item.author.handle,
+            handle: displayAuthorHandle(item.author.handle),
           })),
         }
       }

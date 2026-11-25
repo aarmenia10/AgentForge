@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { Plus } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { agentRepository } from '@/lib/agentRepository'
@@ -96,7 +97,7 @@ function Row({
         <p className="break-words font-medium">{candidate.name}</p>
         <p className="break-all font-mono text-xs text-fg-muted">
           {pin.kind} · {pin.id}@{pin.version}
-          {candidate.handle ? ` · @${candidate.handle}` : ''}
+          {candidate.handle ? ` · @${displayAuthorHandle(candidate.handle)}` : ''}
         </p>
       </div>
       {/* aria-disabled, not disabled: the button the person just pressed

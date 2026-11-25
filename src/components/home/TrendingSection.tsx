@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { ThumbsUp } from 'lucide-react'
 import { formatCount } from '@/lib/format'
 import { TRENDING_COUNT, type HomeItem } from '@/lib/homeFeed'
@@ -84,7 +85,7 @@ function TrendingCard({ item }: { item: HomeItem }) {
       </p>
 
       <p className="mt-auto pt-4 text-xs text-fg-muted">
-        @{item.authorHandle}
+        @{displayAuthorHandle(item.authorHandle)}
         {item.detail && <> · {item.detail}</>}
       </p>
     </article>

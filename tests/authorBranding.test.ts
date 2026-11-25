@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { displayAuthorHandle, displayAuthorName } from '../src/lib/authorBranding'
+import {
+  displayAuthorHandle,
+  displayAuthorName,
+} from '../src/lib/authorBranding'
 
 test('legacy registry author uses current display branding', () => {
   assert.equal(displayAuthorHandle('agentforge'), 'agentlemon')
