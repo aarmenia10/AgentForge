@@ -806,6 +806,11 @@ const skillWith = (
 test('patterns: each warning code fires on its target text', () => {
   const cases: [string, string][] = [
     ['absent_file', 'Match the layout of style-guide.pdf.'],
+    ['absent_file', 'Save it in the same format as L02_Reference.docx.'],
+    [
+      'vague_location',
+      'Ask the user which lesson, then go to the course page.',
+    ],
     ['hidden_context', 'Use the attached spreadsheet.'],
     ['hidden_context', 'Read C:\\Users\\me\\notes.txt first.'],
     ['hidden_context', 'Format it as we did last week.'],
@@ -868,6 +873,12 @@ test('patterns: low false positives on ordinary text', () => {
     'Mark any placeholder the user must fill in with square brackets, like [date].',
     'Use `snake_case` names for columns like `created_at`.',
     'Go to the Overview page. The URL is https://canvas.example.edu/courses/1.',
+    // Output files the item creates are not missing files.
+    'Save the result as CAMS045_L03_Compiled_Reference.docx and present it.',
+    'Name the output file CAMS045_LNN_Compiled_Reference.docx, where NN is the lesson number.',
+    // A place whose address the AI is told to ask for is not vague.
+    'Ask the user for the Canvas course Modules page URL, then go to the course Modules page.',
+    'Go to the course Modules page at the URL the user gives you.',
   ])
     assert.deepEqual(
       checkSelfContained(
