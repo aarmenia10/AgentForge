@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
-import { cn } from '@/components/ui'
+import { cn, copyInstructionClass } from '@/components/ui'
 import {
   FindingNote,
   inputClass,
@@ -385,7 +385,7 @@ export function SkillUpload({ editId }: { editId: string | null }) {
         </Section>
       )}
       <Section id={`${ids}-files`} title="2. Add Your Skill Instructions">
-        <p>
+        <p className={copyInstructionClass}>
           Write or paste the instructions you want your AI to follow, or upload
           an existing skill. Limits: 200 KB total, 100 KB per file, 50 text
           files. Scripts are allowed only in private skills.

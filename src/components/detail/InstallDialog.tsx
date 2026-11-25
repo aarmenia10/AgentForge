@@ -1,7 +1,12 @@
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { MCP_CONNECTOR_URL } from '@/lib/mcpConfig'
 import { ACCOUNT_RESOURCE } from '@/services/connectorConfig'
-import { CopyButton, CopyChatInstruction, primaryButtonClass } from '../ui'
+import {
+  CopyButton,
+  CopyChatInstruction,
+  copyInstructionClass,
+  primaryButtonClass,
+} from '../ui'
 
 type Kind = 'Agent' | 'Skill' | 'Council'
 type Platform = 'ChatGPT' | 'Claude' | 'Codex' | 'Cursor'
@@ -91,14 +96,16 @@ export function InstallDialog({
         )}
         <div className="grid gap-4 md:grid-cols-2">
           <section className="space-y-3 rounded-2xl border border-line p-4">
-            <h3 className="font-semibold">Copy &amp; Paste</h3>
+            <h3 className={copyInstructionClass}>Copy &amp; Paste</h3>
             <p className="text-sm">
               Start using this tool without connecting AgentLemon.
             </p>
             <ol className="list-decimal space-y-1 pl-5 text-sm">
-              <li>Click Copy {kind}.</li>
+              <li className={copyInstructionClass}>Click Copy {kind}.</li>
               <li>Open your preferred AI platform.</li>
-              <li>Paste into your chat and start using the tool.</li>
+              <li className={copyInstructionClass}>
+                Paste into your chat and start using the tool.
+              </li>
             </ol>
             <CopyButton
               key={`direct-${copySession}`}
@@ -141,7 +148,7 @@ export function InstallDialog({
               <h4 className="text-sm font-semibold">
                 1. MCP Connector (AI Connection)
               </h4>
-              <p className="text-sm">{guidance[platform]}</p>
+              <p className={copyInstructionClass}>{guidance[platform]}</p>
               <p className="text-xs text-fg-muted">
                 {account
                   ? 'Use OAuth sign-in and approve access to your AgentLemon account.'
@@ -156,7 +163,7 @@ export function InstallDialog({
                 onResult={(text) => setManual(text ?? '')}
               />
               <h4 className="text-sm font-semibold">2. Install your tool</h4>
-              <p className="text-sm">
+              <p className={copyInstructionClass}>
                 Paste the request into a chat with AgentLemon enabled.
               </p>
               <CopyButton
