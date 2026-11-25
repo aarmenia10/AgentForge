@@ -1,4 +1,4 @@
-# AgentForce Enterprise
+# AgentLemon Enterprise
 
 The /enterprise route uses existing Firebase Authentication. A verified employee registers a domain or requests access to an existing organization. The first administrator must prove control of the organization's DNS. An administrator approves subsequent verified employees and can disable or promote accounts. An admin cannot change their own membership; disabled users cannot request a new membership.
 

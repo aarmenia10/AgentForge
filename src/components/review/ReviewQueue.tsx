@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import {
   useCallback,
@@ -322,7 +323,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: AgentRecord }) {
               </span>
             </span>
             <span className="block break-all text-xs text-fg-muted">
-              {record.id} · @{record.author.handle}
+              {record.id} · @{displayAuthorHandle(record.author.handle)}
               {own ? ' (you)' : ''}
             </span>
             <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1">

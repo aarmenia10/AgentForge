@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { useEffect, useState } from 'react'
 import { CouncilRoster } from './CouncilRoster'
 import { councilStore } from '@/services/councilStore'
@@ -82,7 +83,7 @@ function ReviewCard({ row, onChange }: { row: Row; onChange: () => void }) {
       </summary>
       <p>{record.description}</p>
       <p className="text-xs">
-        @{record.author.handle} · {record.tags.join(', ')}
+        @{displayAuthorHandle(record.author.handle)} · {record.tags.join(', ')}
       </p>
       <h3 className="font-medium">How the Council Works</h3>
       <pre className="whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-4 text-sm">

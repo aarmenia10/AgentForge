@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { useEffect, useState } from 'react'
 import { InstallDialog } from '@/components/detail/InstallDialog'
 import { councilInstallText } from '@/lib/installText'
@@ -203,7 +204,7 @@ export default function CouncilPage() {
       <div className="space-y-5">
         <p>{council.description}</p>
         <p className="break-all text-xs">
-          @{council.author.handle}
+          @{displayAuthorHandle(council.author.handle)}
           {council.author.verified ? ' · Verified author' : ''} ·{' '}
           <code>{ref}</code>
           {origin && ' · ' + origin}

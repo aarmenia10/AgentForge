@@ -20,7 +20,7 @@ const introduction =
 const comparison =
   'An AI agent is your digital assistant. An AI skill teaches it a task. An AI council is a team of agents and skills that work together.'
 const enterprise =
-  'AgentForce Enterprise gives companies a private space to upload, organize, and share AI agents and skills with their employees. Instead of every employee creating their own AI tools from scratch, teams can collaborate and reuse tools internally.'
+  'AgentLemon Enterprise gives companies a private space to upload, organize, and share AI agents and skills with their employees. Instead of every employee creating their own AI tools from scratch, teams can collaborate and reuse tools internally.'
 
 const examples = [
   {
@@ -152,7 +152,7 @@ export default function AboutPage() {
 
       <section className="glass rounded-3xl p-6 sm:p-10">
         <Building2 aria-hidden="true" className="size-9 text-accent-fg" />
-        <h2 className="mt-4 text-2xl sm:text-3xl">AgentForce Enterprise</h2>
+        <h2 className="mt-4 text-2xl sm:text-3xl">AgentLemon Enterprise</h2>
         <p className="mt-3 max-w-3xl leading-relaxed text-fg-muted">
           {enterprise}
         </p>

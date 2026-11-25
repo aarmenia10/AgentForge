@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { ArrowRight, BadgeCheck, Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FRAMEWORK_LABELS, type AgentAuthor, type AgentFramework } from '@/types/agent'
@@ -86,7 +87,7 @@ export function AuthorTag({
   return (
     <span className={className}>
       <span className="truncate underline-offset-2 group-hover/author:underline">
-        @{author.handle}
+        @{displayAuthorHandle(author.handle)}
       </span>
       {badge}
     </span>
@@ -110,7 +111,7 @@ export function AuthorLink({
     <Link
       to={`/u/${author.handle}`}
       onClick={onNavigate}
-      title={`See all public agents from @${author.handle}`}
+      title={`See all public agents from @${displayAuthorHandle(author.handle)}`}
       className="group/author relative z-10 inline-flex min-w-0 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
     >
       <AuthorTag author={author} showVerifiedLabel={showVerifiedLabel} />

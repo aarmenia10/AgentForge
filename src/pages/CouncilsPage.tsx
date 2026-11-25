@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { useEffect, useState } from 'react'
 import { PageShell } from '@/components/PageShell'
 import { inputClass, textLink } from '@/components/studio/parts'
@@ -77,7 +78,8 @@ export default function CouncilsPage() {
                 </Link>
                 <p>{council.description}</p>
                 <p className="text-xs">
-                  {council.member_count} members · @{council.author.handle} ·{' '}
+                  {council.member_count} members · @
+                  {displayAuthorHandle(council.author.handle)} ·{' '}
                   {council.tags.join(', ')}
                 </p>
               </li>

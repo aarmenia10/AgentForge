@@ -47,7 +47,7 @@ export function emailPayload(data, from, recipients) {
     from,
     to: recipients,
     reply_to: data.email,
-    subject: 'New AgentForce Enterprise Demo Request — ' + data.company,
+    subject: 'New AgentLemon Enterprise Demo Request — ' + data.company,
     text: [
       'Full name: ' + data.name,
       'Job title / position: ' + data.position,

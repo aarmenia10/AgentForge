@@ -1,3 +1,4 @@
+import { displayAuthorName } from '@/lib/authorBranding'
 import type { AgentManifest } from '@/types/agent'
 
 export interface AuthorProfile {
@@ -25,7 +26,7 @@ export function authorProfile(
   const newest = agents[0]
   return {
     handle,
-    displayName: newest?.author.name ?? null,
+    displayName: newest ? displayAuthorName(newest.author) : null,
     uid: newest?.author.uid ?? null,
     verified: agents.some((agent) => agent.author.verified),
     agents,

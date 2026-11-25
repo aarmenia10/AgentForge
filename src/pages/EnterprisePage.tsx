@@ -36,10 +36,10 @@ export default function EnterprisePage() {
     new URLSearchParams(window.location.search).has('demo'),
   )
   return (
-    <PageShell title={demo ? 'Enterprise Demo' : 'AgentForce Enterprise'}>
+    <PageShell title={demo ? 'Enterprise Demo' : 'AgentLemon Enterprise'}>
       <RequestDemo />
       <button className={`${button} mb-4`} onClick={() => setDemo(!demo)}>
-        {demo ? 'Back to AgentForce Enterprise' : 'Enterprise Demo'}
+        {demo ? 'Back to AgentLemon Enterprise' : 'Enterprise Demo'}
       </button>
       {demo && (
         <p className="mb-4">
@@ -389,7 +389,7 @@ function Workspace({ uid, email }: { uid: string; email: string }) {
             {challenge && (
               <div className="break-all text-sm">
                 <p>
-                  Add the following DNS TXT record, then contact AgentForce
+                  Add the following DNS TXT record, then contact AgentLemon
                   Enterprise support for verification:
                 </p>
                 <p>Host: _agentforce-enterprise.{domain}</p>

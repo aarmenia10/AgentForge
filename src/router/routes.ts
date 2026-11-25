@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '../lib/authorBranding'
 /**
  * The site's route table. Pure: no React and no DOM, so tests import it
  * directly. Static files (`/catalog.json`, `/llms.txt`, `/mcp/*`) are served by
@@ -181,7 +182,7 @@ export function routeTitle(route: Route): string {
     case 'review':
       return `Review queue · ${SITE}`
     case 'profile':
-      return `@${route.params.handle} · ${SITE}`
+      return `@${displayAuthorHandle(route.params.handle)} · ${SITE}`
     case 'councils':
       return 'Councils · ' + SITE
     case 'council':
@@ -196,7 +197,7 @@ export function routeTitle(route: Route): string {
     case 'demo-requests':
       return `Demo Requests · ${SITE}`
     case 'enterprise':
-      return `AgentForce Enterprise · ${SITE}`
+      return `AgentLemon Enterprise · ${SITE}`
     case 'suggestions':
       return `Suggestions · ${SITE}`
     case 'academy':

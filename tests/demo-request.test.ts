@@ -50,7 +50,7 @@ test('email uses configured recipients and inquiry fields', async () => {
   const payload = emailPayload(data, config.from, config.recipients)
   assert.deepEqual(payload.to, config.recipients)
   assert.equal(payload.reply_to, sample.email)
-  assert.equal(payload.subject, 'New AgentForce Enterprise Demo Request — Acme')
+  assert.equal(payload.subject, 'New AgentLemon Enterprise Demo Request — Acme')
   assert.ok(payload.text.includes(data.submittedAt))
   assert.ok(payload.text.includes(sample.description))
   await sendEmail(data, config, 'test-id', async (url, options) => {

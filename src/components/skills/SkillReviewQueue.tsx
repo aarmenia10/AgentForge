@@ -1,3 +1,4 @@
+import { displayAuthorHandle, displayAuthorName } from '@/lib/authorBranding'
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import {
   useCallback,
@@ -303,7 +304,7 @@ function ReviewItem({ kind, record }: { kind: Kind; record: SkillRecord }) {
               </span>
             </span>
             <span className="block break-all text-xs text-fg-muted">
-              {record.id} · @{record.author.handle}
+              {record.id} · @{displayAuthorHandle(record.author.handle)}
               {own ? ' (you)' : ''} · {record.files.length}{' '}
               {record.files.length === 1 ? 'file' : 'files'}
             </span>
@@ -588,7 +589,8 @@ export function SkillReviewView({
         </dd>
         <dt className="font-medium text-fg">Author</dt>
         <dd className="min-w-0 break-words">
-          @{record.author.handle} ({record.author.name}){' '}
+          @{displayAuthorHandle(record.author.handle)} (
+          {displayAuthorName(record.author)}){' '}
           {record.author.verified ? (
             <StatusText tone="teal">{VERIFIED_AUTHOR_LABEL}</StatusText>
           ) : (

@@ -112,7 +112,7 @@ export default function RequestDemo({
         </div>
         {status === 'success' ? (
           <p role="status">
-            Thank you for your interest in AgentForce Enterprise! Our team will
+            Thank you for your interest in AgentLemon Enterprise! Our team will
             be in touch shortly to discuss your company's needs and schedule a
             personalized demonstration.
           </p>
@@ -141,7 +141,7 @@ export default function RequestDemo({
                 rows={4}
                 className={input}
                 disabled={status === 'sending'}
-                placeholder="Tell us about your company, what you are looking for, and how AgentForce Enterprise could support your business."
+                placeholder="Tell us about your company, what you are looking for, and how AgentLemon Enterprise could support your business."
               />
             </label>
             <div hidden aria-hidden="true">

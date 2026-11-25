@@ -1,3 +1,4 @@
+import { displayAuthorHandle } from '@/lib/authorBranding'
 import { BadgeCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { AgentGrid } from '@/components/AgentGrid'
@@ -50,11 +51,11 @@ export default function ProfilePage() {
             tabIndex={-1}
             className="break-words text-2xl font-semibold tracking-tight outline-none sm:text-3xl"
           >
-            {profile?.displayName ?? `@${handle}`}
+            {profile?.displayName ?? `@${displayAuthorHandle(handle)}`}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-muted">
             {profile?.displayName && (
-              <span className="font-mono">@{handle}</span>
+              <span className="font-mono">@{displayAuthorHandle(handle)}</span>
             )}
             {profile?.verified && (
               <span
@@ -82,7 +83,7 @@ export default function ProfilePage() {
           </h2>
           {status === 'ready' && profile?.agents.length === 0 ? (
             <p className="rounded-3xl bg-surface p-10 text-center text-fg-muted">
-              No public agents from @{handle} yet.
+              No public agents from @{displayAuthorHandle(handle)} yet.
             </p>
           ) : (
             <AgentGrid
