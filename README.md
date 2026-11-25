@@ -562,6 +562,7 @@ What is being built right now. One row per claim. Add yours before you start and
 
 | Task | Who | AI | Branch | Files or areas it touches | Claimed |
 | --- | --- | --- | --- | --- | --- |
+| Weekly featured content | Aidan | Codex | `task/featured-weekly` | Featured rules and export source, catalog exporter, home and review screens, Hosting headers, tests | 2026-11-25 |
 
 ### 8.2 Ideas inbox
 
