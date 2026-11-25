@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { MCP_CONNECTOR_URL } from '@/lib/mcpConfig'
 import { ACCOUNT_RESOURCE } from '@/services/connectorConfig'
-import { CopyButton, primaryButtonClass } from '../ui'
+import { CopyButton, CopyChatInstruction, primaryButtonClass } from '../ui'
 
 type Kind = 'Agent' | 'Skill' | 'Council'
 type Platform = 'ChatGPT' | 'Claude' | 'Codex' | 'Cursor'
@@ -107,6 +107,7 @@ export function InstallDialog({
               tone="primary"
               onResult={(text) => setManual(text ?? '')}
             />
+            {directText && <CopyChatInstruction />}
             {!directText && (
               <p className="text-sm text-fg-muted">
                 Instructions unavailable. Reload or use the connection method.
@@ -165,6 +166,7 @@ export function InstallDialog({
                 tone="primary"
                 onResult={(text) => setManual(text ?? '')}
               />
+              <CopyChatInstruction />
             </section>
           )}
         </div>
