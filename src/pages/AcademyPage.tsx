@@ -10,7 +10,13 @@ import {
 } from '@/lib/academy'
 import { readAcademyDone, writeAcademyDone } from '@/lib/academyProgress'
 import { useAuth } from '@/auth/AuthProvider'
-import { CodeBlock, primaryButtonClass, ArrowIcon } from '@/components/ui'
+import {
+  CodeBlock,
+  primaryButtonClass,
+  ArrowIcon,
+  cn,
+  copyInstructionClass,
+} from '@/components/ui'
 import { Link } from '@/router/Router'
 
 const academyActionClass = `${primaryButtonClass} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lm-accent-text)]`
@@ -110,7 +116,7 @@ export default function AcademyPage() {
               wrap
             />
           </div>
-          <p className="mt-4 text-sm leading-relaxed text-fg-muted">
+          <p className={cn('mt-4', copyInstructionClass)}>
             Paste it into ChatGPT, Claude, or the AI you use. It will walk you
             through everything below.
           </p>
@@ -184,7 +190,16 @@ export default function AcademyPage() {
                 </div>
                 <div className="mt-5 space-y-3 text-sm leading-relaxed text-fg-muted sm:text-base">
                   {step.body.map((paragraph, paragraphIndex) => (
-                    <p key={`${step.id}-${paragraphIndex}`}>{paragraph}</p>
+                    <p
+                      key={`${step.id}-${paragraphIndex}`}
+                      className={
+                        /\b(copy|paste)\b/i.test(paragraph)
+                          ? copyInstructionClass
+                          : undefined
+                      }
+                    >
+                      {paragraph}
+                    </p>
                   ))}
                 </div>
                 {step.copy && (

@@ -161,6 +161,7 @@ export function CopyButton({
   }
 
   const copied = status === 'copied'
+  const emphasize = status === 'idle' || status === 'copying'
   return (
     <button
       type="button"
@@ -170,14 +171,22 @@ export function CopyButton({
         tone === 'primary'
           ? copied
             ? 'inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300'
-            : primaryButtonClass
-          : 'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition',
+            : emphasize
+              ? 'group/btn inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent px-6 py-2 text-base font-bold text-accent-ink transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_var(--lm-accent)] disabled:cursor-not-allowed disabled:opacity-50'
+              : primaryButtonClass
+          : emphasize
+            ? 'inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition'
+            : 'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition',
         copied
           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
           : tone === 'onDark'
-            ? 'bg-white/10 text-slate-200 hover:bg-white/20'
+            ? emphasize
+              ? 'bg-accent/20 text-white hover:bg-accent/30'
+              : 'bg-white/10 text-slate-200 hover:bg-white/20'
             : tone === 'surface' &&
-              'bg-slate-900/5 text-slate-700 hover:bg-slate-900/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15',
+              (emphasize
+                ? 'bg-accent/15 text-fg hover:bg-accent/25'
+                : 'bg-slate-900/5 text-slate-700 hover:bg-slate-900/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15'),
         copied && tone === 'onDark' && 'text-emerald-300',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lm-accent-text)]',
       )}
@@ -185,7 +194,7 @@ export function CopyButton({
       {copied ? (
         <Check className="size-4 shrink-0 text-emerald-500" aria-hidden="true" />
       ) : (
-        <Copy className="size-3.5" aria-hidden="true" />
+        <Copy className={emphasize ? 'size-4 shrink-0' : 'size-3.5'} aria-hidden="true" />
       )}
       <span aria-live="polite">
         {copied
@@ -198,6 +207,12 @@ export function CopyButton({
   )
 }
 
+export const copyInstructionClass =
+  'rounded-lg bg-accent/15 px-3 py-2 text-base font-bold leading-snug text-fg'
+
+const copyDarkInstructionClass =
+  'rounded-lg bg-accent/15 px-3 py-2 text-base font-bold leading-snug text-white'
+
 const COPY_CHAT_INSTRUCTION = 'Copy this into your AI chat'
 
 /** Shared, theme-aware instruction for copying prompts into an AI chat. */
@@ -205,8 +220,8 @@ export function CopyChatInstruction({ onDark = false }: { onDark?: boolean }) {
   return (
     <strong
       className={cn(
-        'block min-w-0 rounded-lg bg-accent/15 px-3 py-2 text-base font-bold leading-snug',
-        onDark ? 'text-white' : 'text-fg',
+        'block min-w-0',
+        onDark ? copyDarkInstructionClass : copyInstructionClass,
       )}
     >
       {COPY_CHAT_INSTRUCTION}
@@ -230,15 +245,12 @@ export function CodeBlock({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 dark:border-white/10">
       <div
-        className={cn(
-          'flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2',
-          title === COPY_CHAT_INSTRUCTION && 'flex-wrap',
-        )}
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-2"
       >
         {title === COPY_CHAT_INSTRUCTION ? (
           <CopyChatInstruction onDark />
         ) : (
-          <span className="truncate font-mono text-xs text-slate-400">{title}</span>
+          <span className={cn('min-w-0 break-words', copyDarkInstructionClass)}>{title}</span>
         )}
         <CopyButton text={code} label={copyLabel} tone="onDark" />
       </div>
