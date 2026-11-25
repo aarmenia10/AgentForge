@@ -210,6 +210,16 @@ The export executes as an atomic two-phase save:
 
 All items land safely on the user's `/me` page as private items with "Saved from chat" markers. Making any item public remains a deliberate action on the website requiring email verification and admin review.
 
+### 9.1 Handoffs
+
+Council instructions are what a fresh AI follows to run the members together. A line like "Check sources and gather papers in parallel, then build an evidence review." (the live sample `council:sample-research-desk@1.0.0`) names the stages but not what moves between them. Write, for each stage, what it produces, what the next stage receives, and in what form, for example: "Stage 1: the source checker returns a table of claims with source, quoted line, and confidence. Stage 2: the reviewer takes that table and the papers' abstracts and writes the evidence review, citing table rows."
+
+`save_council` returns `self_contained_warnings` for the council and for each supplied member, each tagged with its `item` reference. They never block a save (decision D2). For the council, `council_short_instructions` fires under 200 characters and `council_no_handoff` when the instructions never say what passes between stages. Members get the skill and agent checks (`docs/SKILLS.md` section 14.1; agents also get `unused_input` for required inputs the prompts never mention). `get_item` and `get_council` add `context_warnings` to the portability block.
+
+### 9.2 Private pins can break (deferred, decision D4)
+
+Private and friends agents and skills keep only their current version: immutable version snapshots are written only when a public item is approved. A private council pins exact versions, and `save_council` checks those pins only at save time. If the owner later edits a private member (giving it a new version) or deletes it, the council's pin no longer resolves. `get_item` then says the item is at a different version, or is not found. Nothing warns at edit or delete time yet. Private version history is a later task. Until then, the guide tells the exporting AI to remind the user of this, and the `save_council` response says it.
+
 ---
 
 ## 10. Connector tools

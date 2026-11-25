@@ -12,6 +12,11 @@ import {
 import { base64url, pkceChallenge } from '../packages/connector/src/tokens'
 import type { OAuthEnv } from '../packages/connector/src/oauth'
 import { SEED_AGENTS } from '../src/data/seedAgents'
+import assert from 'node:assert/strict'
+import {
+  FIRESTORE_ORIGIN,
+  TOKEN_ENDPOINT,
+} from '../packages/connector/src/firebase'
 
 export const ORIGIN = CONNECTOR_ORIGIN
 export const CALLBACK = 'https://claude.ai/api/mcp/auth_callback'
@@ -191,4 +196,116 @@ export async function toolBody(response: Response) {
   const payload = await response.json()
   if (payload.result?.isError) throw new Error(payload.result.content[0].text)
   return JSON.parse(payload.result.content[0].text)
+}
+
+/**
+ * A connector signed in as "alice" against an in-memory Firestore REST fake.
+ * Moved from connector-auth.test.ts so other tests can save and read back
+ * through the real OAuth, account tools, and Firestore value encoding.
+ */
+export function accountFixture(verified = true) {
+  let time = START
+  let version = 0
+  let exchanges = 0
+  let entropy = 0
+  const exchangeInputs: string[] = []
+  const calls: string[] = []
+  const documents = new Map<string, { fields: object; updateTime: string }>()
+  const projectRoot = 'projects/agentforge-b10db/databases/(default)/documents/'
+  const grantPath = projectRoot + 'connector_grants/alice'
+  const profileFields = {
+    handle: { stringValue: 'alice' },
+    display_name: { stringValue: 'Alice' },
+  }
+  const client = connectorClient({
+    now: () => time,
+    random: (length) =>
+      Uint8Array.from({ length }, (_, index) => (index + ++entropy) % 256),
+    async fetch(url, init) {
+      if (url.startsWith(TOKEN_ENDPOINT)) {
+        const old = new URLSearchParams(init?.body as URLSearchParams).get(
+          'refresh_token',
+        )!
+        exchangeInputs.push(old)
+        if (old === 'bad-token')
+          return Response.json(
+            {
+              error: {
+                message: 'INVALID_REFRESH_TOKEN',
+                status: 'INVALID_ARGUMENT',
+              },
+            },
+            { status: 400 },
+          )
+        return Response.json({
+          id_token: idToken('alice', time, verified),
+          refresh_token: `firebase-${++exchanges}`,
+          user_id: 'alice',
+        })
+      }
+      assert.ok(url.startsWith(FIRESTORE_ORIGIN))
+      assert.match(
+        new Headers(init?.headers).get('Authorization') ?? '',
+        /^Bearer test\./,
+      )
+      const path = url.slice(`${FIRESTORE_ORIGIN}/v1/`.length)
+      if (path.endsWith(':commit')) {
+        calls.push('commit')
+        const {
+          writes: [{ currentDocument, update }],
+        } = JSON.parse(init!.body as string)
+        const existing = documents.get(update.name)
+        if (
+          existing
+            ? existing.updateTime !== currentDocument.updateTime
+            : currentDocument.exists !== false
+        )
+          return Response.json(
+            {
+              error: {
+                status:
+                  existing && currentDocument.exists === false
+                    ? 'ALREADY_EXISTS'
+                    : 'FAILED_PRECONDITION',
+              },
+            },
+            { status: 409 },
+          )
+        documents.set(update.name, {
+          fields: update.fields,
+          updateTime: String(++version),
+        })
+        return Response.json({})
+      }
+      if (path.endsWith(':runQuery')) {
+        calls.push('query')
+        const { structuredQuery: query } = JSON.parse(init!.body as string)
+        assert.ok(
+          query.select.fields.some(
+            ({ fieldPath }: { fieldPath: string }) =>
+              fieldPath === 'review_status',
+          ),
+        )
+        assert.equal(query.where.fieldFilter.value.stringValue, 'alice')
+        return Response.json([])
+      }
+      calls.push(path.slice(projectRoot.length))
+      if (path === projectRoot + 'users/alice')
+        return Response.json({ fields: profileFields })
+      const doc = documents.get(path)
+      return doc ? Response.json(doc) : Response.json({}, { status: 404 })
+    },
+  })
+  return {
+    ...client,
+    calls,
+    exchangeInputs,
+    documents,
+    grantPath,
+    now: () => time,
+    advance: (seconds: number) => {
+      time += seconds * 1000
+    },
+    projectRoot,
+  }
 }

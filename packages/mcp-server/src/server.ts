@@ -47,7 +47,7 @@ export function createRegistryServer(
 ) {
   let active = initial ?? (selector ? selectAgent(catalog, selector) : undefined)
   const server = new Server(
-    { name: 'agentlemon-registry', version: '0.3.4' },
+    { name: 'agentlemon-registry', version: '0.3.5' },
     {
       capabilities: {
         tools: { listChanged: true },

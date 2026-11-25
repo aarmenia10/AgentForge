@@ -22,6 +22,12 @@ import bundledCatalog from '../../../public/catalog.json'
 import { createConnectorServer } from './server'
 import { hostedSkillReader } from '../../mcp-server/src/skills'
 import { resolveAgent, versionUrl } from '../../mcp-server/src/versions'
+import {
+  PublicFileMissing,
+  readPublicResponse,
+  UNREACHABLE_MESSAGE,
+  type PrivateItemHint,
+} from '../../mcp-server/src/shared'
 import { parseOrigins, type OriginApp } from '../../../src/lib/portability'
 import {
   accountToolNames,
@@ -66,7 +72,12 @@ export function createConnector(options: ConnectorOptions = {}) {
   const now = options.now ?? Date.now
   const oauth = createOAuth(options)
   // The snapshot bundled at deploy time is the fallback of last resort.
-  const readSkill = hostedSkillReader(CATALOG_URL, fetchCatalog, now)
+  // Public /mcp clients have no get_item, so their "not public" errors point
+  // at the account connector; /account/mcp clients are told to use get_item.
+  const readSkill = {
+    connector_link: hostedSkillReader(CATALOG_URL, fetchCatalog, now),
+    get_item: hostedSkillReader(CATALOG_URL, fetchCatalog, now, 'get_item'),
+  } satisfies Record<PrivateItemHint, unknown>
   const snapshot = parsePublicCatalog(bundledCatalog)
   let skillIndex:
     { value: ReturnType<typeof parsePublicSkillIndex>; at: number } | undefined
@@ -104,9 +115,14 @@ export function createConnector(options: ConnectorOptions = {}) {
 
   async function publicSkill(id: string, version?: string) {
     async function read(path: string) {
-      const response = await fetchCatalog(new URL(path, CATALOG_URL).href)
-      if (!response.ok) throw new Error('Skill is unavailable.')
-      return response.json()
+      const url = new URL(path, CATALOG_URL).href
+      let response: Response
+      try {
+        response = await fetchCatalog(url)
+      } catch {
+        throw new Error(UNREACHABLE_MESSAGE)
+      }
+      return readPublicResponse(response, url)
     }
     if (!skillIndex || now() - skillIndex.at >= CACHE_MS)
       skillIndex = {
@@ -116,11 +132,15 @@ export function createConnector(options: ConnectorOptions = {}) {
     const entry = skillIndex.value.skills.find((skill) => skill.id === id)
     if (!entry) return null
     const pin = version ?? entry.version
-    const skill = parsePublicSkillVersion(
-      await read(skillVersionPath(id, pin)),
-      id,
-      pin,
-    )
+    let raw: unknown
+    try {
+      raw = await read(skillVersionPath(id, pin))
+    } catch (error) {
+      // Not published at that version: the caller falls back to the owner's copy.
+      if (error instanceof PublicFileMissing) return null
+      throw error
+    }
+    const skill = parsePublicSkillVersion(raw, id, pin)
     return skill.author.uid === entry.author.uid ? skill : null
   }
 
@@ -245,19 +265,27 @@ export function createConnector(options: ConnectorOptions = {}) {
         }
       }
       const { agents } = await loadCatalog()
+      const hint: PrivateItemHint = accountPath ? 'get_item' : 'connector_link'
       const resolve = (selector: string) =>
-        resolveAgent(agents, selector, async (id, version) => {
-          const response = await fetchCatalog(
-            versionUrl(CATALOG_URL, id, version),
-          )
-          if (!response.ok)
-            throw new Error(`Version request failed: HTTP ${response.status}`)
-          return response.json()
-        })
+        resolveAgent(
+          agents,
+          selector,
+          async (id, version) => {
+            const url = versionUrl(CATALOG_URL, id, version)
+            let response: Response
+            try {
+              response = await fetchCatalog(url)
+            } catch {
+              throw new Error(UNREACHABLE_MESSAGE)
+            }
+            return readPublicResponse(response, url)
+          },
+          hint,
+        )
       const server = createConnectorServer(
         agents,
         resolve,
-        readSkill,
+        readSkill[hint],
         accountPath
           ? (name, args) => {
               if (!authorization)
@@ -275,7 +303,8 @@ export function createConnector(options: ConnectorOptions = {}) {
             }
           : undefined,
         loadOrigins,
-        hostedCouncilReader(CATALOG_URL, fetchCatalog, loadOrigins),
+        hostedCouncilReader(CATALOG_URL, fetchCatalog, loadOrigins, hint),
+        hint,
       )
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,

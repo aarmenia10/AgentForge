@@ -17,6 +17,20 @@ export type CouncilItem =
   | { kind: 'skill'; item: SkillManifest }
 type Read = (path: string) => Promise<unknown>
 
+/**
+ * The council (or the requested version of it) is not in the public files.
+ * Readers turn this into a message that names where private items live.
+ */
+export class CouncilNotPublic extends Error {
+  constructor(
+    readonly id: string,
+    readonly version?: { requested: string; current: string },
+  ) {
+    super('Council is unavailable.')
+    this.name = 'CouncilNotPublic'
+  }
+}
+
 export function createPublicCouncilReader(read: Read) {
   const index = async () =>
     parsePublicCouncilIndex(await read('councils.json')).councils
@@ -92,11 +106,20 @@ export function createPublicCouncilReader(read: Read) {
     },
     async get(id: string, version?: string) {
       const current = (await index()).find((entry) => entry.id === id)
-      if (!current) throw new Error('Council is unavailable.')
+      if (!current) throw new CouncilNotPublic(id)
       const pin = version ?? current.version
       const load = (v: string) =>
-        read(councilVersionPath(id, v)).then((value) =>
-          parsePublicCouncilVersion(value, id, v),
+        read(councilVersionPath(id, v)).then(
+          (value) => parsePublicCouncilVersion(value, id, v),
+          (error: unknown) => {
+            // A hosted reader reports an absent file as PublicFileMissing.
+            if (error instanceof Error && error.name === 'PublicFileMissing')
+              throw new CouncilNotPublic(id, {
+                requested: v,
+                current: current.version,
+              })
+            throw error
+          },
         )
       const council = await load(pin)
       if (council.author.uid !== current.author.uid)

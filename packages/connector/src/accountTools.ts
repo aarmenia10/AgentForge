@@ -1,5 +1,6 @@
 import {
   councilManifestSchema,
+  formatCouncilRef as formatCouncilItem,
   validateCouncilRecord,
 } from '../../../src/lib/councilSchema'
 import { lintCouncil } from '../../../src/services/councilSafety'
@@ -33,6 +34,10 @@ import {
   createPortabilityBlock,
   type OriginApp,
 } from '../../../src/lib/portability'
+import {
+  checkSelfContained,
+  type SelfContainedWarning,
+} from '../../../src/lib/selfContained'
 
 const kind = z.enum(['agent', 'skill', 'council'])
 const visibility = z.enum(['public', 'friends', 'private'])
@@ -122,7 +127,7 @@ function tool(
 }
 
 const saveDescription =
-  'Only call on the user’s explicit request after showing them the content. This creates one new private item. AgentLemon supplies the author and visibility.'
+  'Only call on the user’s explicit request after showing them the content. This creates one new private item and cannot replace an existing one: to revise an item, save under a new ID or edit it on the site. AgentLemon supplies the author and visibility. Before saving, make the item self-contained (see "Exporting a skill, agent, or council" in the guide): bundle every file it refers to as text, state URLs and IDs, and describe tools by capability with a fallback. The response lists self_contained_warnings; they never block a save.'
 export const accountTools = [
   tool(
     'account_status',
@@ -142,7 +147,7 @@ export const accountTools = [
     'get_item',
     'Get an AgentLemon item',
     READ,
-    'Read a full agent blueprint, skill or council you can access. Accepts an ID and an optional exact version.',
+    'Read a full agent blueprint, skill or council you can access, including your own private and friends items, which the public tools (search_*, get_skill, get_agent, get_council) cannot see. Accepts an ID and an optional exact version.',
     getArgs,
   ),
   tool(
@@ -163,7 +168,7 @@ export const accountTools = [
     'save_council',
     'Save a private council',
     WRITE,
-    'Call only on the user’s explicit request after showing the council and any new member content. Include exact member pins in manifest and supply any missing member blueprints or skills in member_items. Saves missing members and the council privately in one commit.',
+    'Call only on the user’s explicit request after showing the council and any new member content. Include exact member pins in manifest and supply any missing member blueprints or skills in member_items. Saves missing members and the council privately in one commit; it cannot replace existing items. The instructions should say what each stage hands to the next and in what form. The response lists self_contained_warnings for the council and each supplied member; they never block a save.',
     saveCouncilArgs,
   ),
 ]
@@ -268,6 +273,20 @@ async function listItems(input: unknown, { db, access }: Context) {
   })
 }
 
+/**
+ * get_item errors. "Not found" and "someone else's private item" read the
+ * same, so the error never reveals whether another person's item exists.
+ */
+const notVisible = (kind: string, id: string) =>
+  `This ${kind} is unavailable: "${id}" was not found or is not visible to your account. Check the ID with list_my_items.`
+const versionDiffers = (
+  kind: string,
+  id: string,
+  requested: string,
+  current: string,
+) =>
+  `This ${kind} version is unavailable: "${id}" is at version ${current}, not ${requested}. Private and friends items keep only their current version, so a council pinned to an older version cannot load it. Read the current version, or ask the owner to save the old one under a new ID.`
+
 async function getItem(
   input: unknown,
   { db, publicAgent, publicSkill, publicOrigins }: Context,
@@ -276,12 +295,12 @@ async function getItem(
   if (kind === 'council') {
     const doc = await readableItem(db, 'councils/' + id)
     const parsed = validateCouncilRecord(doc?.fields)
-    if (
-      !parsed.ok ||
-      parsed.value.id !== id ||
-      (version && parsed.value.version !== version)
-    )
-      throw new Error('This council or version is unavailable to your account.')
+    if (!parsed.ok || parsed.value.id !== id)
+      throw new Error(notVisible('council', id))
+    if (version && parsed.value.version !== version)
+      throw new Error(
+        versionDiffers('council', id, version, parsed.value.version),
+      )
     const { review_status } = parsed.value
     const council = councilManifestSchema.strip().parse(parsed.value)
     return jsonResult({
@@ -292,6 +311,7 @@ async function getItem(
       portability: createPortabilityBlock(
         council.instructions,
         council.origin_app as OriginApp | undefined,
+        council,
       ),
     })
   }
@@ -301,19 +321,17 @@ async function getItem(
   ).catch(() => null)
   let docFields: Record<string, unknown> | undefined
   if (!item) {
-    const unavailable = () =>
-      new Error('This item or version is unavailable to your account.')
+    const unavailable = () => new Error(notVisible(kind, id))
     const doc = await db.get(`${itemCollection(kind)}/${id}`).catch((error) => {
       if (error instanceof FirestoreError && error.status === 403)
         throw unavailable()
       throw error
     })
-    if (
-      !doc ||
-      doc.fields.id !== id ||
-      (version && doc.fields.version !== version)
-    )
-      throw unavailable()
+    if (!doc || doc.fields.id !== id) throw unavailable()
+    if (version && doc.fields.version !== version)
+      throw new Error(
+        versionDiffers(kind, id, version, String(doc.fields.version)),
+      )
     docFields = doc.fields
     if (kind === 'agent') item = manifestSchema.strip().parse(doc.fields)
     else {
@@ -406,6 +424,8 @@ export function prepareChatSave(
     return {
       record: { ...manifest, ...metadata, shared_with: [] },
       findings: skipLint ? null : lintManifest(manifest).findings,
+      // Unlike the linter, always run, whatever the size (R4).
+      warnings: checkSelfContained(manifest, 'agent'),
     }
   }
   const validated = validateSkillManifest(normalized)
@@ -418,6 +438,21 @@ export function prepareChatSave(
   return {
     record: { ...validated.value, ...metadata },
     findings: skipLint ? null : lintSkill(validated.value).findings,
+    warnings: checkSelfContained(validated.value, 'skill'),
+  }
+}
+
+const WARNINGS_NEXT_STEP =
+  'Fix the self_contained_warnings with the user before anyone relies on this item: bundle every file it mentions as a text reference file (convert binary files to a Markdown format spec plus an example excerpt), replace "this project" phrasing with the real content, state URLs and IDs or make them inputs to ask for, and describe tools by capability with a fallback. Then save again under a new item ID, because saving never replaces an existing item.'
+
+/** Adds the self-containment warnings and their next step to a save response. */
+function withWarnings(
+  warnings: (SelfContainedWarning & { item?: string })[],
+  nextStep: string,
+) {
+  return {
+    self_contained_warnings: warnings,
+    next_step: warnings.length ? `${WARNINGS_NEXT_STEP} ${nextStep}` : nextStep,
   }
 }
 
@@ -437,7 +472,7 @@ async function saveItem(
       `Choose your username at ${SITE_ORIGIN}/settings before saving items.`,
     )
   const originApp = clientOriginApp(context.grant?.app)
-  const { record, findings } = prepareChatSave(
+  const { record, findings, warnings } = prepareChatSave(
     kind,
     input,
     access.uid,
@@ -464,8 +499,10 @@ async function saveItem(
     ...(findings === null && {
       lint_note: 'This item will be linted when opened on AgentLemon.',
     }),
-    next_step:
+    ...withWarnings(
+      warnings,
       'To make this item public, open My items and submit it for review.',
+    ),
   })
 }
 
@@ -578,6 +615,20 @@ async function saveCouncil(input: unknown, context: Context) {
     encoder.encode(council.instructions).byteLength <= INLINE_LINT_BYTES
       ? lintCouncil(council).findings
       : null
+  // Always checked, whatever the size: the council and every supplied member.
+  const warnings = [
+    ...checkSelfContained(council, 'council').map((warning) => ({
+      item: formatCouncilItem(council.id, council.version),
+      ...warning,
+    })),
+    ...member_items.flatMap(({ kind, ...payload }) => {
+      const item = 'manifest' in payload ? payload.manifest : payload.skill
+      return checkSelfContained(item, kind).map((warning) => ({
+        item: formatItemRef({ kind, id: item.id, version: item.version }),
+        ...warning,
+      }))
+    }),
+  ]
   if (council.members.length > 8) {
     const prefix =
       'councils/' + council.id + '/member_checks/' + access.uid + '/groups/'
@@ -620,7 +671,10 @@ async function saveCouncil(input: unknown, context: Context) {
     ...(findings === null && {
       lint_note: 'AgentLemon will lint the council before sharing.',
     }),
-    next_step: 'To share the council, open My items and choose its visibility.',
+    ...withWarnings(
+      warnings,
+      'Editing or deleting a private member later can break this council, because private items keep only their current version. To share the council, open My items and choose its visibility.',
+    ),
   })
 }
 
