@@ -198,6 +198,22 @@ export function CopyButton({
   )
 }
 
+const COPY_CHAT_INSTRUCTION = 'Copy this into your AI chat'
+
+/** Shared, theme-aware instruction for copying prompts into an AI chat. */
+export function CopyChatInstruction({ onDark = false }: { onDark?: boolean }) {
+  return (
+    <strong
+      className={cn(
+        'block min-w-0 rounded-lg bg-accent/15 px-3 py-2 text-base font-bold leading-snug',
+        onDark ? 'text-white' : 'text-fg',
+      )}
+    >
+      {COPY_CHAT_INSTRUCTION}
+    </strong>
+  )
+}
+
 /** Monospace block with a header row and a copy action. */
 export function CodeBlock({
   code,
@@ -213,8 +229,17 @@ export function CodeBlock({
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 dark:border-white/10">
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
-        <span className="truncate font-mono text-xs text-slate-400">{title}</span>
+      <div
+        className={cn(
+          'flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2',
+          title === COPY_CHAT_INSTRUCTION && 'flex-wrap',
+        )}
+      >
+        {title === COPY_CHAT_INSTRUCTION ? (
+          <CopyChatInstruction onDark />
+        ) : (
+          <span className="truncate font-mono text-xs text-slate-400">{title}</span>
+        )}
         <CopyButton text={code} label={copyLabel} tone="onDark" />
       </div>
       <pre
