@@ -148,7 +148,7 @@ export function InstallDialog({
               <h4 className="text-sm font-semibold">
                 1. MCP Connector (AI Connection)
               </h4>
-              <p className={copyInstructionClass}>{guidance[platform]}</p>
+              <p className="text-sm">{guidance[platform]}</p>
               <p className="text-xs text-fg-muted">
                 {account
                   ? 'Use OAuth sign-in and approve access to your AgentLemon account.'

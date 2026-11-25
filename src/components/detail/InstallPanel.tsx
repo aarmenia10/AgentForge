@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { buildInstallSnippet, MCP_CLIENTS, MCP_SERVER_PACKAGE, type McpClient } from '@/lib/mcpConfig'
 import type { AgentManifest } from '@/types/agent'
 import { ConnectorCard } from '../ConnectorCard'
-import { cn, CodeBlock, copyInstructionClass } from '../ui'
+import { cn, CodeBlock } from '../ui'
 
 /** Tab 4: generates the exact config for the chosen MCP client. */
 export function InstallPanel({ agent }: { agent: AgentManifest }) {
@@ -89,7 +89,7 @@ export function InstallPanel({ agent }: { agent: AgentManifest }) {
         <li className="flex gap-3">
           <Step n={2} />
           <div className="min-w-0 flex-1 space-y-2">
-            <p className={client.configFile ? copyInstructionClass : undefined}>
+            <p>
               {client.configFile
                 ? 'Paste this in. If the file already has an mcpServers block, add the inner entry to it.'
                 : 'Run the command for your system.'}
