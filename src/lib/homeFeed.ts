@@ -28,6 +28,11 @@ export interface HomeItem {
 
 export const TRENDING_COUNT = 6
 
+export function homeItemLink(kind: HomeItemKind, id: string): string {
+  const encoded = encodeURIComponent(id)
+  return kind === 'agent' ? `/agents?agent=${encoded}` : `/${kind}s/${encoded}`
+}
+
 function time(value: string | undefined): number {
   const ms = value ? Date.parse(value) : NaN
   return Number.isFinite(ms) ? ms : 0
@@ -48,7 +53,7 @@ export function agentItem(agent: AgentManifest): HomeItem {
     authorHandle: agent.author.handle,
     likes: votes(agent.stats.stars),
     updatedAt: time(agent.stats.updated_at),
-    to: `/agents?agent=${encodeURIComponent(agent.id)}`,
+    to: homeItemLink('agent', agent.id),
   }
 }
 
@@ -61,7 +66,7 @@ export function skillItem(skill: SkillIndexEntry): HomeItem {
     authorHandle: skill.author.handle,
     likes: votes(skill.stats.thumbs_up),
     updatedAt: time(skill.stats.updated_at),
-    to: `/skills/${encodeURIComponent(skill.id)}`,
+    to: homeItemLink('skill', skill.id),
   }
 }
 
@@ -75,7 +80,7 @@ export function councilItem(council: CouncilIndexEntry): HomeItem {
     authorHandle: council.author.handle,
     likes: 0,
     updatedAt: time(council.stats.updated_at),
-    to: `/councils/${encodeURIComponent(council.id)}`,
+    to: homeItemLink('council', council.id),
     detail: `${council.member_count} members`,
   }
 }

@@ -12,6 +12,7 @@ export const sources = [
   'comments',
   'councils',
   'council_versions',
+  'featured',
 ] as const
 type Source = (typeof sources)[number]
 export interface Receipt {

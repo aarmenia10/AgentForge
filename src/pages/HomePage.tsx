@@ -8,8 +8,10 @@ import {
 import { Hero } from '@/components/Hero'
 import { HomeBackdrop, useReducedMotion } from '@/components/home/HomeBackdrop'
 import { homeGlass } from '@/components/home/scenePalette'
+import { FeaturedSection } from '@/components/home/FeaturedSection'
 import { TrendingSection } from '@/components/home/TrendingSection'
 import { ArrowIcon, primaryButtonClass } from '@/components/ui'
+import { loadFeatured } from '@/lib/featured'
 import { trendingFrom, type HomeSources } from '@/lib/homeFeed'
 import { Link } from '@/router/Router'
 import { tokensFor } from '@/theme/appearance'
@@ -66,7 +68,7 @@ function useNavHeight(): number | null {
 
 /**
  * The landing page, top to bottom: the hero, "Explore" and its three
- * buttons, then Trending, all scrolling over the lemon press background.
+ * buttons, weekly picks, then Trending, all scrolling over the lemon press background.
  * Categories live on /agents.
  *
  * Content sits above the background with `pointer-events: none` on its
@@ -75,6 +77,15 @@ function useNavHeight(): number | null {
  */
 export function HomePage() {
   const sources = useHomeSources()
+  const [featured, setFeatured] =
+    useState<Awaited<ReturnType<typeof loadFeatured>>>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    void loadFeatured(controller.signal).then((result) => {
+      if (!controller.signal.aborted) setFeatured(result)
+    })
+    return () => controller.abort()
+  }, [])
   const navHeight = useNavHeight()
   const reduced = useReducedMotion()
   const { appearance } = useTheme()
@@ -129,6 +140,7 @@ export function HomePage() {
           </div>
         </section>
 
+        <FeaturedSection featured={featured} />
         <TrendingSection items={trending} />
       </div>
     </main>

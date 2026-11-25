@@ -96,6 +96,7 @@ test('hourly export reads only dirty documents and acknowledges only published r
         'export_sources/comments/changes',
         'export_sources/council_versions/changes',
         'export_sources/councils/changes',
+        'export_sources/featured/changes',
         'export_sources/skill_versions/changes',
         'export_sources/skills/changes',
         'export_sources/votes/changes',

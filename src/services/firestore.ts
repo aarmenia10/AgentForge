@@ -10,7 +10,8 @@ export function markExportChange(
     | 'skills'
     | 'skill_versions'
     | 'votes'
-    | 'comments',
+    | 'comments'
+    | 'featured',
   id: string,
 ) {
   write.set(doc(db, 'export_sources', source, 'changes', id), {

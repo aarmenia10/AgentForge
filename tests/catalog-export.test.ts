@@ -49,6 +49,12 @@ test('hourly checkpoint must match this UTC day, release, catalog and all histor
     const output = {
       catalog,
       files,
+      featuredSelection: {
+        week_of: '2026-11-23',
+        items: [
+          { kind: 'agent' as const, id: record.id, note: 'From the editor.' },
+        ],
+      },
       ...emptySkillExport(),
       ...emptyCouncilExport(),
     }
@@ -63,6 +69,7 @@ test('hourly checkpoint must match this UTC day, release, catalog and all histor
       { scope: 'other/commit' },
       { format: 0 },
       { catalog: [] },
+      { featuredSelection: null },
       { versions: data.versions.slice(1) },
       { versions: [{ ...catalog[0], id: '../escape' }] },
     ]) {

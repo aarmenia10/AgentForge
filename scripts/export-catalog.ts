@@ -27,6 +27,8 @@ import type { SkillManifest } from '../src/types/skill'
 import type { OriginApp } from '../src/lib/portability'
 import { parseAllowlist, unallowedFindings } from './catalogSafety'
 import type { LinterAllowance } from './catalogSafety'
+import type { FeaturedSelection } from '../src/lib/featured'
+import { buildFeatured } from './featuredExport'
 
 export interface ExportNotice {
   id: string
@@ -291,6 +293,7 @@ export interface PublicExport
   catalog: AgentManifest[]
   files: Map<string, AgentManifest>
   origins?: Record<string, OriginApp>
+  featuredSelection?: FeaturedSelection | null
 }
 
 export function exportDigest({
@@ -302,6 +305,7 @@ export function exportDigest({
   councilFiles,
   origins,
   ratingsFiles,
+  featuredSelection,
 }: PublicExport) {
   const digest = createHash('sha256').update(JSON.stringify(catalog))
   for (const [path, manifest] of [...files].sort(([a], [b]) =>
@@ -325,6 +329,13 @@ export function exportDigest({
   digest
     .update('origins.json')
     .update(JSON.stringify(sortOrigins(origins ?? {})))
+  digest
+    .update('featured.json')
+    .update(
+      JSON.stringify(
+        buildFeatured(featuredSelection, { catalog, skillIndex, councilIndex }),
+      ),
+    )
   return digest.digest('hex')
 }
 
@@ -420,6 +431,7 @@ export async function exportCatalog() {
     catalog: seeds,
     files: buildVersionFiles(seeds, [], SEED_AGENTS, allow, log),
     origins: {},
+    featuredSelection: null,
   }
   const publicDir =
     process.env.AGENTLEMON_CATALOG_OUTPUT_DIR ||
@@ -445,6 +457,11 @@ export async function exportCatalog() {
     resolve(publicDir, 'origins.json'),
     `${JSON.stringify(sortOrigins(output.origins ?? {}), null, 2)}\n`,
     'utf8',
+  )
+  await writeFile(
+    resolve(publicDir, 'featured.json'),
+    JSON.stringify(buildFeatured(output.featuredSelection, output), null, 2) +
+      '\n',
   )
   await writeFile(
     resolve(publicDir, 'export-state.json'),

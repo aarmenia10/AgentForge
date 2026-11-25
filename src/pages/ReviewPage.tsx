@@ -2,6 +2,7 @@ import { CouncilReviewQueue } from '@/components/councils/CouncilReviewQueue'
 import { useEffect, useState } from 'react'
 import RequireAccount from '@/components/RequireAccount'
 import { PageHold, PageShell } from '@/components/PageShell'
+import { FeaturedEditor } from '@/components/review/FeaturedEditor'
 import { ReviewQueue } from '@/components/review/ReviewQueue'
 import { SkillReviewQueue } from '@/components/skills/SkillReviewQueue'
 import { AdminReportsView } from '@/components/ratings/AdminReportsView'
@@ -20,7 +21,7 @@ export default function ReviewPage() {
 }
 
 type Access = 'checking' | 'admin' | 'not-admin' | 'error'
-type Items = 'agents' | 'skills' | 'councils' | 'reports'
+type Items = 'agents' | 'skills' | 'councils' | 'reports' | 'featured'
 
 function ReviewerOnly() {
   const [access, setAccess] = useState<Access>('checking')
@@ -63,7 +64,7 @@ function ReviewerOnly() {
       <div
         role="group"
         aria-label="What to review"
-        className="mt-4 flex w-full rounded-full bg-surface-2 p-1 sm:w-fit"
+        className="mt-4 flex w-fit max-w-full flex-wrap rounded-2xl bg-surface-2 p-1 sm:rounded-full"
       >
         {(
           [
@@ -71,6 +72,7 @@ function ReviewerOnly() {
             ['skills', 'Skills'],
             ['councils', 'Councils'],
             ['reports', 'Reports'],
+            ['featured', 'Featured'],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -104,6 +106,9 @@ function ReviewerOnly() {
       </div>
       <div hidden={items !== 'reports'}>
         {seen.has('reports') && <AdminReportsView />}
+      </div>
+      <div hidden={items !== 'featured'}>
+        {seen.has('featured') && <FeaturedEditor />}
       </div>
     </PageShell>
   )
