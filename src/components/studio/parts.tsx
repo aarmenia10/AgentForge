@@ -165,18 +165,15 @@ export function FindingNote({
               “{finding.excerpt}”
             </p>
             <p className="opacity-90">
-              This is a preview and may not contain the exact sentence that
-              caused the finding.
+              This preview may not show the exact sentence.
             </p>
           </div>
         )}
         <p className="opacity-90">{SEVERITY_TEXT[finding.severity]}.</p>
         {block && (
           <p>
-            <span className="font-semibold">What to do:</span> Review the
-            instructions against the safety concern above and correct any
-            unsafe behavior before sharing. If you believe this finding is
-            incorrect, contact support for review.
+            Review the instructions and correct any unsafe behavior before sharing.
+            If you believe this finding is incorrect, contact support.
           </p>
         )}
       </div>
