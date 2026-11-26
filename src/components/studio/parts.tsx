@@ -159,11 +159,21 @@ export function FindingNote({
           {finding.message}
         </p>
         {finding.excerpt && (
-          <p className="break-words font-mono opacity-90">
-            “{finding.excerpt}”
-          </p>
+          <div className="space-y-1">
+            <p className="font-medium">Context from your submission</p>
+            <p className="break-words font-mono opacity-90">
+              “{finding.excerpt}”
+            </p>
+            <p className="opacity-90">This is only a preview.</p>
+          </div>
         )}
         <p className="opacity-90">{SEVERITY_TEXT[finding.severity]}.</p>
+        {block && (
+          <p>
+            Correct any unsafe behavior before sharing. Contact support if you
+            believe this finding is incorrect.
+          </p>
+        )}
       </div>
     </div>
   )
