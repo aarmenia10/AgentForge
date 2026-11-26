@@ -164,16 +164,14 @@ export function FindingNote({
             <p className="break-words font-mono opacity-90">
               “{finding.excerpt}”
             </p>
-            <p className="opacity-90">
-              This preview may not show the exact sentence.
-            </p>
+            <p className="opacity-90">This is only a preview.</p>
           </div>
         )}
         <p className="opacity-90">{SEVERITY_TEXT[finding.severity]}.</p>
         {block && (
           <p>
-            Review the instructions and correct any unsafe behavior before sharing.
-            If you believe this finding is incorrect, contact support.
+            Correct any unsafe behavior before sharing. Contact support if you
+            believe this finding is incorrect.
           </p>
         )}
       </div>
